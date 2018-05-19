@@ -46,10 +46,27 @@ SOL_PACKET = 263
 PACKET_ADD_MEMBERSHIP = 1
 eapol_socket.setsockopt(SOL_PACKET, PACKET_ADD_MEMBERSHIP, mreq)
 print("sending packet")
-identity_request = "888e01000005010100050100000000000000000000000000000000000000000000000000000000000000000000000000"
-packet = pae_group_addr + hwaddr + build_byte_string(identity_request)
+identity_request1 = "888e01000005010100050100000000000000000000000000000000000000000000000000000000000000000000000000"
+packet = pae_group_addr + hwaddr + build_byte_string(identity_request1)
 eapol_socket.send(packet)
 print("reading")
 data = eapol_socket.recv(4096)
 print("Got packet %s" % data)
+# assume it's correct and send the same thing again
+identity_request2 = "888e01000005010000050100000000000000000000000000000000000000000000000000000000000000000000000000"
+print("sending request again")
+packet = pae_group_addr + hwaddr + build_byte_string(identity_request2)
+eapol_socket.send(packet)
+data = eapol_socket.recv(4096)
+print("Got packet %s" % data)
+challenge = "888e01000016010100160410824788d693e2adac6ce15641418228cf"
+print("sending challenge")
+packet = pae_group_addr + hwaddr + build_byte_string(challenge)
+eapol_socket.send(packet)
+data = eapol_socket.recv(4096)
+print("Got packet %s" % data)
+success = "888e0100000403010004"
+print("sending success")
+packet = pae_group_addr + hwaddr + build_byte_string(success)
+eapol_socket.send(packet)
 eapol_socket.close()
