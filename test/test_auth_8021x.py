@@ -1,6 +1,6 @@
 import unittest
 from netils import build_byte_string
-from chewy.auth_8021x import Auth8021x
+from chewie.auth_8021x import Auth8021x
 
 class Auth8021xTestCase(unittest.TestCase):
     def test_auth_8021x_parses(self):

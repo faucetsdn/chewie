@@ -1,1 +1,1 @@
-PYTHONPATH=./ pytest --cov=chewy --cov-report=xml:coverage.xml test/
+PYTHONPATH=./ pytest --cov=chewie --cov-report=xml:coverage.xml test/

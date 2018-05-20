@@ -1,6 +1,6 @@
 import unittest
 from netils import build_byte_string
-from chewy.eap import Eap
+from chewie.eap import Eap
 
 class EapTestCase(unittest.TestCase):
     def test_auth_8021x_parses(self):

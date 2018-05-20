@@ -4,14 +4,14 @@ from select import select
 from fcntl import ioctl
 from netils import build_byte_string
 
-from chewy.chewy import Chewy
+from chewie.chewie import Chewie
 
 #NETWORK_INTERFACE = "eth0"
 #NETWORK_INTERFACE = "br-208d61c884fc"
 #NETWORK_INTERFACE = "vethe8b890e"
 
-chewy = Chewy("eth0")
-chewy.run()
+chewie = Chewie("eth0")
+chewie.run()
 
 exit()
 

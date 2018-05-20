@@ -10,7 +10,7 @@ from .eap import Eap, EapIdentity, EapMd5Challenge
 def unpack_byte_string(byte_string):
     return "".join("%02x" % x for x in byte_string)
 
-class Chewy(object):
+class Chewie(object):
     SIOCGIFHWADDR = 0x8927
     SIOCGIFINDEX = 0x8933
     PACKET_MR_MULTICAST = 0
