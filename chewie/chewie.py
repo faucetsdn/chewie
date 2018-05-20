@@ -4,8 +4,10 @@ from hashlib import md5
 from fcntl import ioctl
 from netils import build_byte_string
 
+from .ethernet_packet import EthernetPacket
 from .auth_8021x import Auth8021x
 from .eap import Eap, EapIdentity, EapMd5Challenge
+from .message_parser import MessageParser
 
 def unpack_byte_string(byte_string):
     return "".join("%02x" % x for x in byte_string)
@@ -47,18 +49,17 @@ class Chewie(object):
         self.socket.close()
 
     def handle_eap_packet(self, packed_message):
-        auth_8021x = Auth8021x.parse(packed_message)
+        ethernet_packet = EthernetPacket.parse(packed_message)
+        auth_8021x = Auth8021x.parse(ethernet_packet.data)
         print("packed message: %s" % packed_message)
         eap = Eap.parse(auth_8021x.data)
         print("data: %s" % auth_8021x.data)
-        if eap.packet_type == 1:
+        if eap.PACKET_TYPE == 1:
             print("Eap packet type identity")
-            identity = EapIdentity.parse(eap.data)
-            print("Identity: %s" % identity.identity)
-        elif eap.packet_type == 4:
+            print("Identity: %s" % eap.identity)
+        elif eap.PACKET_TYPE == 4:
             print("Eap packet type md5-challenge")
-            challenge = EapMd5Challenge.parse(eap.data)
-            print("Response: %s" % unpack_byte_string(challenge.value))
+            print("Response: %s" % unpack_byte_string(eap.challenge))
             challenge_salt = build_byte_string("824788d693e2adac6ce15641418228cf")
             password="microphone".encode()
             challenge_id=1
@@ -66,7 +67,7 @@ class Chewie(object):
             expected_response = md5(challenge_id_string + password + challenge_salt).digest()
             print("Expected response: %s" % unpack_byte_string(expected_response))
         else:
-            print("Unknown Eap packet type: %d" % eap.packet_type)
+            print("Unknown Eap packet type: %d" % eap.PACKET_TYPE)
 
     def open_socket(self):
         self.socket = socket.socket(socket.PF_PACKET, socket.SOCK_RAW, socket.htons(0x888e))

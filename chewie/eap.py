@@ -1,45 +1,62 @@
 import struct
 
 class EapIdentity(object):
-    def __init__(self, identity):
-        self.identity = identity
+    PACKET_TYPE = 1
+
+    def __init__(self, eap_header, identity):
+        self.code = eap_header.code
+        self.packet_id = eap_header.packet_id
+        self.identity = identity.decode()
 
     @classmethod
-    def parse(cls, packed_message):
-        return cls(packed_message)
+    def parse(cls, eap_header, packed_message):
+        return cls(eap_header, packed_message)
 
     def __repr__(self):
         return "%s(identity=%s)" % \
             (self.__class__.__name__, self.identity)
 
 class EapMd5Challenge(object):
-    def __init__(self, value, extra_data):
-        self.value = value
+    PACKET_TYPE = 4
+
+    def __init__(self, eap_header, challenge, extra_data):
+        self.code = eap_header.code
+        self.packet_id = eap_header.packet_id
+        self.challenge = challenge
         self.extra_data = extra_data
 
     @classmethod
-    def parse(cls, packed_message):
+    def parse(cls, eap_header, packed_message):
         value_length, = struct.unpack("!B", packed_message[:1])
-        value = packed_message[1:1+value_length]
+        challenge = packed_message[1:1+value_length]
         extra_data = packed_message[1+value_length:]
-        return cls(value, extra_data)
+        return cls(eap_header, challenge, extra_data)
 
     def __repr__(self):
-        return "%s(value=%s, extra_data=%s)" % \
-            (self.__class__.__name__, self.value, self.extra_data)
+        return "%s(challenge=%s, extra_data=%s)" % \
+            (self.__class__.__name__, self.challenge, self.extra_data)
 
 EAP_HEADER_LENGTH = 1 + 1 + 2 + 1
 
+PARSERS = {
+    1: EapIdentity,
+    4: EapMd5Challenge,
+}
+
 class Eap:
-    def __init__(self, code, packet_id, length, packet_type, data):
+    REQUEST = 1
+    RESPONSE = 2
+    IDENTITY = 1
+    MD5_CHALLENGE = 4
+    def __init__(self, code, packet_id, length, packet_type):
         self.code = code
         self.packet_id = packet_id
         self.length = length
         self.packet_type = packet_type
-        self.data = data
 
     @classmethod
     def parse(cls, packed_message):
         code, packet_id, length, packet_type = struct.unpack("!BBHB", packed_message[:EAP_HEADER_LENGTH])
         data = packed_message[EAP_HEADER_LENGTH:EAP_HEADER_LENGTH+length]
-        return cls(code, packet_id, length, packet_type, data)
+        eap_header = cls(code, packet_id, length, packet_type)
+        return PARSERS[packet_type].parse(eap_header, data)
