@@ -1,15 +1,19 @@
 import socket
-from select import select
 import struct
+from select import select
 from fcntl import ioctl
+from netils import build_byte_string
 
-NETWORK_INTERFACE = "eth0"
+from chewy.chewy import Chewy
+
+#NETWORK_INTERFACE = "eth0"
 #NETWORK_INTERFACE = "br-208d61c884fc"
 #NETWORK_INTERFACE = "vethe8b890e"
 
-def build_byte_string(hex_stream):
-    values = [int(x, 16) for x in map(''.join, zip(*[iter(hex_stream)]*2))]
-    return struct.pack("!" + "B" * len(values), *values)
+chewy = Chewy("eth0")
+chewy.run()
+
+exit()
 
 print("opening socket")
 eapol_socket = socket.socket(socket.PF_PACKET, socket.SOCK_RAW, socket.htons(0x888e))
