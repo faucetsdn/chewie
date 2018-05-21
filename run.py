@@ -10,7 +10,10 @@ from chewie.chewie import Chewie
 #NETWORK_INTERFACE = "br-208d61c884fc"
 #NETWORK_INTERFACE = "vethe8b890e"
 
-chewie = Chewie("eth0")
+credentials = {
+    "user@example.com": "microphone"
+}
+chewie = Chewie("eth0", credentials)
 chewie.run()
 
 exit()

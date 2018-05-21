@@ -9,3 +9,9 @@ class Auth8021xTestCase(unittest.TestCase):
         self.assertEqual(message.version, 1)
         self.assertEqual(message.packet_type, 0)
         self.assertEqual(len(message.data), 5)
+
+    def test_auth_8021x_packs(self):
+        expected_packed_message = build_byte_string("010000050101000501")
+        message = Auth8021x(version=1, packet_type=0, data=build_byte_string("0101000501"))
+        packed_message = message.pack()
+        self.assertEqual(expected_packed_message, packed_message)

@@ -1,6 +1,7 @@
 from .ethernet_packet import EthernetPacket
 from .auth_8021x import Auth8021x
-from .eap import Eap
+from .eap import Eap, EapIdentity, EapMd5Challenge
+from .mac_address import MacAddress
 
 class IdentityMessage(object):
     def __init__(self, src_mac, message_id, code, identity):
@@ -41,3 +42,16 @@ class MessageParser:
             raise ValueError("802.1x has bad type, expected 0: %s" % auth_8021x)
         eap = Eap.parse(auth_8021x.data)
         return MESSAGES[eap.PACKET_TYPE].build(ethernet_packet.src_mac, eap)
+
+class MessagePacker:
+    @staticmethod
+    def pack(message):
+        if isinstance(message, IdentityMessage):
+            eap = EapIdentity(message.code, message.message_id, message.identity)
+            auth_8021x = Auth8021x(version=1, packet_type=0, data=eap.pack())
+        elif isinstance(message, Md5ChallengeMessage):
+            eap = EapMd5Challenge(message.code, message.message_id, message.challenge, message.extra_data)
+            auth_8021x = Auth8021x(version=1, packet_type=0, data=eap.pack())
+        ethernet_packet = EthernetPacket(dst_mac=MacAddress.from_string("01:80:c2:00:00:03"), src_mac=message.src_mac, ethertype=0x888e, data=auth_8021x.pack())
+        return ethernet_packet.pack()
+
