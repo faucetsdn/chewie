@@ -87,7 +87,6 @@ class Chewie(object):
         response = ioctl(self.socket, self.SIOCGIFINDEX, ifreq)
         _ifname, self.interface_index = struct.unpack('16sI', response)
 
-
     def join_multicast_group(self):
         mreq = struct.pack("IHH8s", self.interface_index, self.PACKET_MR_MULTICAST, len(self.EAP_ADDRESS), self.EAP_ADDRESS)
         self.socket.setsockopt(self.SOL_PACKET, self.PACKET_ADD_MEMBERSHIP, mreq)
