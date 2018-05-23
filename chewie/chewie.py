@@ -1,3 +1,6 @@
+from eventlet import sleep, GreenPool
+from eventlet.queue import Queue
+import eventlet.greenthread as greenthread
 import socket
 import struct
 from hashlib import md5
@@ -10,6 +13,7 @@ from .eap import Eap, EapIdentity, EapMd5Challenge
 from .message_parser import MessageParser, MessagePacker, IdentityMessage, Md5ChallengeMessage
 from .mac_address import MacAddress
 from .state_machine import StateMachine
+from .event import EventMessageReceived
 
 def unpack_byte_string(byte_string):
     return "".join("%02x" % x for x in byte_string)
@@ -25,13 +29,40 @@ class Chewie(object):
     def __init__(self, interface_name, credentials):
         self.interface_name = interface_name
         self.credentials = credentials
-        self.state_machine = StateMachine()
 
     def run(self):
         self.open_socket()
         self.get_interface_info()
+        self.build_state_machine()
         self.join_multicast_group()
-        self.run_demo()
+        #self.run_demo()
+        self.start_threads_and_wait()
+
+    def start_threads_and_wait(self):
+        print("Starting threads")
+        self.pool = GreenPool()
+        self.eventlets = []
+
+        self.eventlets.append(self.pool.spawn(self.send_messages))
+        self.eventlets.append(self.pool.spawn(self.receive_messages))
+
+        self.pool.waitall()
+
+    def send_messages(self):
+        while True:
+            sleep(0)
+            message = self.state_machine.output_messages.get()
+            print("Sending message: %s" % message)
+            self.socket.send(MessagePacker.pack(message))
+
+    def receive_messages(self):
+        while True:
+            sleep(0)
+            packed_message = self.socket.recv(4096)
+            message = MessageParser.parse(packed_message)
+            print("Received message: %s" % message)
+            event = EventMessageReceived(message)
+            self.state_machine.event(event)
 
     def run_demo(self):
         self.seed = md5("banana".encode()).digest()
@@ -71,6 +102,9 @@ class Chewie(object):
     def open_socket(self):
         self.socket = socket.socket(socket.PF_PACKET, socket.SOCK_RAW, socket.htons(0x888e))
         self.socket.bind((self.interface_name, 0))
+
+    def build_state_machine(self):
+        self.state_machine = StateMachine(self.interface_address)
 
     def get_interface_info(self):
         self.get_interface_address()

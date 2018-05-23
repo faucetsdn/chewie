@@ -102,6 +102,12 @@ class MessagePacker:
         elif isinstance(message, Md5ChallengeMessage):
             eap = EapMd5Challenge(message.code, message.message_id, message.challenge, message.extra_data)
             auth_8021x = Auth8021x(version=1, packet_type=0, data=eap.pack())
+        elif isinstance(message, SuccessMessage):
+            eap = EapSuccess(message.message_id)
+            auth_8021x = Auth8021x(version=1, packet_type=0, data=eap.pack())
+        elif isinstance(message, FailureMessage):
+            eap = EapFailure(message.message_id)
+            auth_8021x = Auth8021x(version=1, packet_type=0, data=eap.pack())
         elif isinstance(message, EapolStartMessage):
             auth_8021x = Auth8021x(version=1, packet_type=1, data=b"")
         elif isinstance(message, EapolLogoffMessage):

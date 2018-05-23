@@ -90,6 +90,9 @@ class EapSuccess(Eap):
     def parse(cls, packet_id):
         return cls(code, packet_id)
 
+    def pack(self):
+        return struct.pack("!BBH", Eap.SUCCESS, self.packet_id, EAP_HEADER_LENGTH)
+
     def __repr__(self):
         return "%s(packet_id=%s)" % \
             (self.__class__.__name__, self.packet_id)
@@ -101,6 +104,9 @@ class EapFailure(Eap):
     @classmethod
     def parse(cls, packet_id):
         return cls(code, packet_id)
+
+    def pack(self):
+        return struct.pack("!BBH", Eap.FAILURE, self.packet_id, EAP_HEADER_LENGTH)
 
     def __repr__(self):
         return "%s(packet_id=%s)" % \

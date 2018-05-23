@@ -95,9 +95,21 @@ class EapTestCase(unittest.TestCase):
         self.assertEqual(255, message.message_id)
         self.assertTrue(isinstance(message, SuccessMessage))
 
+    def test_success_message_packs(self):
+        expected_packed_message = build_byte_string("0180c2000003001906eab88c888e0100000403ff0004")
+        message = SuccessMessage(src_mac=MacAddress.from_string("00:19:06:ea:b8:8c"), message_id=255)
+        packed_message = MessagePacker.pack(message)
+        self.assertEqual(expected_packed_message, packed_message)
+
     def test_failure_message_parses(self):
         packed_message = build_byte_string("0180c2000003001906eab88c888e0100000404ff0004")
         message = MessageParser.parse(packed_message)
         self.assertEqual(MacAddress.from_string("00:19:06:ea:b8:8c"), message.src_mac)
         self.assertEqual(255, message.message_id)
         self.assertTrue(isinstance(message, FailureMessage))
+
+    def test_failure_message_packs(self):
+        expected_packed_message = build_byte_string("0180c2000003001906eab88c888e0100000404ff0004")
+        message = FailureMessage(src_mac=MacAddress.from_string("00:19:06:ea:b8:8c"), message_id=255)
+        packed_message = MessagePacker.pack(message)
+        self.assertEqual(expected_packed_message, packed_message)
