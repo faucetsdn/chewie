@@ -1,7 +1,25 @@
 from .ethernet_packet import EthernetPacket
 from .auth_8021x import Auth8021x
-from .eap import Eap, EapIdentity, EapMd5Challenge
+from .eap import Eap, EapIdentity, EapMd5Challenge, EapSuccess, EapFailure
 from .mac_address import MacAddress
+
+class SuccessMessage(object):
+    def __init__(self, src_mac, message_id):
+        self.src_mac = src_mac
+        self.message_id = message_id
+
+    @classmethod
+    def build(cls, src_mac, eap):
+        return cls(src_mac, eap.packet_id)
+
+class FailureMessage(object):
+    def __init__(self, src_mac, message_id):
+        self.src_mac = src_mac
+        self.message_id = message_id
+
+    @classmethod
+    def build(cls, src_mac, eap):
+        return cls(src_mac, eap.packet_id)
 
 class IdentityMessage(object):
     def __init__(self, src_mac, message_id, code, identity):
@@ -53,7 +71,14 @@ class MessageParser:
         auth_8021x = Auth8021x.parse(ethernet_packet.data)
         if auth_8021x.packet_type == 0:
             eap = Eap.parse(auth_8021x.data)
-            return EAP_MESSAGES[eap.PACKET_TYPE].build(ethernet_packet.src_mac, eap)
+            if isinstance(eap, EapIdentity) or isinstance(eap, EapMd5Challenge):
+                return EAP_MESSAGES[eap.PACKET_TYPE].build(ethernet_packet.src_mac, eap)
+            elif isinstance(eap, EapSuccess):
+                return SuccessMessage.build(ethernet_packet.src_mac, eap)
+            elif isinstance(eap, EapFailure):
+                return FailureMessage.build(ethernet_packet.src_mac, eap)
+            else:
+                raise ValueError("Got bad Eap packet: %s" % eap)
         elif auth_8021x.packet_type == 1:
             return EapolStartMessage.build(ethernet_packet.src_mac)
         raise ValueError("802.1x has bad type, expected 0: %s" % auth_8021x)
