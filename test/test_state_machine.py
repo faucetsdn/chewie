@@ -79,3 +79,15 @@ class StateMachineChallengeSentTestCase(unittest.TestCase):
         self.state_machine.event(EventMessageReceived(message))
         self.assertEqual(self.state_machine.state, "authenticated")
         self.assertEqual(self.state_machine.output_messages.qsize(), 1)
+
+    def test_incorrect_challenge_received_moves_to_idle(self):
+        txn_id = 123
+        challenge = build_byte_string("01234567890abcdef01234567890abcdef")
+        password = "notmicrophone"
+        id_string = struct.pack("B", txn_id)
+        challenge_response = md5(id_string + password.encode() + challenge).digest()
+        message = Md5ChallengeMessage(
+            MacAddress.from_string("00:12:34:56:78:90"), self.state_machine.txn_id, Eap.RESPONSE, challenge_response, b"who cares")
+        self.state_machine.event(EventMessageReceived(message))
+        self.assertEqual(self.state_machine.state, "idle")
+        self.assertEqual(self.state_machine.output_messages.qsize(), 1)
