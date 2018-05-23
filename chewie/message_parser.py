@@ -26,9 +26,22 @@ class Md5ChallengeMessage(object):
     def build(cls, src_mac, eap):
         return cls(src_mac, eap.packet_id, eap.code, eap.challenge, eap.extra_data)
 
-MESSAGES = {
+class EapolStartMessage(object):
+    def __init__(self, src_mac):
+        self.src_mac = src_mac
+
+    @classmethod
+    def build(cls, src_mac):
+        return cls(src_mac)
+
+EAP_MESSAGES = {
     Eap.IDENTITY: IdentityMessage,
     Eap.MD5_CHALLENGE: Md5ChallengeMessage,
+}
+
+AUTH_8021X_MESSAGES = {
+    0: "eap",
+    1: "eapol start",
 }
 
 class MessageParser:
@@ -38,10 +51,12 @@ class MessageParser:
         if ethernet_packet.ethertype != 0x888e:
             raise ValueError("Ethernet packet with bad ethertype received: %s" % ethernet_packet)
         auth_8021x = Auth8021x.parse(ethernet_packet.data)
-        if auth_8021x.packet_type != 0:
-            raise ValueError("802.1x has bad type, expected 0: %s" % auth_8021x)
-        eap = Eap.parse(auth_8021x.data)
-        return MESSAGES[eap.PACKET_TYPE].build(ethernet_packet.src_mac, eap)
+        if auth_8021x.packet_type == 0:
+            eap = Eap.parse(auth_8021x.data)
+            return EAP_MESSAGES[eap.PACKET_TYPE].build(ethernet_packet.src_mac, eap)
+        elif auth_8021x.packet_type == 1:
+            return EapolStartMessage.build(ethernet_packet.src_mac)
+        raise ValueError("802.1x has bad type, expected 0: %s" % auth_8021x)
 
 class MessagePacker:
     @staticmethod
@@ -52,6 +67,10 @@ class MessagePacker:
         elif isinstance(message, Md5ChallengeMessage):
             eap = EapMd5Challenge(message.code, message.message_id, message.challenge, message.extra_data)
             auth_8021x = Auth8021x(version=1, packet_type=0, data=eap.pack())
+        elif isinstance(message, EapolStartMessage):
+            auth_8021x = Auth8021x(version=1, packet_type=1, data=b"")
+        else:
+            raise ValueError("Cannot pack message: %s" % message)
         ethernet_packet = EthernetPacket(dst_mac=MacAddress.from_string("01:80:c2:00:00:03"), src_mac=message.src_mac, ethertype=0x888e, data=auth_8021x.pack())
         return ethernet_packet.pack()
 

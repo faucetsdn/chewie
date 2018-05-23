@@ -9,6 +9,7 @@ from .auth_8021x import Auth8021x
 from .eap import Eap, EapIdentity, EapMd5Challenge
 from .message_parser import MessageParser, MessagePacker, IdentityMessage, Md5ChallengeMessage
 from .mac_address import MacAddress
+from .state_machine import StateMachine
 
 def unpack_byte_string(byte_string):
     return "".join("%02x" % x for x in byte_string)
@@ -24,6 +25,7 @@ class Chewie(object):
     def __init__(self, interface_name, credentials):
         self.interface_name = interface_name
         self.credentials = credentials
+        self.state_machine = StateMachine()
 
     def run(self):
         self.open_socket()

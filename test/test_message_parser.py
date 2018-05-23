@@ -1,6 +1,7 @@
 import unittest
 from netils import build_byte_string
 from chewie.message_parser import MessageParser, MessagePacker, IdentityMessage, Md5ChallengeMessage
+from chewie.message_parser import EapolStartMessage
 from chewie.mac_address import MacAddress
 from chewie.eap import Eap
 
@@ -62,3 +63,16 @@ class EapTestCase(unittest.TestCase):
         message = Md5ChallengeMessage(src_mac=MacAddress.from_string("00:14:22:e9:54:5e"), message_id=1, code=Eap.RESPONSE, challenge=build_byte_string("3a535f0ee8c6b34fe714aa7dad9a0e15"), extra_data=b"John.McGuirk")
         packed_message = MessagePacker.pack(message)
         self.assertEqual(expected_packed_message, packed_message)
+
+    def test_eapol_start_message_parses(self):
+        packed_message = build_byte_string("0180c2000003001906eab88c888e01010000")
+        message = MessageParser.parse(packed_message)
+        self.assertEqual(MacAddress.from_string("00:19:06:ea:b8:8c"), message.src_mac)
+        self.assertTrue(isinstance(message, EapolStartMessage))
+
+    def test_eapol_start_message_packs(self):
+        expected_packed_message = build_byte_string("0180c2000003001906eab88c888e01010000")
+        message = EapolStartMessage(src_mac=MacAddress.from_string("00:19:06:ea:b8:8c"))
+        packed_message = MessagePacker.pack(message)
+        self.assertEqual(expected_packed_message, packed_message)
+
