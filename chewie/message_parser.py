@@ -52,6 +52,14 @@ class EapolStartMessage(object):
     def build(cls, src_mac):
         return cls(src_mac)
 
+class EapolLogoffMessage(object):
+    def __init__(self, src_mac):
+        self.src_mac = src_mac
+
+    @classmethod
+    def build(cls, src_mac):
+        return cls(src_mac)
+
 EAP_MESSAGES = {
     Eap.IDENTITY: IdentityMessage,
     Eap.MD5_CHALLENGE: Md5ChallengeMessage,
@@ -81,6 +89,8 @@ class MessageParser:
                 raise ValueError("Got bad Eap packet: %s" % eap)
         elif auth_8021x.packet_type == 1:
             return EapolStartMessage.build(ethernet_packet.src_mac)
+        elif auth_8021x.packet_type == 2:
+            return EapolLogoffMessage.build(ethernet_packet.src_mac)
         raise ValueError("802.1x has bad type, expected 0: %s" % auth_8021x)
 
 class MessagePacker:
@@ -94,6 +104,8 @@ class MessagePacker:
             auth_8021x = Auth8021x(version=1, packet_type=0, data=eap.pack())
         elif isinstance(message, EapolStartMessage):
             auth_8021x = Auth8021x(version=1, packet_type=1, data=b"")
+        elif isinstance(message, EapolLogoffMessage):
+            auth_8021x = Auth8021x(version=1, packet_type=2, data=b"")
         else:
             raise ValueError("Cannot pack message: %s" % message)
         ethernet_packet = EthernetPacket(dst_mac=MacAddress.from_string("01:80:c2:00:00:03"), src_mac=message.src_mac, ethertype=0x888e, data=auth_8021x.pack())
