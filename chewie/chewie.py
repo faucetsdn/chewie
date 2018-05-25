@@ -22,13 +22,15 @@ class Chewie(object):
     SIOCGIFHWADDR = 0x8927
     SIOCGIFINDEX = 0x8933
     PACKET_MR_MULTICAST = 0
+    PACKET_MR_PROMISC = 1
     SOL_PACKET = 263
     PACKET_ADD_MEMBERSHIP = 1
     EAP_ADDRESS = build_byte_string("0180c2000003")
 
-    def __init__(self, interface_name, credentials):
+    def __init__(self, interface_name, credentials, logger):
         self.interface_name = interface_name
         self.credentials = credentials
+        self.logger = logger
 
     def run(self):
         self.open_socket()
@@ -39,7 +41,6 @@ class Chewie(object):
         self.start_threads_and_wait()
 
     def start_threads_and_wait(self):
-        print("Starting threads")
         self.pool = GreenPool()
         self.eventlets = []
 
@@ -52,7 +53,7 @@ class Chewie(object):
         while True:
             sleep(0)
             message = self.state_machine.output_messages.get()
-            print("Sending message: %s" % message)
+            self.logger.info("CHEWIE: Sending message: %s" % message)
             self.socket.send(MessagePacker.pack(message))
 
     def receive_messages(self):
@@ -60,13 +61,13 @@ class Chewie(object):
             sleep(0)
             packed_message = self.socket.recv(4096)
             message = MessageParser.parse(packed_message)
-            print("Received message: %s" % message)
+            self.logger.info("CHEWIE: Received message: %s" % message)
             event = EventMessageReceived(message)
             self.state_machine.event(event)
 
     def run_demo(self):
         self.seed = md5("banana".encode()).digest()
-        print("Sending packet")
+        self.logger.warning("CHEWIE: Sending packet")
         self.message_id = 123
         packet = MessagePacker.pack(IdentityMessage(self.interface_address, self.message_id, Eap.REQUEST, ""))
         self.socket.send(packet)
@@ -84,20 +85,20 @@ class Chewie(object):
         self.socket.close()
 
     def handle_eap_packet(self, packed_message):
-        print("packed message: %s" % packed_message)
+        self.logger.warning("CHEWIE: packed message: %s" % packed_message)
         message = MessageParser.parse(packed_message)
         if isinstance(message, IdentityMessage):
-            print("Eap packet type identity")
-            print("Identity: %s" % message.identity)
+            self.logger.warning("CHEWIE: Eap packet type identity")
+            self.logger.warning("CHEWIE: Identity: %s" % message.identity)
         elif isinstance(message, Md5ChallengeMessage):
-            print("Eap packet type md5-challenge")
-            print("Response: %s" % unpack_byte_string(message.challenge))
+            self.logger.warning("CHEWIE: Eap packet type md5-challenge")
+            self.logger.warning("CHEWIE: Response: %s" % unpack_byte_string(message.challenge))
             password="microphone".encode()
             challenge_id_string = struct.pack("B", self.message_id)
             expected_response = md5(challenge_id_string + password + self.seed).digest()
-            print("Expected response: %s" % unpack_byte_string(expected_response))
+            self.logger.warning("CHEWIE: Expected response: %s" % unpack_byte_string(expected_response))
         else:
-            print("Unknown message %s" % message)
+            self.logger.warning("CHEWIE: Unknown message %s" % message)
 
     def open_socket(self):
         self.socket = socket.socket(socket.PF_PACKET, socket.SOCK_RAW, socket.htons(0x888e))
@@ -124,5 +125,5 @@ class Chewie(object):
         _ifname, self.interface_index = struct.unpack('16sI', response)
 
     def join_multicast_group(self):
-        mreq = struct.pack("IHH8s", self.interface_index, self.PACKET_MR_MULTICAST, len(self.EAP_ADDRESS), self.EAP_ADDRESS)
+        mreq = struct.pack("IHH8s", self.interface_index, self.PACKET_MR_PROMISC, len(self.EAP_ADDRESS), self.EAP_ADDRESS)
         self.socket.setsockopt(self.SOL_PACKET, self.PACKET_ADD_MEMBERSHIP, mreq)

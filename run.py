@@ -10,10 +10,17 @@ from chewie.chewie import Chewie
 #NETWORK_INTERFACE = "br-208d61c884fc"
 #NETWORK_INTERFACE = "vethe8b890e"
 
+class Logger:
+    def info(self, message):
+        print("INFO: %s" % message)
+
+    def warning(self, message):
+        print("WARNING: %s" % message)
+
 credentials = {
     "user@example.com": "microphone"
 }
-chewie = Chewie("eth0", credentials)
+chewie = Chewie("eth0", credentials, Logger())
 chewie.run()
 
 exit()
