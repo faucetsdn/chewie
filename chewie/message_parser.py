@@ -95,7 +95,7 @@ class MessageParser:
 
 class MessagePacker:
     @staticmethod
-    def pack(message):
+    def pack(message, dst_mac):
         if isinstance(message, IdentityMessage):
             eap = EapIdentity(message.code, message.message_id, message.identity)
             auth_8021x = Auth8021x(version=1, packet_type=0, data=eap.pack())
@@ -114,6 +114,6 @@ class MessagePacker:
             auth_8021x = Auth8021x(version=1, packet_type=2, data=b"")
         else:
             raise ValueError("Cannot pack message: %s" % message)
-        ethernet_packet = EthernetPacket(dst_mac=MacAddress.from_string("01:80:c2:00:00:03"), src_mac=message.src_mac, ethertype=0x888e, data=auth_8021x.pack())
+        ethernet_packet = EthernetPacket(dst_mac=dst_mac, src_mac=message.src_mac, ethertype=0x888e, data=auth_8021x.pack())
         return ethernet_packet.pack()
 

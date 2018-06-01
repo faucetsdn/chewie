@@ -25,12 +25,14 @@ class Chewie(object):
     PACKET_MR_PROMISC = 1
     SOL_PACKET = 263
     PACKET_ADD_MEMBERSHIP = 1
-    EAP_ADDRESS = build_byte_string("0180c2000003")
+    EAP_ADDRESS = MacAddress.from_string("01:80:c2:00:00:03")
 
-    def __init__(self, interface_name, credentials, logger):
+    def __init__(self, interface_name, credentials, logger=None, group_address=None):
         self.interface_name = interface_name
         self.credentials = credentials
         self.logger = logger
+        if not group_address:
+            self.group_address = self.EAP_ADDRESS
 
     def run(self):
         self.open_socket()
@@ -54,7 +56,7 @@ class Chewie(object):
             sleep(0)
             message = self.state_machine.output_messages.get()
             self.logger.info("CHEWIE: Sending message: %s" % message)
-            self.socket.send(MessagePacker.pack(message))
+            self.socket.send(MessagePacker.pack(message, self.group_address))
 
     def receive_messages(self):
         while True:
@@ -79,7 +81,7 @@ class Chewie(object):
         self.handle_eap_packet(response)
         # send success to keep it happy
         success = build_byte_string("888e0100000403010004")
-        packet = self.EAP_ADDRESS + self.interface_address.address + success
+        packet = self.group_address + self.interface_address.address + success
         self.socket.send(packet)
 
         self.socket.close()
@@ -125,5 +127,6 @@ class Chewie(object):
         _ifname, self.interface_index = struct.unpack('16sI', response)
 
     def join_multicast_group(self):
-        mreq = struct.pack("IHH8s", self.interface_index, self.PACKET_MR_PROMISC, len(self.EAP_ADDRESS), self.EAP_ADDRESS)
+        # TODO this works but should blank out the end bytes
+        mreq = struct.pack("IHH8s", self.interface_index, self.PACKET_MR_PROMISC, len(self.EAP_ADDRESS.address), self.EAP_ADDRESS.address)
         self.socket.setsockopt(self.SOL_PACKET, self.PACKET_ADD_MEMBERSHIP, mreq)
