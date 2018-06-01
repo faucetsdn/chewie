@@ -33,6 +33,7 @@ class Chewie(object):
         self.credentials = credentials
         self.logger = logger
         self.auth_handler = auth_handler
+        self.group_address = group_address
         if not group_address:
             self.group_address = self.EAP_ADDRESS
 
@@ -58,7 +59,7 @@ class Chewie(object):
             message = self.state_machine.output_messages.get()
             if isinstance(message, SuccessMessage) and self.auth_handler:
                 self.auth_handler(self.group_address)
-            self.logger.info("CHEWIE: Sending message: %s" % message)
+            self.logger.info("CHEWIE: Sending message %s to %s" % (message, str(self.group_address)))
             self.socket.send(MessagePacker.pack(message, self.group_address))
 
     def receive_messages(self):
