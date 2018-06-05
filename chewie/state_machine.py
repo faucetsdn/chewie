@@ -15,8 +15,9 @@ def generate_random_bytes(num_bytes):
     return os.urandom(num_bytes)
 
 class StateMachine:
-    def __init__(self, src_mac):
+    def __init__(self, src_mac, auth_success=None):
         self.src_mac = src_mac
+        self.auth_success = auth_success
 
         self.txn_id = None
         self.challenge = None
@@ -59,6 +60,8 @@ class StateMachine:
     def handle_challenge_sent_message(self, message):
         if isinstance(message, Md5ChallengeMessage):
             if message.challenge == self.expected_response:
+                if self.auth_success:
+                    self.auth_success(message.src_mac)
                 message = SuccessMessage(self.src_mac, self.txn_id)
                 self.output_messages.put(message)
                 self.state = "authenticated"

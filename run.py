@@ -13,8 +13,8 @@ class Logger:
     def warning(self, message):
         print("WARNING: %s" % message)
 
-def auth_handler(address):
-    print("Authed address %s" % str(address))
+def auth_handler(address, group_address):
+    print("Authed address %s on port %s" % (str(address), str(group_address)))
 
 credentials = {
     "user@example.com": "microphone"

@@ -38,6 +38,7 @@ class Chewie(object):
             self.group_address = self.EAP_ADDRESS
 
     def run(self):
+        self.logger.info("CHEWIE: Starting")
         self.open_socket()
         self.get_interface_info()
         self.build_state_machine()
@@ -53,12 +54,14 @@ class Chewie(object):
 
         self.pool.waitall()
 
+    def auth_success(self, src_mac):
+        if self.auth_handler:
+            self.auth_handler(src_mac, self.group_address)
+
     def send_messages(self):
         while True:
             sleep(0)
             message = self.state_machine.output_messages.get()
-            if isinstance(message, SuccessMessage) and self.auth_handler:
-                self.auth_handler(self.group_address)
             self.logger.info("CHEWIE: Sending message %s to %s" % (message, str(self.group_address)))
             self.socket.send(MessagePacker.pack(message, self.group_address))
 
@@ -76,7 +79,7 @@ class Chewie(object):
         self.socket.bind((self.interface_name, 0))
 
     def build_state_machine(self):
-        self.state_machine = StateMachine(self.interface_address)
+        self.state_machine = StateMachine(self.interface_address, self.auth_success)
 
     def get_interface_info(self):
         self.get_interface_address()
