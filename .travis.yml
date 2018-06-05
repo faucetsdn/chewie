@@ -5,7 +5,7 @@ python:
 env:
   global:
     - GIT_COMMITTED_AT=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then git log -1 --pretty=format:%ct; else git log -1 --skip 1 --pretty=format:%ct; fi)
-    - CC_TEST_REPORTER_ID=374a468f390fafce9456b727a0104f34022525a5745fdb9b94de75f52d3e2b00
+    - CC_TEST_REPORTER_ID=3b159317808fe335201d4666f82eab6199272452aaf05d1b55e1e55319d0689c
 cache:
   pip: true
 install:
