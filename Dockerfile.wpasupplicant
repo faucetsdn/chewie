@@ -3,4 +3,3 @@ FROM ubuntu:18.04
 RUN apt-get update
 RUN apt-get install -y wpasupplicant=2:2.6-15ubuntu2
 
-COPY ./wpasupplicant.conf /tmp/wpasupplicant.conf

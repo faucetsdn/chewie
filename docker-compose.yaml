@@ -1,14 +1,6 @@
-version: '3'
-services:
-    hostapd:
-        build:
-            context: .
-            dockerfile: Dockerfile.hostapd
-        image: 'chewie/hostapd:latest'
-        networks:
-            hostapd-net:
-                ipv4_address: 172.27.0.111
+version: '2'
 
+services:
     wpasupplicant:
         build:
             context: .
@@ -20,6 +12,8 @@ services:
                 ipv4_address: 172.23.0.111
         cap_add:
             - ALL
+        volumes:
+            - ./wpasupplicant.conf:/tmp/wpasupplicant.conf
 
     test:
         build:
@@ -32,11 +26,8 @@ services:
                 ipv4_address: 172.23.0.112
         cap_add:
             - ALL
+
 networks:
-    hostapd-net:
-        ipam:
-            config:
-                - subnet: 172.27.0.0/16
     wpasupplicant-net:
         driver: macvlan
         ipam:
