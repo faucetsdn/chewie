@@ -26,6 +26,8 @@ services:
                 ipv4_address: 172.23.0.112
         cap_add:
             - ALL
+        volumes:
+            - ./:/chewie-src/
 
 networks:
     wpasupplicant-net:
