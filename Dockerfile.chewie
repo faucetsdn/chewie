@@ -4,5 +4,6 @@ RUN apt-get update
 RUN apt-get install -y python3 python3-pip
 RUN apt-get install -y vim
 
-RUN pip3 install netils
-RUN pip3 install eventlet
+COPY ./ /chewie-src/
+
+RUN pip3 install /chewie-src/
