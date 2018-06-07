@@ -20,7 +20,8 @@ services:
             context: .
             dockerfile: Dockerfile.chewie
         image: 'chewie/chewie:latest'
-        command: bash -c "python3 /chewie-src/run.py"
+        command: bash -c "pip3 install -r /chewie-src/requirements.txt;
+                  python3 /chewie-src/run.py"
         networks:
             wpasupplicant-net:
                 ipv4_address: 172.23.0.112
