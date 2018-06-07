@@ -1,1 +1,4 @@
-PYTHONPATH=./ pytest --cov=chewie --cov-report=xml:coverage.xml test/
+#!/bin/bash
+
+cd /chewie-src/
+python3 -m pytest --cov=chewie/ --cov-report term --cov-report=xml:coverage.xml test/

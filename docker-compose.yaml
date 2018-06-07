@@ -21,7 +21,7 @@ services:
         cap_add:
             - ALL
 
-    test:
+    chewie:
         build:
             context: .
             dockerfile: Dockerfile.chewie

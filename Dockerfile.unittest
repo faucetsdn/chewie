@@ -1,0 +1,12 @@
+FROM ubuntu:18.04
+
+RUN apt-get -qq update && \
+    apt-get install -qqy python3 python3-pip
+
+
+COPY ./ /chewie-src/
+
+RUN pip3 install -r /chewie-src/test-requirements.txt && \
+    pip3 install /chewie-src/
+
+CMD ["./chewie-src/run_tests.sh"]
