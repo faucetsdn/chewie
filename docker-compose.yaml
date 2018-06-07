@@ -1,0 +1,44 @@
+version: '3'
+services:
+    hostapd:
+        build:
+            context: .
+            dockerfile: Dockerfile.hostapd
+        image: 'chewie/hostapd:latest'
+        networks:
+            hostapd-net:
+                ipv4_address: 172.27.0.111
+
+    wpasupplicant:
+        build:
+            context: .
+            dockerfile: Dockerfile.wpasupplicant
+        image: 'chewie/wpasupplicant:latest'
+        command: bash -c "wpa_supplicant -dd -c /tmp/wpasupplicant.conf -i eth0 -D wired;"
+        networks:
+            wpasupplicant-net:
+                ipv4_address: 172.23.0.111
+        cap_add:
+            - ALL
+
+    test:
+        build:
+            context: .
+            dockerfile: Dockerfile.chewie
+        image: 'chewie/chewie:latest'
+        command: bash -c "python3 /chewie-src/run.py"
+        networks:
+            wpasupplicant-net:
+                ipv4_address: 172.23.0.112
+        cap_add:
+            - ALL
+networks:
+    hostapd-net:
+        ipam:
+            config:
+                - subnet: 172.27.0.0/16
+    wpasupplicant-net:
+        driver: macvlan
+        ipam:
+            config:
+                - subnet: 172.23.0.0/16
