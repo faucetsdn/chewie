@@ -1,0 +1,37 @@
+version: '2'
+
+services:
+    wpasupplicant:
+        build:
+            context: .
+            dockerfile: Dockerfile.wpasupplicant
+        image: 'chewie/wpasupplicant:latest'
+        command: bash -c "wpa_supplicant -dd -c /tmp/wpasupplicant.conf -i eth0 -D wired;"
+        networks:
+            wpasupplicant-net:
+                ipv4_address: 172.23.0.111
+        cap_add:
+            - ALL
+        volumes:
+            - ./wpasupplicant.conf:/tmp/wpasupplicant.conf
+
+    test:
+        build:
+            context: .
+            dockerfile: Dockerfile.chewie
+        image: 'chewie/chewie:latest'
+        command: bash -c "python3 /chewie-src/run.py"
+        networks:
+            wpasupplicant-net:
+                ipv4_address: 172.23.0.112
+        cap_add:
+            - ALL
+        volumes:
+            - ./:/chewie-src/
+
+networks:
+    wpasupplicant-net:
+        driver: macvlan
+        ipam:
+            config:
+                - subnet: 172.23.0.0/16

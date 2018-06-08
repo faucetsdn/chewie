@@ -4,6 +4,6 @@ RUN apt-get update
 RUN apt-get install -y python3 python3-pip
 RUN apt-get install -y vim
 
-COPY ./ /chewie-src/
+COPY ./requirements.txt /tmp/requirements.txt
 
-RUN pip3 install /chewie-src/
+RUN pip3 install -r /tmp/requirements.txt
