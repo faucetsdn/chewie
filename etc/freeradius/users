@@ -1,0 +1,9 @@
+hostuser0   Cleartext-Password := "host0pass"
+
+hostuser1   Cleartext-Password := "hostpass1"
+
+hostuser2   Cleartext-Password := "hostpass2"
+
+hostuser3   Cleartext-Password := "hostpass3"
+
+hostuser4   Cleartext-Password := "hostpass4"
