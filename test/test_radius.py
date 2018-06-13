@@ -2,7 +2,7 @@ import unittest
 from netils import build_byte_string
 from chewie.radius import *
 from chewie.radius_attributes import UserName, ServiceType, FramedMTU, CalledStationId, AcctSessionId, NASPortType, \
-    ConnectInfo, EAPMessage, EAPAuthenticator, State, VendorSpecific
+    ConnectInfo, EAPMessage, MessageAuthenticator, State, VendorSpecific, CallingStationId
 
 
 class RadiusTestCase(unittest.TestCase):
@@ -21,7 +21,7 @@ class RadiusTestCase(unittest.TestCase):
         self.assertEqual(msg_attr.find(AcctSessionId.DESCRIPTION).data_type.data, "C648004A9C905579")
         self.assertEqual(msg_attr.find(FramedMTU.DESCRIPTION).data_type.data, 1400)
         self.assertEqual(msg_attr.find(EAPMessage.DESCRIPTION).data_type.data.hex(), "0201000e01686f73743175736572")
-        self.assertEqual(msg_attr.find(EAPAuthenticator.DESCRIPTION).data_type.data.hex(), "73f82750f6f261a95a7cc7d318b9f573")
+        self.assertEqual(msg_attr.find(MessageAuthenticator.DESCRIPTION).data_type.data.hex(), "73f82750f6f261a95a7cc7d318b9f573")
 
     def test_radius_access_accept_parses(self):
         packed_message = build_byte_string("0201004602970aff2ef0700780f70848e90d24101a0f00003039010973747564656e744f06030200045012d7ec84e8864dd6cd00916c1d5a3cf41b010b686f73743175736572")
@@ -31,7 +31,7 @@ class RadiusTestCase(unittest.TestCase):
         msg_attr = message.attributes
         self.assertEqual(len(msg_attr.attributes), 4)
         self.assertEqual(msg_attr.find(EAPMessage.DESCRIPTION).data_type.data.hex(), "03020004")
-        self.assertEqual(msg_attr.find(EAPAuthenticator.DESCRIPTION).data_type.data.hex(), "d7ec84e8864dd6cd00916c1d5a3cf41b")
+        self.assertEqual(msg_attr.find(MessageAuthenticator.DESCRIPTION).data_type.data.hex(), "d7ec84e8864dd6cd00916c1d5a3cf41b")
         self.assertEqual(msg_attr.find(UserName.DESCRIPTION).data_type.data, 'host1user')
 
     def test_radius_access_accept_packs(self):
@@ -44,7 +44,7 @@ class RadiusTestCase(unittest.TestCase):
         attr_list = list()
         attr_list.append(VendorSpecific.parse(VendorSpecific.TYPE, 13, bytes.fromhex("00003039010973747564656e74")))
         attr_list.append(EAPMessage.parse(EAPMessage.TYPE, 4, bytes.fromhex("03020004")))
-        attr_list.append(EAPAuthenticator.parse(EAPAuthenticator.TYPE, 16, bytes.fromhex("d7ec84e8864dd6cd00916c1d5a3cf41b")))
+        attr_list.append(MessageAuthenticator.parse(MessageAuthenticator.TYPE, 16, bytes.fromhex("d7ec84e8864dd6cd00916c1d5a3cf41b")))
         attr_list.append(UserName.parse(UserName.TYPE, 9, "host1user".encode()))
         attributes = RadiusAttributesList(attr_list)
         access_accept = RadiusAccessAccept(Radius.ACCESS_ACCEPT, 1, "02970aff2ef0700780f70848e90d2410", attributes)
@@ -61,7 +61,7 @@ class RadiusTestCase(unittest.TestCase):
         msg_attr = message.attributes
         self.assertEqual(len(msg_attr.attributes), 3)
         self.assertEqual(msg_attr.find(EAPMessage.DESCRIPTION).data_type.data.hex(), "01020016041074d3db089b727d9cc5774599e4a32a29")
-        self.assertEqual(msg_attr.find(EAPAuthenticator.DESCRIPTION).data_type.data.hex(), "ecc840b316217c851bd6708afb554b24")
+        self.assertEqual(msg_attr.find(MessageAuthenticator.DESCRIPTION).data_type.data.hex(), "ecc840b316217c851bd6708afb554b24")
         self.assertEqual(msg_attr.find(State.DESCRIPTION).data_type.data.hex(), "19ddf6d119dff272fa2fe16c34990c7d")
 
     def test_radius_access_challenge_ttls_parses(self):
@@ -76,7 +76,7 @@ class RadiusTestCase(unittest.TestCase):
                                                                            "6572746966696361746520417574686f72697479301e170d3138303630353033353134345a170d3138303830343033353134345a307c310b3009060355040613024652310f300d06035504080c0652616469757331153013060355040a0c0c4578616d706c6520496e632e3123302106035504030c1a4578616d706c65205365727665722043657274696669636174653120301e06092a864886f70d010901161161646d696e406578616d706c652e6f726730820122300d06092a864886f70d01010105000382010f003082010a0282010100cf5456d7e6142383101cf79275f6396e2c9b3f7cb2878d35e5ecc6f47ee11ef20bc8a8b3217a89351c55"
                                                                            "856e5cd5eed2d10037c9bcce89fbdf927e4cc4f069863acbac4accee7e80f2105ad80d837fa50a931c5b41d03c993f5e338cfd8e69e23818360053501c34c08132ec3d6e14df89ff29c5cec5c7a87d48c4afdcf9d3f8290050be5b903ba6a2a5ce2eb79c922cae70869618c75923059f9a8d62144e8ecdaf0a9f02886afa0e73e3d68037ea9fdca2bdd0f0785e05f5ac88031010c105575dbb09eb4f307547622120ee384ab454376de8e14e0afea02f1211801b6c932324ef6dba7abf3f48f8e3e84716c40b59041ec936cb273d684b22aa1c9d24e10203010001a34f304d30130603551d25040c300a06082b0601050507030130360603551d1f042f"
                                                                            "302d302ba029a0278625687474703a2f2f7777772e6578616d706c652e636f6d2f6578616d706c655f63612e63726c300d06092a864886f70d01010b0500038201010054fdcdabdc3a153dc167d6b210d1b324ecfac0e3b8d385704463a7f8ebf46e2e6952f249f4436ec66760868860e5ed50b519ec14628179472c312f507bc9349971d21f8f2b7d6b329b02fab448bd90fd4ce4dfbc78f23a8c4eed74d5589f4c3bd11b552535b8ab8a1a6ab9d1dfda21f247a93354702c12fdde1113cb8dd0e46e2a3a94547c9871df2a88943751d8276dc43f7f6aed921f43f6a33f9beba804c3d2b5781d754abe36ba58461798be8585b8b2")
-        self.assertEqual(msg_attr.find(EAPAuthenticator.DESCRIPTION).data_type.data.hex(), "26e219fc875fd78976eb2b9b475b1488")
+        self.assertEqual(msg_attr.find(MessageAuthenticator.DESCRIPTION).data_type.data.hex(), "26e219fc875fd78976eb2b9b475b1488")
         self.assertEqual(msg_attr.find(State.DESCRIPTION).data_type.data.hex(), "c1591073c33305b4fa8bd26dd27eafd9")
 
 
@@ -90,13 +90,11 @@ class RadiusTestCase(unittest.TestCase):
         attr_list.append(EAPMessage.parse(EAPMessage.TYPE, 253, bytes.fromhex("6572746966696361746520417574686f72697479301e170d3138303630353033353134345a170d3138303830343033353134345a307c310b3009060355040613024652310f300d06035504080c0652616469757331153013060355040a0c0c4578616d706c6520496e632e3123302106035504030c1a4578616d706c65205365727665722043657274696669636174653120301e06092a864886f70d010901161161646d696e406578616d706c652e6f726730820122300d06092a864886f70d01010105000382010f003082010a0282010100cf5456d7e6142383101cf79275f6396e2c9b3f7cb2878d35e5ecc6f47ee11ef20bc8a8b3217a89351c55")))
         attr_list.append(EAPMessage.parse(EAPMessage.TYPE, 253, bytes.fromhex("856e5cd5eed2d10037c9bcce89fbdf927e4cc4f069863acbac4accee7e80f2105ad80d837fa50a931c5b41d03c993f5e338cfd8e69e23818360053501c34c08132ec3d6e14df89ff29c5cec5c7a87d48c4afdcf9d3f8290050be5b903ba6a2a5ce2eb79c922cae70869618c75923059f9a8d62144e8ecdaf0a9f02886afa0e73e3d68037ea9fdca2bdd0f0785e05f5ac88031010c105575dbb09eb4f307547622120ee384ab454376de8e14e0afea02f1211801b6c932324ef6dba7abf3f48f8e3e84716c40b59041ec936cb273d684b22aa1c9d24e10203010001a34f304d30130603551d25040c300a06082b0601050507030130360603551d1f042f")))
         attr_list.append(EAPMessage.parse(EAPMessage.TYPE, 245, bytes.fromhex("302d302ba029a0278625687474703a2f2f7777772e6578616d706c652e636f6d2f6578616d706c655f63612e63726c300d06092a864886f70d01010b0500038201010054fdcdabdc3a153dc167d6b210d1b324ecfac0e3b8d385704463a7f8ebf46e2e6952f249f4436ec66760868860e5ed50b519ec14628179472c312f507bc9349971d21f8f2b7d6b329b02fab448bd90fd4ce4dfbc78f23a8c4eed74d5589f4c3bd11b552535b8ab8a1a6ab9d1dfda21f247a93354702c12fdde1113cb8dd0e46e2a3a94547c9871df2a88943751d8276dc43f7f6aed921f43f6a33f9beba804c3d2b5781d754abe36ba58461798be8585b8b2")))
-        attr_list.append(EAPAuthenticator.parse(EAPAuthenticator.TYPE, 16, bytes.fromhex("26e219fc875fd78976eb2b9b475b1488")))
+        attr_list.append(MessageAuthenticator.parse(MessageAuthenticator.TYPE, 16, bytes.fromhex("26e219fc875fd78976eb2b9b475b1488")))
         attr_list.append(State.parse(State.TYPE, 16, bytes.fromhex("c1591073c33305b4fa8bd26dd27eafd9")))
         attributes = RadiusAttributesList(attr_list)
         access_challenge = RadiusAccessChallenge(Radius.ACCESS_CHALLENGE, 6, "54dbc73332c00c0347fc4b462d1811a7", attributes)
         packed_message = access_challenge.pack()
-        print('got :', packed_message.hex())
-        print('want:', expected_packed_message.hex())
         self.assertEqual(len(expected_packed_message), len(packed_message))
         self.assertEqual(expected_packed_message, packed_message)
 
@@ -112,13 +110,40 @@ class RadiusTestCase(unittest.TestCase):
             "856e5cd5eed2d10037c9bcce89fbdf927e4cc4f069863acbac4accee7e80f2105ad80d837fa50a931c5b41d03c993f5e338cfd8e69e23818360053501c34c08132ec3d6e14df89ff29c5cec5c7a87d48c4afdcf9d3f8290050be5b903ba6a2a5ce2eb79c922cae70869618c75923059f9a8d62144e8ecdaf0a9f02886afa0e73e3d68037ea9fdca2bdd0f0785e05f5ac88031010c105575dbb09eb4f307547622120ee384ab454376de8e14e0afea02f1211801b6c932324ef6dba7abf3f48f8e3e84716c40b59041ec936cb273d684b22aa1c9d24e10203010001a34f304d30130603551d25040c300a06082b0601050507030130360603551d1f042f"
             "302d302ba029a0278625687474703a2f2f7777772e6578616d706c652e636f6d2f6578616d706c655f63612e63726c300d06092a864886f70d01010b0500038201010054fdcdabdc3a153dc167d6b210d1b324ecfac0e3b8d385704463a7f8ebf46e2e6952f249f4436ec66760868860e5ed50b519ec14628179472c312f507bc9349971d21f8f2b7d6b329b02fab448bd90fd4ce4dfbc78f23a8c4eed74d5589f4c3bd11b552535b8ab8a1a6ab9d1dfda21f247a93354702c12fdde1113cb8dd0e46e2a3a94547c9871df2a88943751d8276dc43f7f6aed921f43f6a33f9beba804c3d2b5781d754abe36ba58461798be8585b8b2")))
         attr_list.append(
-            EAPAuthenticator.parse(EAPAuthenticator.TYPE, 16, bytes.fromhex("26e219fc875fd78976eb2b9b475b1488")))
+            MessageAuthenticator.parse(MessageAuthenticator.TYPE, 16, bytes.fromhex("26e219fc875fd78976eb2b9b475b1488")))
         attr_list.append(State.parse(State.TYPE, 16, bytes.fromhex("c1591073c33305b4fa8bd26dd27eafd9")))
         attributes = RadiusAttributesList(attr_list)
         access_challenge = RadiusAccessChallenge(Radius.ACCESS_CHALLENGE, 6, "54dbc73332c00c0347fc4b462d1811a7",
                                                  attributes)
         packed_message = access_challenge.pack()
-        print('got :', packed_message.hex())
-        print('want:', expected_packed_message.hex())
+        self.assertEqual(len(expected_packed_message), len(packed_message))
+        self.assertEqual(expected_packed_message, packed_message)
+
+
+    def test_radius_access_request_packs(self):
+        expected_packed_message = build_byte_string("010e01dc688d6504db3c757243f995d5f0d32e50010b686f737431757365721e1434342d34342d34342d34342d34342d34343a3d06000000130606000000021f1330302d30302d30302d31312d31312d30314d17434f4e4e45435420304d627073203830322e3131622c12433634383030344139433930353537390c06000005784fff02250133150016030101280100012403032c36dbf8ee16b94b28efdb8c5603e07823f9b716557b5ef2624b026daea115760000aac030c02cc028c024c014c00a00a500a300a1009f006b006a0069006800390038003700360088008700860085c032c02ec02ac026c00fc005009d003d00350084c02fc02bc027c023c013c00900a400a200a0009e00670040003f003e0033003200310030009a0099009800970045004400430042c031c02dc029c025c00ec004009c003c002f00960041c011c007c00cc00200050004c012c008001600130010000dc00dc003000a00ff01000051000b000403000102000a001c001a00170019001c001b0018001a004f3816000e000d000b000c0009000a000d0020001e060106020603050105020503040104020403030103020303020102020203000f0001011812cefe6083cfdb75dd64722c274ec353725012ab67ed568931f12d258f9ffda931159e")
+
+        attr_list = list()
+        attr_list.append(UserName.parse(UserName.TYPE, 9, bytes.fromhex("686f73743175736572")))
+        attr_list.append(CalledStationId.parse(CalledStationId.TYPE, 18, bytes.fromhex("34342d34342d34342d34342d34342d34343a")))
+        attr_list.append(NASPortType.parse(NASPortType.TYPE, 4, bytes.fromhex("00000013")))
+        attr_list.append(ServiceType.parse(ServiceType.TYPE, 4, bytes.fromhex("00000002")))
+        attr_list.append(CallingStationId.parse(CallingStationId.TYPE, 17, bytes.fromhex("30302d30302d30302d31312d31312d3031")))
+        attr_list.append(ConnectInfo.parse(ConnectInfo.TYPE, 21, bytes.fromhex("434f4e4e45435420304d627073203830322e313162")))
+        attr_list.append(AcctSessionId.parse(AcctSessionId.TYPE, 16, bytes.fromhex("43363438303034413943393035353739")))
+        attr_list.append(FramedMTU.parse(FramedMTU.TYPE, 4, bytes.fromhex("00000578")))
+
+
+        attr_list.append(EAPMessage.parse(EAPMessage.TYPE, 253,
+                                                    bytes.fromhex("02250133150016030101280100012403032c36dbf8ee16b94b28efdb8c5603e07823f9b716557b5ef2624b026daea115760000aac030c02cc028c024c014c00a00a500a300a1009f006b006a0069006800390038003700360088008700860085c032c02ec02ac026c00fc005009d003d00350084c02fc02bc027c023c013c00900a400a200a0009e00670040003f003e0033003200310030009a0099009800970045004400430042c031c02dc029c025c00ec004009c003c002f00960041c011c007c00cc00200050004c012c008001600130010000dc00dc003000a00ff01000051000b000403000102000a001c001a00170019001c001b0018001a00")))
+        attr_list.append(EAPMessage.parse(EAPMessage.TYPE, 54,
+                                                    bytes.fromhex("16000e000d000b000c0009000a000d0020001e060106020603050105020503040104020403030103020303020102020203000f000101")))
+        attr_list.append(State.parse(State.TYPE, 16, bytes.fromhex("cefe6083cfdb75dd64722c274ec35372")))
+        attr_list.append(MessageAuthenticator.parse(MessageAuthenticator.TYPE, 16, bytes.fromhex("00000000000000000000000000000000")))
+
+        attributes = RadiusAttributesList(attr_list)
+        access_request = RadiusAccessRequest(Radius.ACCESS_REQUEST, 14, "688d6504db3c757243f995d5f0d32e50", attributes)
+        packed_message = access_request.build("SECRET")
+
         self.assertEqual(len(expected_packed_message), len(packed_message))
         self.assertEqual(expected_packed_message, packed_message)

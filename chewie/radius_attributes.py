@@ -136,7 +136,7 @@ class EAPMessage(Attribute):
 
 
 @register_attribute_type
-class EAPAuthenticator(Attribute):
+class MessageAuthenticator(Attribute):
     TYPE = 80
     DATA_TYPE = String
-    DESCRIPTION = "EAP-Authenticator"
+    DESCRIPTION = "Message-Authenticator"

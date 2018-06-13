@@ -1,7 +1,8 @@
+import hmac
 import struct
 
-from chewie.radius_attributes import ATTRIBUTE_TYPES, Attribute
-from chewie.radius_datatypes import Concat, DataType
+from chewie.radius_attributes import ATTRIBUTE_TYPES, Attribute, MessageAuthenticator
+from chewie.radius_datatypes import Concat
 
 
 RADIUS_HEADER_LENGTH = 1 + 1 + 2 + 16
@@ -38,6 +39,7 @@ def register_packet_type_parser(cls):
 
 class RadiusPacket(Radius):
     CODE = None
+    packed = None
 
     def __init__(self, code, packet_id, authenticator, attributes):
         self.code = code
@@ -54,7 +56,20 @@ class RadiusPacket(Radius):
                              RADIUS_HEADER_LENGTH + self.attributes.__len__(),
                              bytes.fromhex(self.authenticator))
         packed_attributes = self.attributes.pack()
-        return header + packed_attributes
+        self.packed = bytearray(header + packed_attributes)
+        return self.packed
+
+    def build(self, secret=None):
+        """Only call this once, or else the MessageAuthenticator will not be zeros, resulting in the wrong hash"""
+        if not self.packed:
+            self.packed = self.pack()
+        if secret and self.attributes.find(MessageAuthenticator.DESCRIPTION):
+            message_authenticator = bytearray(hmac.new(secret.encode(), self.packed, 'md5').digest())
+            position = self.attributes.index(MessageAuthenticator.DESCRIPTION)
+
+            for i in range(16):
+                self.packed[i+position] = message_authenticator[i]
+        return self.packed
 
 
 @register_packet_type_parser
@@ -105,7 +120,7 @@ class RadiusAttributesList(object):
 
             i = i + attr_length
 
-        # deal with concat
+        # Join Attributes that's datatype is Concat into one attribute.
         concatenated_attributes = []
         for value, list_ in attributes_to_concat.items():
             concatenated_data = b""
@@ -114,9 +129,8 @@ class RadiusAttributesList(object):
             concatenated_attributes.append(ATTRIBUTE_TYPES[value].parse(value,
                                                                         len(concatenated_data),
                                                                         concatenated_data))
-
+        # Remove old Attributes that were concatenated.
         for c in concatenated_attributes:
-            # attributes = list(filter(c.VALUE.__ne__, attributes))
             attributes = [x for x in attributes if x.TYPE != c.TYPE]
 
         attributes.extend(concatenated_attributes)
@@ -128,6 +142,14 @@ class RadiusAttributesList(object):
             if item == attr.DESCRIPTION:
                 return attr
         return None
+
+    def index(self, item):
+        i = 0
+        for attr in self.attributes:
+            if item == attr.DESCRIPTION:
+                break
+            i += attr.__len__() + Attribute.HEADER_SIZE
+        return i
 
     def __len__(self):
         total = 0
