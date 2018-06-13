@@ -62,9 +62,14 @@ class RadiusPacket(Radius):
         """Only call this once, or else the MessageAuthenticator will not be zeros, resulting in the wrong hash"""
         if not self.packed:
             self.packed = self.pack()
+        try:
+            position = self.attributes.index(MessageAuthenticator.DESCRIPTION)
+        except ValueError as e:
+            print(e.message)
+            return self.packed
+
         if secret and self.attributes.find(MessageAuthenticator.DESCRIPTION):
             message_authenticator = bytearray(hmac.new(secret.encode(), self.packed, 'md5').digest())
-            position = self.attributes.index(MessageAuthenticator.DESCRIPTION)
 
             for i in range(16):
                 self.packed[i+position] = message_authenticator[i]
@@ -147,6 +152,8 @@ class RadiusAttributesList(object):
             if item == attr.DESCRIPTION:
                 break
             i += attr.__len__() + Attribute.HEADER_SIZE
+        else:
+            raise ValueError("Cannot find item: %s in attributes list" % item)
         return i
 
     def __len__(self):
