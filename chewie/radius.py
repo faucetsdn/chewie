@@ -119,8 +119,7 @@ class RadiusAttributesList(object):
             concatenated_data = b""
             for d in list_:
                 concatenated_data += d.data_type.data
-            concatenated_attributes.append(ATTRIBUTE_TYPES[value].parse(len(concatenated_data),
-                                                                        concatenated_data))
+            concatenated_attributes.append(ATTRIBUTE_TYPES[value].parse(concatenated_data))
         # Remove old Attributes that were concatenated.
         for c in concatenated_attributes:
             attributes = [x for x in attributes if x.TYPE != c.TYPE]
@@ -134,10 +133,9 @@ class RadiusAttributesList(object):
         while i < total_length:
             type_, attr_length = struct.unpack("!BB", attributes_data[i:i + Attribute.HEADER_SIZE])
             data = attributes_data[i + Attribute.HEADER_SIZE: i + attr_length]
-            length = attr_length - Attribute.HEADER_SIZE
             packed_value = data[:attr_length - Attribute.HEADER_SIZE]
 
-            attribute = ATTRIBUTE_TYPES[type_].parse(length, packed_value)
+            attribute = ATTRIBUTE_TYPES[type_].parse(packed_value)
 
             if attribute.DATA_TYPE.DATA_TYPE_VALUE == Concat.DATA_TYPE_VALUE:
                 if attribute.TYPE not in attributes_to_concat:

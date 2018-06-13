@@ -21,14 +21,13 @@ class Attribute(object):
 
     HEADER_SIZE = 1 + 1
 
-    def __init__(self, length, data_type):
-        self.length = length
+    def __init__(self, data_type):
         self.data_type = data_type
 
     @classmethod
-    def parse(cls, length, packed_value):
+    def parse(cls, packed_value):
         data_type = get_data_type(cls.TYPE)
-        return cls(length, DATA_TYPE_PARSERS[data_type](length, packed_value))
+        return cls(DATA_TYPE_PARSERS[data_type](packed_value))
 
     def pack(self):
         tl = struct.pack("!BB", self.TYPE, self.__len__())
