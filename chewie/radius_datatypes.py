@@ -31,12 +31,15 @@ class DataType(object):
         return
 
     @abc.abstractmethod
-    def __len__(self):
+    def data_length(self):
         """
         :return: length of the data field, and not total length of the attribute (including the type and length).
-        If total is required add 2.
+        If total is required user full_length.
         """
-        return
+        return 0
+
+    def full_length(self):
+        return self.data_length() + self.AVP_HEADER_LEN
 
     @classmethod
     def is_valid_length(cls, packed_value):
@@ -65,7 +68,7 @@ class Integer(DataType):
     def pack(self, attribute_type):
         return struct.pack("!I", self.data)
 
-    def __len__(self):
+    def data_length(self):
         return 4
 
 
@@ -83,7 +86,7 @@ class Enum(DataType):
     def pack(self, attribute_type):
         return struct.pack("!I", self.data)
 
-    def __len__(self):
+    def data_length(self):
         return 4
 
 
@@ -99,7 +102,7 @@ class Text(DataType):
     def pack(self, attribute_type):
         return struct.pack("!%ds" % len(self.data), self.data.encode('utf-8'))
 
-    def __len__(self):
+    def data_length(self):
         return len(self.data)
 
 
@@ -116,7 +119,7 @@ class String(DataType):
     def pack(self, attribute_type):
         return struct.pack("!%ds" % len(self.data), self.data)
 
-    def __len__(self):
+    def data_length(self):
         return len(self.data)
 
 
@@ -153,10 +156,13 @@ class Concat(DataType):
                               self.data[i * self.MAX_DATA_LENGTH:])
         return packed
 
-    def __len__(self):
+    def full_length(self):
         return self.AVP_HEADER_LEN * \
-               (math.ceil(len(self.data) / self.MAX_DATA_LENGTH))\
+               (math.ceil(len(self.data) / self.MAX_DATA_LENGTH + 1))\
                + len(self.data) - self.AVP_HEADER_LEN
+
+    def data_length(self):
+        return len(self.data)
 
 
 @register_datatype_parser
@@ -174,7 +180,7 @@ class Vsa(DataType):
         return cls(struct.unpack("!%ds" % len(packed_value), packed_value)[0])
 
     def pack(self, attribute_type):
-        return struct.pack("!%ds" % (self.__len__()), self.data)
+        return struct.pack("!%ds" % (self.data_length()), self.data)
 
-    def __len__(self):
+    def data_length(self):
         return len(self.data)

@@ -30,12 +30,12 @@ class Attribute(object):
         return cls(DATA_TYPE_PARSERS[data_type](packed_value))
 
     def pack(self):
-        tl = struct.pack("!BB", self.TYPE, self.__len__())
+        tl = struct.pack("!BB", self.TYPE, self.full_length())
         v = self.data_type.pack(self.TYPE)
         return tl + v
 
-    def __len__(self):
-        return self.data_type.__len__() + 2
+    def full_length(self):
+        return self.data_type.full_length()
 
 
 def register_attribute_type(cls):

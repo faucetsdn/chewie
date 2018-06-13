@@ -28,7 +28,7 @@ class Radius(object):
             return PACKET_TYPE_PARSERS[code](packet_id, authenticator,
                                              RadiusAttributesList.parse(packed_message[RADIUS_HEADER_LENGTH:]))
 
-    def pack(self, packed_body):
+    def pack(self):
         pass
 
 
@@ -63,7 +63,8 @@ class RadiusPacket(Radius):
         if not self.packed:
             self.packed = self.pack()
         try:
-            position = self.attributes.index(MessageAuthenticator.DESCRIPTION)
+            position = self.attributes.index(MessageAuthenticator.DESCRIPTION) + \
+                       RADIUS_HEADER_LENGTH + Attribute.HEADER_SIZE
         except ValueError as e:
             print(e.message)
             return self.packed
@@ -157,7 +158,7 @@ class RadiusAttributesList(object):
         for attr in self.attributes:
             if item == attr.DESCRIPTION:
                 break
-            i += attr.__len__() + Attribute.HEADER_SIZE
+            i += attr.full_length()
         else:
             raise ValueError("Cannot find item: %s in attributes list" % item)
         return i
@@ -165,7 +166,7 @@ class RadiusAttributesList(object):
     def __len__(self):
         total = 0
         for attr in self.attributes:
-            total = total + len(attr)
+            total = total + attr.full_length()
         return total
 
     def pack(self):
