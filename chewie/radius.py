@@ -68,7 +68,7 @@ class RadiusPacket(Radius):
             print(e.message)
             return self.packed
 
-        if secret and self.attributes.find(MessageAuthenticator.DESCRIPTION):
+        if secret:
             message_authenticator = bytearray(hmac.new(secret.encode(), self.packed, 'md5').digest())
 
             for i in range(16):
@@ -103,10 +103,34 @@ class RadiusAttributesList(object):
 
     @classmethod
     def parse(cls, attributes_data):
-        total_length = len(attributes_data)
-        i = 0
         attributes = []
         attributes_to_concat = {}
+        cls.extract_attributes(attributes, attributes_data, attributes_to_concat)
+
+        attributes = cls.merge_concat_attributes(attributes, attributes_to_concat)
+
+        return cls(attributes)
+
+    @classmethod
+    def merge_concat_attributes(cls, attributes, attributes_to_concat):
+        # Join Attributes that's datatype is Concat into one attribute.
+        concatenated_attributes = []
+        for value, list_ in attributes_to_concat.items():
+            concatenated_data = b""
+            for d in list_:
+                concatenated_data += d.data_type.data
+            concatenated_attributes.append(ATTRIBUTE_TYPES[value].parse(len(concatenated_data),
+                                                                        concatenated_data))
+        # Remove old Attributes that were concatenated.
+        for c in concatenated_attributes:
+            attributes = [x for x in attributes if x.TYPE != c.TYPE]
+        attributes.extend(concatenated_attributes)
+        return attributes
+
+    @classmethod
+    def extract_attributes(cls, attributes, attributes_data, attributes_to_concat):
+        total_length = len(attributes_data)
+        i = 0
         while i < total_length:
             type_, attr_length = struct.unpack("!BB", attributes_data[i:i + Attribute.HEADER_SIZE])
             data = attributes_data[i + Attribute.HEADER_SIZE: i + attr_length]
@@ -123,22 +147,6 @@ class RadiusAttributesList(object):
             attributes.append(attribute)
 
             i = i + attr_length
-
-        # Join Attributes that's datatype is Concat into one attribute.
-        concatenated_attributes = []
-        for value, list_ in attributes_to_concat.items():
-            concatenated_data = b""
-            for d in list_:
-                concatenated_data += d.data_type.data
-            concatenated_attributes.append(ATTRIBUTE_TYPES[value].parse(len(concatenated_data),
-                                                                        concatenated_data))
-        # Remove old Attributes that were concatenated.
-        for c in concatenated_attributes:
-            attributes = [x for x in attributes if x.TYPE != c.TYPE]
-
-        attributes.extend(concatenated_attributes)
-
-        return cls(attributes)
 
     def find(self, item):
         for attr in self.attributes:
