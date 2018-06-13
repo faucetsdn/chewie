@@ -26,8 +26,8 @@ class Attribute(object):
         self.data_type = data_type
 
     @classmethod
-    def parse(cls, attribute_type, length, packed_value):
-        data_type = get_data_type(attribute_type)
+    def parse(cls, length, packed_value):
+        data_type = get_data_type(cls.TYPE)
         return cls(length, DATA_TYPE_PARSERS[data_type](length, packed_value))
 
     def pack(self):

@@ -127,7 +127,6 @@ class Concat(DataType):
 
     @classmethod
     def parse(cls, length, packed_value):
-        print('concat buffer', len(packed_value))
         return cls(struct.unpack("!%ds" % length, packed_value)[0])
 
     def pack(self, attribute_type):

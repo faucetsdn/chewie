@@ -25,7 +25,7 @@ class Radius(object):
         code, packet_id, length, authenticator = struct.unpack("!BBH16s", packed_message[:RADIUS_HEADER_LENGTH])
         authenticator = authenticator.hex()
         if code in PACKET_TYPE_PARSERS.keys():
-            return PACKET_TYPE_PARSERS[code](code, packet_id, authenticator,
+            return PACKET_TYPE_PARSERS[code](packet_id, authenticator,
                                              RadiusAttributesList.parse(packed_message[RADIUS_HEADER_LENGTH:]))
 
     def pack(self, packed_body):
@@ -41,18 +41,17 @@ class RadiusPacket(Radius):
     CODE = None
     packed = None
 
-    def __init__(self, code, packet_id, authenticator, attributes):
-        self.code = code
+    def __init__(self, packet_id, authenticator, attributes):
         self.packet_id = packet_id
         self.authenticator = authenticator
         self.attributes = attributes
 
     @classmethod
-    def parse(cls, code, packet_id, request_authenticator, attributes):
-        return cls(code, packet_id, request_authenticator, attributes)
+    def parse(cls, packet_id, request_authenticator, attributes):
+        return cls(packet_id, request_authenticator, attributes)
 
     def pack(self):
-        header = struct.pack("!BBH16s", self.code, self.packet_id,
+        header = struct.pack("!BBH16s", self.CODE, self.packet_id,
                              RADIUS_HEADER_LENGTH + self.attributes.__len__(),
                              bytes.fromhex(self.authenticator))
         packed_attributes = self.attributes.pack()
@@ -109,7 +108,7 @@ class RadiusAttributesList(object):
             length = attr_length - Attribute.HEADER_SIZE
             packed_value = data[:attr_length - Attribute.HEADER_SIZE]
 
-            attribute = ATTRIBUTE_TYPES[type_].parse(type_, length, packed_value)
+            attribute = ATTRIBUTE_TYPES[type_].parse(length, packed_value)
 
             if attribute.DATA_TYPE.DATA_TYPE_VALUE == Concat.DATA_TYPE_VALUE:
                 if attribute.TYPE not in attributes_to_concat:
@@ -126,8 +125,7 @@ class RadiusAttributesList(object):
             concatenated_data = b""
             for d in list_:
                 concatenated_data += d.data_type.data
-            concatenated_attributes.append(ATTRIBUTE_TYPES[value].parse(value,
-                                                                        len(concatenated_data),
+            concatenated_attributes.append(ATTRIBUTE_TYPES[value].parse(len(concatenated_data),
                                                                         concatenated_data))
         # Remove old Attributes that were concatenated.
         for c in concatenated_attributes:
