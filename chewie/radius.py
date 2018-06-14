@@ -1,3 +1,4 @@
+import copy
 import hmac
 import struct
 
@@ -8,6 +9,12 @@ from chewie.radius_datatypes import Concat
 RADIUS_HEADER_LENGTH = 1 + 1 + 2 + 16
 
 PACKET_TYPE_PARSERS = {}
+
+
+class InvalidMessageAuthenticatorError(Exception):
+    """To be used when the Message-Authenticator hashes (received in packet, and calculated) do not match.
+    Received packets that throw this error should be 'siliently dropped' (logging is fine)."""
+    pass
 
 
 class Radius(object):
@@ -21,12 +28,14 @@ class Radius(object):
     STATUS_CLIENT = 13
 
     @staticmethod
-    def parse(packed_message):
+    def parse(packed_message, secret=None, request_authenticator=None):
         code, packet_id, length, authenticator = struct.unpack("!BBH16s", packed_message[:RADIUS_HEADER_LENGTH])
         authenticator = authenticator.hex()
         if code in PACKET_TYPE_PARSERS.keys():
-            return PACKET_TYPE_PARSERS[code](packet_id, authenticator,
+            radius_packet = PACKET_TYPE_PARSERS[code](packet_id, authenticator,
                                              RadiusAttributesList.parse(packed_message[RADIUS_HEADER_LENGTH:]))
+
+            return radius_packet.validate_packet(secret, request_authenticator=request_authenticator)
 
     def pack(self):
         pass
@@ -61,7 +70,7 @@ class RadiusPacket(Radius):
     def build(self, secret=None):
         """Only call this once, or else the MessageAuthenticator will not be zeros, resulting in the wrong hash"""
         if not self.packed:
-            self.packed = self.pack()
+            self.pack()
         try:
             position = self.attributes.index(MessageAuthenticator.DESCRIPTION) + \
                        RADIUS_HEADER_LENGTH + Attribute.HEADER_SIZE
@@ -75,6 +84,35 @@ class RadiusPacket(Radius):
             for i in range(16):
                 self.packed[i+position] = message_authenticator[i]
         return self.packed
+
+    def validate_packet(self, secret, request_authenticator=None):
+        """Calculates the message authenticator hash and compares with what was provided.
+        """
+
+        # Copy this packet so we can modify the 'Authenticator' and 'Message-Authenticator'
+        radius_packet = copy.deepcopy(self)
+        # get the Original Message Authenticator
+
+        message_authenticator = radius_packet.attributes.find(MessageAuthenticator.DESCRIPTION)
+        if not message_authenticator or not request_authenticator:
+            # no validation required.
+            return self
+        if not secret:
+            raise ValueError("secret cannot be None for hashing")
+
+        original_ma = message_authenticator.data_type.data
+        # Replace the Original Message Authenticator
+        message_authenticator.data_type.data = bytes.fromhex("00000000000000000000000000000000")
+        radius_packet.authenticator = request_authenticator
+        radius_packet.pack()
+
+        # calculate new hash message authenticator
+        new_ma = hmac.new(secret.encode(), radius_packet.packed, 'md5').digest()
+
+        # compare old and new message authenticator
+        if original_ma != new_ma:
+            raise InvalidMessageAuthenticatorError("Original Message-Authenticator: '%s', does not match calculated: '%s'", original_ma.hex(), new_ma.hex())
+        return self
 
 
 @register_packet_type_parser
@@ -118,34 +156,47 @@ class RadiusAttributesList(object):
         concatenated_attributes = []
         for value, list_ in attributes_to_concat.items():
             concatenated_data = b""
-            for d in list_:
+            for d, i in list_:
                 concatenated_data += d.data_type.data
-            concatenated_attributes.append(ATTRIBUTE_TYPES[value].parse(concatenated_data))
+            concatenated_attributes.append(tuple((ATTRIBUTE_TYPES[value].parse(concatenated_data), i)))
         # Remove old Attributes that were concatenated.
-        for c in concatenated_attributes:
-            attributes = [x for x in attributes if x.TYPE != c.TYPE]
-        attributes.extend(concatenated_attributes)
+        for ca, _ in concatenated_attributes:
+            attributes = [x for x in attributes if x.TYPE != ca.TYPE]
+
+        # need to put them back in the same position.
+        for ca, i in concatenated_attributes:
+            attributes.insert(i, ca)
+
         return attributes
 
     @classmethod
     def extract_attributes(cls, attributes, attributes_data, attributes_to_concat):
         total_length = len(attributes_data)
-        i = 0
-        while i < total_length:
-            type_, attr_length = struct.unpack("!BB", attributes_data[i:i + Attribute.HEADER_SIZE])
-            data = attributes_data[i + Attribute.HEADER_SIZE: i + attr_length]
+        pos = 0
+        index = -1
+        last_data_type_value = -1
+        while pos < total_length:
+            type_, attr_length = struct.unpack("!BB", attributes_data[pos:pos + Attribute.HEADER_SIZE])
+            data = attributes_data[pos + Attribute.HEADER_SIZE: pos + attr_length]
+            pos += attr_length
+
             packed_value = data[:attr_length - Attribute.HEADER_SIZE]
 
             attribute = ATTRIBUTE_TYPES[type_].parse(packed_value)
 
+            # keep track of where the concated AVP should be in the attributes list.
+            # required so the hashing gives correct hash.
+            if last_data_type_value != attribute.DATA_TYPE.DATA_TYPE_VALUE:
+                index += 1
+            last_data_type_value = attribute.DATA_TYPE.DATA_TYPE_VALUE
+
+
             if attribute.DATA_TYPE.DATA_TYPE_VALUE == Concat.DATA_TYPE_VALUE:
                 if attribute.TYPE not in attributes_to_concat:
                     attributes_to_concat[attribute.TYPE] = []
-                attributes_to_concat[attribute.TYPE].append(attribute)
+                attributes_to_concat[attribute.TYPE].append((attribute, index))
 
             attributes.append(attribute)
-
-            i = i + attr_length
 
     def find(self, item):
         for attr in self.attributes:
