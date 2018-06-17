@@ -1,0 +1,227 @@
+import copy
+import hmac
+import struct
+
+from chewie.radius_attributes import ATTRIBUTE_TYPES, Attribute, MessageAuthenticator
+from chewie.radius_datatypes import Concat
+
+
+RADIUS_HEADER_LENGTH = 1 + 1 + 2 + 16
+
+PACKET_TYPE_PARSERS = {}
+
+
+class InvalidMessageAuthenticatorError(Exception):
+    """To be used when the Message-Authenticator hashes (received in packet, and calculated) do not match.
+    Received packets that throw this error should be 'siliently dropped' (logging is fine)."""
+    pass
+
+
+class Radius(object):
+    ACCESS_REQUEST = 1
+    ACCESS_ACCEPT = 2
+    ACCESS_REJECT = 3
+    ACCOUNTING_REQUEST = 4
+    ACCOUNTING_RESPONSE = 5
+    ACCESS_CHALLENGE = 11
+    STATUS_SERVER = 12
+    STATUS_CLIENT = 13
+
+    @staticmethod
+    def parse(packed_message, secret=None, request_authenticator=None):
+        code, packet_id, length, authenticator = struct.unpack("!BBH16s", packed_message[:RADIUS_HEADER_LENGTH])
+        authenticator = authenticator.hex()
+        if code in PACKET_TYPE_PARSERS.keys():
+            radius_packet = PACKET_TYPE_PARSERS[code](packet_id, authenticator,
+                                             RadiusAttributesList.parse(packed_message[RADIUS_HEADER_LENGTH:]))
+
+            return radius_packet.validate_packet(secret, request_authenticator=request_authenticator)
+
+    def pack(self):
+        pass
+
+
+def register_packet_type_parser(cls):
+    PACKET_TYPE_PARSERS[cls.CODE] = cls.parse
+    return cls
+
+
+class RadiusPacket(Radius):
+    CODE = None
+    packed = None
+
+    def __init__(self, packet_id, authenticator, attributes):
+        self.packet_id = packet_id
+        self.authenticator = authenticator
+        self.attributes = attributes
+
+    @classmethod
+    def parse(cls, packet_id, request_authenticator, attributes):
+        return cls(packet_id, request_authenticator, attributes)
+
+    def pack(self):
+        header = struct.pack("!BBH16s", self.CODE, self.packet_id,
+                             RADIUS_HEADER_LENGTH + self.attributes.__len__(),
+                             bytes.fromhex(self.authenticator))
+        packed_attributes = self.attributes.pack()
+        self.packed = bytearray(header + packed_attributes)
+        return self.packed
+
+    def build(self, secret=None):
+        """Only call this once, or else the MessageAuthenticator will not be zeros, resulting in the wrong hash"""
+        if not self.packed:
+            self.pack()
+        try:
+            position = self.attributes.index(MessageAuthenticator.DESCRIPTION) + \
+                       RADIUS_HEADER_LENGTH + Attribute.HEADER_SIZE
+        except ValueError as e:
+            print(e.message)
+            return self.packed
+
+        if secret:
+            message_authenticator = bytearray(hmac.new(secret.encode(), self.packed, 'md5').digest())
+
+            for i in range(16):
+                self.packed[i+position] = message_authenticator[i]
+        return self.packed
+
+    def validate_packet(self, secret, request_authenticator=None):
+        """Calculates the message authenticator hash and compares with what was provided.
+        """
+
+        # Copy this packet so we can modify the 'Authenticator' and 'Message-Authenticator'
+        radius_packet = copy.deepcopy(self)
+        # get the Original Message Authenticator
+
+        message_authenticator = radius_packet.attributes.find(MessageAuthenticator.DESCRIPTION)
+        if not message_authenticator or not request_authenticator:
+            # no validation required.
+            return self
+        if not secret:
+            raise ValueError("secret cannot be None for hashing")
+
+        original_ma = message_authenticator.data_type.data
+        # Replace the Original Message Authenticator
+        message_authenticator.data_type.data = bytes.fromhex("00000000000000000000000000000000")
+        radius_packet.authenticator = request_authenticator
+        radius_packet.pack()
+
+        # calculate new hash message authenticator
+        new_ma = hmac.new(secret.encode(), radius_packet.packed, 'md5').digest()
+
+        # compare old and new message authenticator
+        if original_ma != new_ma:
+            raise InvalidMessageAuthenticatorError("Original Message-Authenticator: '%s', does not match calculated: '%s'", original_ma.hex(), new_ma.hex())
+        return self
+
+
+@register_packet_type_parser
+class RadiusAccessRequest(RadiusPacket):
+    CODE = Radius.ACCESS_REQUEST
+
+
+@register_packet_type_parser
+class RadiusAccessAccept(RadiusPacket):
+    CODE = Radius.ACCESS_ACCEPT
+
+
+@register_packet_type_parser
+class RadiusAccessReject(RadiusPacket):
+    CODE = Radius.ACCESS_REJECT
+
+
+@register_packet_type_parser
+class RadiusAccessChallenge(RadiusPacket):
+    CODE = Radius.ACCESS_CHALLENGE
+
+
+class RadiusAttributesList(object):
+
+    def __init__(self, attributes):
+        self.attributes = attributes
+
+    @classmethod
+    def parse(cls, attributes_data):
+        attributes = []
+        attributes_to_concat = {}
+        cls.extract_attributes(attributes, attributes_data, attributes_to_concat)
+
+        attributes = cls.merge_concat_attributes(attributes, attributes_to_concat)
+
+        return cls(attributes)
+
+    @classmethod
+    def merge_concat_attributes(cls, attributes, attributes_to_concat):
+        # Join Attributes that's datatype is Concat into one attribute.
+        concatenated_attributes = []
+        for value, list_ in attributes_to_concat.items():
+            concatenated_data = b""
+            for d, i in list_:
+                concatenated_data += d.data_type.data
+            concatenated_attributes.append(tuple((ATTRIBUTE_TYPES[value].parse(concatenated_data), i)))
+        # Remove old Attributes that were concatenated.
+        for ca, _ in concatenated_attributes:
+            attributes = [x for x in attributes if x.TYPE != ca.TYPE]
+
+        # need to put them back in the same position.
+        for ca, i in concatenated_attributes:
+            attributes.insert(i, ca)
+
+        return attributes
+
+    @classmethod
+    def extract_attributes(cls, attributes, attributes_data, attributes_to_concat):
+        total_length = len(attributes_data)
+        pos = 0
+        index = -1
+        last_data_type_value = -1
+        while pos < total_length:
+            type_, attr_length = struct.unpack("!BB", attributes_data[pos:pos + Attribute.HEADER_SIZE])
+            data = attributes_data[pos + Attribute.HEADER_SIZE: pos + attr_length]
+            pos += attr_length
+
+            packed_value = data[:attr_length - Attribute.HEADER_SIZE]
+
+            attribute = ATTRIBUTE_TYPES[type_].parse(packed_value)
+
+            # keep track of where the concated AVP should be in the attributes list.
+            # required so the hashing gives correct hash.
+            if last_data_type_value != attribute.DATA_TYPE.DATA_TYPE_VALUE:
+                index += 1
+            last_data_type_value = attribute.DATA_TYPE.DATA_TYPE_VALUE
+
+
+            if attribute.DATA_TYPE.DATA_TYPE_VALUE == Concat.DATA_TYPE_VALUE:
+                if attribute.TYPE not in attributes_to_concat:
+                    attributes_to_concat[attribute.TYPE] = []
+                attributes_to_concat[attribute.TYPE].append((attribute, index))
+
+            attributes.append(attribute)
+
+    def find(self, item):
+        for attr in self.attributes:
+            if item == attr.DESCRIPTION:
+                return attr
+        return None
+
+    def index(self, item):
+        i = 0
+        for attr in self.attributes:
+            if item == attr.DESCRIPTION:
+                break
+            i += attr.full_length()
+        else:
+            raise ValueError("Cannot find item: %s in attributes list" % item)
+        return i
+
+    def __len__(self):
+        total = 0
+        for attr in self.attributes:
+            total = total + attr.full_length()
+        return total
+
+    def pack(self):
+        packed_attributes = bytes()
+        for attr in self.attributes:
+            packed_attributes += attr.pack()
+        return packed_attributes
