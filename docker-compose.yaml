@@ -6,7 +6,7 @@ services:
             context: .
             dockerfile: Dockerfile.wpasupplicant
         image: 'chewie/wpasupplicant:latest'
-        command: bash -c "wpa_supplicant -dd -c /tmp/wpasupplicant.conf -i eth0 -D wired;"
+        command: bash -c "wpa_supplicant -dd -c/tmp/wpasupplicant.conf -ieth0 -Dwired;"
         networks:
             wpasupplicant-net:
                 ipv4_address: 172.23.0.111

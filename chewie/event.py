@@ -3,16 +3,26 @@ class Event(object):
     MESSAGE_RECEIVED = 2
     SHUTDOWN = 3
 
+
 class EventTimerExpired(Event):
     def __init__(self):
         # will work but please do this properly
         self.type = self.TIMER_EXPIRED
+
 
 class EventMessageReceived(Event):
     def __init__(self, message):
         # will work but please do this properly
         self.type = self.MESSAGE_RECEIVED
         self.message = message
+
+
+class EventRadiusMessageReceived(EventMessageReceived):
+
+    def __init__(self, message, state):
+        super().__init__(message)
+        self.state = state
+
 
 class EventShutdown(Event):
     def __init__(self):

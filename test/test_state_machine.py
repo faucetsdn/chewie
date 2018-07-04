@@ -10,11 +10,14 @@ from chewie.message_parser import IdentityMessage, Md5ChallengeMessage, EapolSta
 from chewie.event import EventMessageReceived
 from chewie.eap import Eap
 
+
 def txn_id_injector():
     return 123
 
+
 def challenge_injector(_):
     return build_byte_string("01234567890abcdef01234567890abcdef")
+
 
 def build_state_machine(src_mac):
     state_machine = StateMachine(src_mac)
@@ -22,6 +25,7 @@ def build_state_machine(src_mac):
     state_machine.challenge_method = challenge_injector
 
     return state_machine
+
 
 class StateMachineIdleTestCase(unittest.TestCase):
     def setUp(self):
@@ -34,6 +38,7 @@ class StateMachineIdleTestCase(unittest.TestCase):
         self.state_machine.event(EventMessageReceived(message))
         self.assertEqual(self.state_machine.state, "identity request sent")
         self.assertEqual(self.state_machine.output_messages.qsize(), 1)
+
 
 class StateMachineIdentitySentTestCase(unittest.TestCase):
     def setUp(self):
@@ -51,6 +56,7 @@ class StateMachineIdentitySentTestCase(unittest.TestCase):
         self.state_machine.event(EventMessageReceived(message))
         self.assertEqual(self.state_machine.state, "challenge sent")
         self.assertEqual(self.state_machine.output_messages.qsize(), 1)
+
 
 class StateMachineChallengeSentTestCase(unittest.TestCase):
     def setUp(self):

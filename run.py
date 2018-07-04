@@ -1,23 +1,18 @@
-import socket
-import struct
-from select import select
-from fcntl import ioctl
-from netils import build_byte_string
-
 from chewie.chewie import Chewie
+import chewie.utils as utils
 
-class Logger:
-    def info(self, message):
-        print("INFO: %s" % message)
-
-    def warning(self, message):
-        print("WARNING: %s" % message)
-
-def auth_handler(address, group_address):
-    print("Authed address %s on port %s" % (str(address), str(group_address)))
 
 credentials = {
     "user@example.com": "microphone"
 }
-chewie = Chewie("eth0", credentials, Logger(), auth_handler)
+
+
+def auth_handler(address, group_address):
+    print("Authed address %s on port %s" % (str(address), str(group_address)))
+
+
+logger = utils.get_logger("CHEWIE")
+logger.info('starting chewieeeee.')
+
+chewie = Chewie("eth1", credentials, logger, auth_handler, radius_ip="172.24.0.113")
 chewie.run()

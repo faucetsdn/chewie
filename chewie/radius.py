@@ -33,7 +33,7 @@ class Radius(object):
         authenticator = authenticator.hex()
         if code in PACKET_TYPE_PARSERS.keys():
             radius_packet = PACKET_TYPE_PARSERS[code](packet_id, authenticator,
-                                             RadiusAttributesList.parse(packed_message[RADIUS_HEADER_LENGTH:]))
+                                                      RadiusAttributesList.parse(packed_message[RADIUS_HEADER_LENGTH:]))
 
             return radius_packet.validate_packet(secret, request_authenticator=request_authenticator)
 
@@ -62,7 +62,7 @@ class RadiusPacket(Radius):
     def pack(self):
         header = struct.pack("!BBH16s", self.CODE, self.packet_id,
                              RADIUS_HEADER_LENGTH + self.attributes.__len__(),
-                             bytes.fromhex(self.authenticator))
+                             self.authenticator)
         packed_attributes = self.attributes.pack()
         self.packed = bytearray(header + packed_attributes)
         return self.packed
@@ -111,7 +111,9 @@ class RadiusPacket(Radius):
 
         # compare old and new message authenticator
         if original_ma != new_ma:
-            raise InvalidMessageAuthenticatorError("Original Message-Authenticator: '%s', does not match calculated: '%s'", original_ma.hex(), new_ma.hex())
+            raise InvalidMessageAuthenticatorError(
+                "Original Message-Authenticator: '%s', does not match calculated: '%s'",
+                original_ma.hex(), new_ma.hex())
         return self
 
 
@@ -189,7 +191,6 @@ class RadiusAttributesList(object):
             if last_data_type_value != attribute.DATA_TYPE.DATA_TYPE_VALUE:
                 index += 1
             last_data_type_value = attribute.DATA_TYPE.DATA_TYPE_VALUE
-
 
             if attribute.DATA_TYPE.DATA_TYPE_VALUE == Concat.DATA_TYPE_VALUE:
                 if attribute.TYPE not in attributes_to_concat:
