@@ -5,6 +5,7 @@ from fcntl import ioctl
 
 import struct
 
+from chewie.eap import Eap
 from chewie.eap_state_machine import FullEAPStateMachine
 from chewie.radius_attributes import EAPMessage, State
 from chewie.state_machine import StateMachine
@@ -127,8 +128,10 @@ class Chewie(object):
                 radius = MessageParser.radius_parse(packed_message)
                 self.logger.info("Received RADIUS message: %s", radius)
                 eap_msg = radius.attributes.find(EAPMessage.DESCRIPTION)
+                # TODO parse eap_msg (EAPMessage) into something else.
+                eap_msg = Eap.parse(eap_msg.data_type.data)
                 state = radius.attributes.find(State.DESCRIPTION)
-                self.logger.info("radius EAP(%d): %s", len(eap_msg.data_type.data), eap_msg.data_type.data)
+                self.logger.info("radius EAP: %s",  eap_msg)
                 event = EventRadiusMessageReceived(eap_msg, state)
                 # RADIUS Events can be Access-Accept, Access-Reject, Access-Challenge.
                 # For each event send the eap-message back to the supplicant.

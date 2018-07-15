@@ -81,7 +81,7 @@ class MPassthrough:
         return 1
 
     def getKey(self):
-        pass
+        return None
 
     def buildReq(self, current_id):
         return EapIdentity(Eap.REQUEST, current_id, "")
@@ -621,8 +621,8 @@ class FullEAPStateMachine:
             if isinstance(event, EventRadiusMessageReceived):
                 self.radius_state_attribute = event.state
                 self.aaaEapReq = True
-                self.aaaEapReqData = Eap.parse(event.message.data_type.data)
-                self.logger.info('sm ev.msg: %s', Eap.parse(event.message.data_type.data))
+                self.aaaEapReqData = event.message  #Eap.parse(event.message)
+                self.logger.info('sm ev.msg: %s', self.aaaEapReqData)
                 if isinstance(self.aaaEapReqData, EapSuccess):
                     self.logger.info("aaaSuccess")
                     self.aaaSuccess = True
