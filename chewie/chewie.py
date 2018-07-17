@@ -5,7 +5,6 @@ from fcntl import ioctl
 
 import struct
 
-from chewie.eap import Eap
 from chewie.eap_state_machine import FullEAPStateMachine
 from chewie.radius_attributes import EAPMessage, State
 from chewie.state_machine import StateMachine
@@ -128,15 +127,12 @@ class Chewie(object):
                 radius = MessageParser.radius_parse(packed_message)
                 self.logger.info("Received RADIUS message: %s", radius)
                 eap_msg = radius.attributes.find(EAPMessage.DESCRIPTION)
-                # TODO parse eap_msg (EAPMessage) into something else.
-                eap_msg = Eap.parse(eap_msg.data_type.data)
+                sm = self.get_state_machine_from_radius_packet_id(radius.packet_id)
+                src_mac = sm.src_mac
+                eap_msg = MessageParser.eap_parse(eap_msg.data_type.data, src_mac)
                 state = radius.attributes.find(State.DESCRIPTION)
                 self.logger.info("radius EAP: %s",  eap_msg)
                 event = EventRadiusMessageReceived(eap_msg, state)
-                # RADIUS Events can be Access-Accept, Access-Reject, Access-Challenge.
-                # For each event send the eap-message back to the supplicant.
-                # And maybe do something with it locally (accept-faucet acl)
-                sm = self.get_state_machine_from_radius_packet_id(radius.packet_id)
                 self.logger.warning('sm %s from packet_id %d', str(sm), radius.packet_id)
                 self.logger.warning('ev.msg %s', event.message)
                 sm.event(event)

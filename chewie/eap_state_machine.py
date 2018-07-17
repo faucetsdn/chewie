@@ -1,6 +1,6 @@
 """Loosely based on RFC4137 'EAP State Machines' with some interpretation"""
 
-from chewie.eap import Eap, EapIdentity, EapSuccess, EapFailure
+from chewie.eap import Eap
 from chewie.event import EventMessageReceived, EventRadiusMessageReceived
 from chewie.message_parser import SuccessMessage, FailureMessage, EapolStartMessage, IdentityMessage
 import chewie.utils as utils
@@ -84,7 +84,8 @@ class MPassthrough:
         return None
 
     def buildReq(self, current_id):
-        return EapIdentity(Eap.REQUEST, current_id, "")
+        # todo change this to identitymessage.
+        return IdentityMessage(self.src_mac, current_id, Eap.REQUEST, "")
 
 
 class FullEAPStateMachine:
@@ -190,7 +191,7 @@ class FullEAPStateMachine:
     def getId(self):
         """Determines the identifier value chosen by the AAA server for the current EAP request.
          The return value is an integer."""
-        return self.eapReqData.packet_id
+        return self.eapReqData.message_id
 
     def calculateTimeout(self):
         """https: // tools.ietf.org / html / rfc3748  # section-4"""
@@ -201,11 +202,7 @@ class FullEAPStateMachine:
         eap = self.eapRespData
         respMethod = None
 
-        # TODO sort this so packets are only of the one parent type. Message or Eap
-        if isinstance(eap, Eap):
-            _id = eap.packet_id
-        else:
-            _id = eap.message_id
+        _id = eap.message_id
 
         self.logger.info("parseEapResp eap was: %s" % eap)
         if isinstance(eap, IdentityMessage):
@@ -587,17 +584,15 @@ class FullEAPStateMachine:
                 self.currentState = FullEAPStateMachine.AAA_IDLE
 
     def event(self, event):
-        """
-        :param event: Eap message, or EAP Start
-        :return:
+        """Processes an event.
+        Event should have message attribute which is of the ***Message types (e.g. SuccessMessage, IdentityMessage,...)
+        Output is via the eap/radius queue. and again will be of type ***Message.
         """
 
-        # TODO want input/output to be either ***Message (IdentityMessage) OR Eap*** (EapIdentity).
         self.logger.info("full state machine received event")
         # 'Lower Layer' shim
         if isinstance(event, EventMessageReceived):
-            self.logger.info('type: %s', type(event.message))
-            self.logger.info('message: %s', event.message)
+            self.logger.info('type: %s, message %s', type(event.message), event.message)
             if isinstance(event.message, EapolStartMessage):
                 self.eapRestart = True
             if not isinstance(event, EventRadiusMessageReceived):
@@ -621,12 +616,12 @@ class FullEAPStateMachine:
             if isinstance(event, EventRadiusMessageReceived):
                 self.radius_state_attribute = event.state
                 self.aaaEapReq = True
-                self.aaaEapReqData = event.message  #Eap.parse(event.message)
+                self.aaaEapReqData = event.message
                 self.logger.info('sm ev.msg: %s', self.aaaEapReqData)
-                if isinstance(self.aaaEapReqData, EapSuccess):
+                if isinstance(self.aaaEapReqData, SuccessMessage):
                     self.logger.info("aaaSuccess")
                     self.aaaSuccess = True
-                if isinstance(self.aaaEapReqData, EapFailure):
+                if isinstance(self.aaaEapReqData, FailureMessage):
                     self.logger.info("aaaFail")
                     self.aaaFail = True
             else:
@@ -638,7 +633,7 @@ class FullEAPStateMachine:
 
         if self.eapReq:
             if (hasattr(self.eapReqData, 'code') and self.eapReqData.code == Eap.REQUEST)\
-                    or isinstance(self.eapReqData, EapSuccess) or isinstance(self.eapReqData, EapFailure):
+                    or isinstance(self.eapReqData, SuccessMessage) or isinstance(self.eapReqData, FailureMessage):
                 self.logger.warning("eapReqData: %s %s", type(self.eapReqData), self.eapReqData)
                 self.eap_output_messages.put((self.eapReqData, self.src_mac))
             else:

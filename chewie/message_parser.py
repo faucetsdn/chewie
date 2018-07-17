@@ -112,19 +112,11 @@ AUTH_8021X_MESSAGES = {
 
 class MessageParser:
     @staticmethod
-    def eap_parse(data, src_mac):
+    def one_x_parse(data, src_mac):
+        """Parses the 1x header (version and packet type) part of the packet, and the payload."""
         auth_8021x = Auth8021x.parse(data)
         if auth_8021x.packet_type == 0:
-            eap = Eap.parse(auth_8021x.data)
-            if isinstance(eap, EapIdentity) or isinstance(eap, EapMd5Challenge) \
-                    or isinstance(eap, EapLegacyNak) or isinstance(eap, EapTTLS):
-                return EAP_MESSAGES[eap.PACKET_TYPE].build(src_mac, eap)
-            elif isinstance(eap, EapSuccess):
-                return SuccessMessage.build(src_mac, eap)
-            elif isinstance(eap, EapFailure):
-                return FailureMessage.build(src_mac, eap)
-            else:
-                raise ValueError("Got bad Eap packet: %s" % eap)
+            return MessageParser.eap_parse(auth_8021x.data, src_mac)
         elif auth_8021x.packet_type == 1:
             return EapolStartMessage.build(src_mac)
         elif auth_8021x.packet_type == 2:
@@ -132,12 +124,27 @@ class MessageParser:
         raise ValueError("802.1x has bad type, expected 0: %s" % auth_8021x)
 
     @staticmethod
+    def eap_parse(data, src_mac):
+        """Parses the actual EAP payload"""
+        eap = Eap.parse(data)
+        if isinstance(eap, EapIdentity) or isinstance(eap, EapMd5Challenge) \
+                or isinstance(eap, EapLegacyNak) or isinstance(eap, EapTTLS):
+            return EAP_MESSAGES[eap.PACKET_TYPE].build(src_mac, eap)
+        elif isinstance(eap, EapSuccess):
+            return SuccessMessage.build(src_mac, eap)
+        elif isinstance(eap, EapFailure):
+            return FailureMessage.build(src_mac, eap)
+        else:
+            raise ValueError("Got bad Eap packet: %s" % eap)
+
+    @staticmethod
     def ethernet_parse(packed_message):
+        """Parses the ethernet header part, and payload"""
         ethernet_packet = EthernetPacket.parse(packed_message)
         if ethernet_packet.ethertype != 0x888e:
             raise ValueError("Ethernet packet with bad ethertype received: %s" % ethernet_packet)
 
-        return MessageParser.eap_parse(ethernet_packet.data, ethernet_packet.src_mac)
+        return MessageParser.one_x_parse(ethernet_packet.data, ethernet_packet.src_mac)
 
     @staticmethod
     def radius_parse(packed_message):
