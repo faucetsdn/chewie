@@ -1,7 +1,8 @@
 """Loosely based on RFC4137 'EAP State Machines' with some interpretation"""
+import random
 
 from chewie.eap import Eap
-from chewie.event import EventMessageReceived, EventRadiusMessageReceived
+from chewie.event import EventMessageReceived, EventRadiusMessageReceived, EventTimerExpired
 from chewie.message_parser import SuccessMessage, FailureMessage, EapolStartMessage, IdentityMessage
 import chewie.utils as utils
 from chewie.utils import log_method
@@ -22,7 +23,7 @@ class Policy:
         # TODO if not offloading return success/failure/Continue
         # if eap start return continue (this is currently short circuited in event())
 
-        if isinstance(eapRespData, EapolStartMessage):
+        if eapRespData is None or isinstance(eapRespData, EapolStartMessage):
             return Decision.CONTINUE
         return Decision.PASSTHROUGH
 
@@ -62,6 +63,7 @@ class MPassthrough:
         :param eapRespData:
         :return: True if packet should be ignored. otherwise False if packet is good.
         """
+        # TODO if packet is not the one we're expecting ignore it.
         return False
 
     def process(self, eapRespData):
@@ -89,15 +91,15 @@ class MPassthrough:
 
 
 class FullEAPStateMachine:
-    # TODO also do retransmit if no reply received within the timeout value.
-    # e.g. if packet lost.
-    # maybe have a timer thread/queue and put SM on there?
 
     # non RFC 4137 variables/CONSTANTs
     currentState = None
     eap_output_messages = None
     src_mac = None
     radius_state_attribute = None  # the last state from radius server
+    sent_count = 0
+
+    DEFAULT_TIMEOUT = 5  # Number of Seconds
 
     NO_STATE = "NO_STATE"
     DISABLED = "DISABLED"
@@ -176,10 +178,11 @@ class FullEAPStateMachine:
     eapKeyData = None   # EAP Key
     eapKeyAvailable = None  # bool
 
-    def __init__(self, eap_output_queue, radius_output_queue, src_mac):
+    def __init__(self, eap_output_queue, radius_output_queue, src_mac, timer_scheduler):
         self.eap_output_messages = eap_output_queue
         self.radius_output_messages = radius_output_queue
         self.src_mac = src_mac
+        self.timer_scheduler = timer_scheduler
 
         self.currentState = FullEAPStateMachine.NO_STATE
         # TODO dynamically assign this or make a way to give it multiple methods and self.m is the one currently in use.
@@ -194,9 +197,11 @@ class FullEAPStateMachine:
         return self.eapReqData.message_id
 
     def calculateTimeout(self):
-        """https: // tools.ietf.org / html / rfc3748  # section-4"""
+        """https: // tools.ietf.org / html / rfc3748  # section-4
+        Returns:
+            Milliseconds"""
         # TODO actually implement.
-        return 1
+        return self.DEFAULT_TIMEOUT
 
     def parseEapResp(self):
         eap = self.eapRespData
@@ -204,7 +209,6 @@ class FullEAPStateMachine:
 
         _id = eap.message_id
 
-        self.logger.info("parseEapResp eap was: %s" % eap)
         if isinstance(eap, IdentityMessage):
             respMethod = MethodState.IDENTITY
 
@@ -221,9 +225,11 @@ class FullEAPStateMachine:
     def nextId(self):
         """Determines the next identifier value to use, based on the previous one. Returns integer"""
         if self.currentId is None:
-            # todo should this be random?
-            return 1
+            # I'm assuming we cant have ids wrap around in the same series.
+            #  so the 200 provides a large buffer.
+            return random.randint(0, 200)
         else:
+            # TODO what about overflow?
             return self.currentId + 1
 
     @log_method
@@ -445,8 +451,15 @@ class FullEAPStateMachine:
                     self.propose_method_state()
                     self.currentState = FullEAPStateMachine.PROPOSE_METHOD
 
-            if self.currentState == FullEAPStateMachine.FAILURE or \
-                    self.currentState == FullEAPStateMachine.SUCCESS:
+            if self.currentState == FullEAPStateMachine.FAILURE:
+                # Do nothing.
+                pass
+
+            if self.currentState == FullEAPStateMachine.SUCCESS:
+                # Do nothing.
+                pass
+
+            if self.currentState == FullEAPStateMachine.TIMEOUT_FAILURE:
                 # Do nothing.
                 pass
 
@@ -478,8 +491,8 @@ class FullEAPStateMachine:
                     self.currentState = FullEAPStateMachine.IDLE
 
             if self.currentState == FullEAPStateMachine.RECEIVED:
-                self.logger.warning("RECEIVED- rxResp: %s, respId: %d, respMethod: %s", rxResp, respId, respMethod)
-                self.logger.warning("RECIEVED- currentId: %d, currentMethod: %s, methodState: %s",
+                self.logger.debug("RECEIVED- rxResp: %s, respId: %d, respMethod: %s", rxResp, respId, respMethod)
+                self.logger.debug("RECIEVED- currentId: %d, currentMethod: %s, methodState: %s",
                                     self.currentId, self.currentMethod, self.methodState)
                 if rxResp and respId == self.currentId \
                         and (respMethod == MethodState.NAK
@@ -583,6 +596,18 @@ class FullEAPStateMachine:
                 self.aaa_idle_state()
                 self.currentState = FullEAPStateMachine.AAA_IDLE
 
+            if self.currentState == FullEAPStateMachine.FAILURE2:
+                # Do nothing.
+                pass
+
+            if self.currentState == FullEAPStateMachine.SUCCESS2:
+                # Do nothing.
+                pass
+
+            if self.currentState == FullEAPStateMachine.TIMEOUT_FAILURE2:
+                # Do nothing.
+                pass
+
     def event(self, event):
         """Processes an event.
         Event should have message attribute which is of the ***Message types (e.g. SuccessMessage, IdentityMessage,...)
@@ -590,6 +615,7 @@ class FullEAPStateMachine:
         """
 
         self.logger.info("full state machine received event")
+        # TODO provide an event mechanism for setting portEnabled.
         # 'Lower Layer' shim
         if isinstance(event, EventMessageReceived):
             self.logger.info('type: %s, message %s', type(event.message), event.message)
@@ -627,29 +653,51 @@ class FullEAPStateMachine:
             else:
                 self.aaaEapReq = False
 
-            self.handle_message_received()
+        elif isinstance(event, EventTimerExpired):
+            self.logger.info("Expired Timer Event Received")
+            if self.sent_count == event.sent_count:
+                self.logger.debug("processing timer event. haven't received a reply. %s %s", self.sent_count, event.sent_count)
 
+                if self.currentState == self.AAA_IDLE:
+                    self.aaaTimeout = True
+                if self.currentState == self.IDLE2 or self.currentState == self.IDLE:
+                    self.retransWhile = 0
+            else:
+                self.logger.debug("ignoring timer event, already received a reply.")
+                return
+
+        self.handle_message_received()
         self.logger.info('end state: %s', self.currentState)
 
         if self.eapReq:
-            if (hasattr(self.eapReqData, 'code') and self.eapReqData.code == Eap.REQUEST)\
+            if (hasattr(self.eapReqData, 'code') and self.eapReqData.code == Eap.REQUEST) \
                     or isinstance(self.eapReqData, SuccessMessage) or isinstance(self.eapReqData, FailureMessage):
-                self.logger.warning("eapReqData: %s %s", type(self.eapReqData), self.eapReqData)
                 self.eap_output_messages.put((self.eapReqData, self.src_mac))
+                self.sent_count += 1
+                self.set_timer()
             else:
                 self.logger.error('cant find code --- %s', self.eapReqData)
             self.eapReq = False
 
         if self.aaaEapResp and self.aaaEapRespData:
             if self.aaaEapRespData.code == Eap.RESPONSE:
-                self.logger.warning("aaaEapRespData: %s %s", type(self.aaaEapRespData), self.aaaEapRespData)
                 self.radius_output_messages.put((self.aaaEapRespData, self.src_mac,
                                                  self.aaaIdentity.identity, self.radius_state_attribute))
+                self.sent_count += 1
+                self.set_timer()
             self.aaaEapResp = False
         elif self.aaaEapResp:
-            self.logger.warning("aaaEapResp is true. but data is false")
+            self.logger.error("aaaEapResp is true. but data is false. This should never happen")
 
         if self.eapSuccess:
             self.logger.info('Yay authentication successful %s %s', self.src_mac, self.aaaIdentity.identity)
         if self.eapFail:
             self.logger.info('oh authentication not successful %s', self.src_mac)
+
+    def set_timer(self):
+        if self.currentState != self.SUCCESS and self.currentState != self.SUCCESS2 \
+                and self.currentState != self.FAILURE and self.currentState != self.FAILURE2 \
+                and self.currentState != self.TIMEOUT_FAILURE and self.currentState != self.TIMEOUT_FAILURE2:
+            timeout = self.retransWhile
+            self.timer_scheduler.enter(timeout, 10, self.event, argument=[EventTimerExpired(self, self.sent_count)])
+            # TODO could cancel the scheduled events when they're no longer needed (response received)

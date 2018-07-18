@@ -5,9 +5,11 @@ class Event(object):
 
 
 class EventTimerExpired(Event):
-    def __init__(self):
+    def __init__(self, state_machine=None, sent_count=None):
         # will work but please do this properly
         self.type = self.TIMER_EXPIRED
+        self.state_machine = state_machine
+        self.sent_count = sent_count
 
 
 class EventMessageReceived(Event):

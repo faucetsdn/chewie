@@ -1,3 +1,6 @@
+import sched
+import time
+
 from eventlet import sleep, GreenPool
 from eventlet.green import socket
 from eventlet.queue import Queue
@@ -47,6 +50,8 @@ class Chewie(object):
         self.eap_output_messages = Queue()
         self.radius_output_messages = Queue()
 
+        self.timer_scheduler = sched.scheduler(time.time, sleep)
+
         self.radius_id = -1
 
     def run(self):
@@ -66,6 +71,9 @@ class Chewie(object):
 
         self.eventlets.append(self.pool.spawn(self.send_radius_messages))
         self.eventlets.append(self.pool.spawn(self.receive_radius_messages))
+
+        self.eventlets.append(self.pool.spawn(self.timer_messages))
+
         self.pool.waitall()
 
     def auth_success(self, src_mac):
@@ -104,14 +112,16 @@ class Chewie(object):
             while True:
                 sleep(0)
                 eap_message, src_mac, username, state = self.radius_output_messages.get()
-                self.logger.info("got radius to send.. mac: %s %s, username: %s", type(src_mac), src_mac, username)
+                self.logger.info("got eap to send to radius.. mac: %s %s, username: %s", type(src_mac), src_mac, username)
+                state_dict = None
+                if state:
+                    state_dict = state.__dict__
+                self.logger.info("Sending to RADIUS eap message %s with state %s", eap_message.__dict__, state_dict)
                 radius_packet_id = self.get_next_radius_packet_id()
                 self.packet_id_to_mac[radius_packet_id] = src_mac
                 # message is eap. needs to be wrapped into a radius packet.
-                self.logger.info("Sending RADIUS message %s with state %s", eap_message, state)
                 data = MessagePacker.radius_pack(eap_message, src_mac, username,
                                                  radius_packet_id, state, self.radius_secret)
-                self.logger.warning("sending data: %s", data)
                 self.radius_socket.sendto(data, (self.radius_ip, self.RADIUS_UDP_PORT))
                 self.logger.info("sent radius message.")
         except Exception as e:
@@ -123,7 +133,6 @@ class Chewie(object):
                 sleep(0)
                 self.logger.info("waiting for radius.")
                 packed_message = self.radius_socket.recv(4096)
-                self.logger.info("got radius. parsing....")
                 radius = MessageParser.radius_parse(packed_message)
                 self.logger.info("Received RADIUS message: %s", radius)
                 eap_msg = radius.attributes.find(EAPMessage.DESCRIPTION)
@@ -133,9 +142,19 @@ class Chewie(object):
                 state = radius.attributes.find(State.DESCRIPTION)
                 self.logger.info("radius EAP: %s",  eap_msg)
                 event = EventRadiusMessageReceived(eap_msg, state)
-                self.logger.warning('sm %s from packet_id %d', str(sm), radius.packet_id)
-                self.logger.warning('ev.msg %s', event.message)
                 sm.event(event)
+        except Exception as e:
+            self.logger.exception(e)
+
+    def timer_messages(self):
+        def scheduler_done():
+            self.logger.info("scheduler has processed it's last job.")
+        try:
+            while True:
+                # TODO how else could this be made to never end?
+                self.timer_scheduler.enter(999999, 99, scheduler_done)
+                self.timer_scheduler.run()
+                self.logger.info("scheduler completed")
         except Exception as e:
             self.logger.exception(e)
 
@@ -180,7 +199,7 @@ class Chewie(object):
     def get_state_machine(self, src_mac):
         sm = self.state_machines.get(src_mac, None)
         if not sm:
-            sm = FullEAPStateMachine(self.eap_output_messages, self.radius_output_messages, src_mac)
+            sm = FullEAPStateMachine(self.eap_output_messages, self.radius_output_messages, src_mac, self.timer_scheduler)
             sm.eapRestart = True
             # TODO what if port is not actually enabled, but then how did they auth?
             sm.portEnabled = True

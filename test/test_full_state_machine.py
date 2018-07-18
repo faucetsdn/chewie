@@ -1,4 +1,5 @@
-
+import sched
+import time
 from queue import Queue
 import unittest
 
@@ -13,12 +14,19 @@ from chewie.event import EventMessageReceived, EventRadiusMessageReceived
 
 
 class FullStateMachineStartTestCase(unittest.TestCase):
+    # TODO tests could be more thorough, and test that
+    # the correct packet (type/content) has been put in its respective queue
 
     def setUp(self):
         self.eap_output_queue = Queue()
         self.radius_output_queue = Queue()
+        self.timer_scheduler = sched.scheduler(time.time, time.sleep)
         self.src_mac = MacAddress.from_string("00:12:34:56:78:90")
-        self.sm = FullEAPStateMachine(self.eap_output_queue, self.radius_output_queue, self.src_mac)
+        self.sm = FullEAPStateMachine(self.eap_output_queue, self.radius_output_queue,
+                                      self.src_mac, self.timer_scheduler)
+        self.MAX_RETRANSMITS = 3
+        self.sm.MAX_RETRANS = self.MAX_RETRANSMITS
+        self.sm.DEFAULT_TIMEOUT = 0.01
         self.sm.portEnabled = True
         self.sm.eapRestart = True
 
@@ -34,11 +42,75 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.assertIsInstance(output, IdentityMessage)
         self.assertEqual(self.radius_output_queue.qsize(), 0)
 
+    def test_timeout_failure_from_max_retransmits(self):
+        """Go to timeout failure from exceeding max retransmits (also tests retransmitting)"""
+        self.test_eap_start()
+
+        old_radius_count = self.radius_output_queue.qsize()
+        self.timer_scheduler.run()
+
+        output0 = self.eap_output_queue.queue[0][0]
+        output1 = self.eap_output_queue.queue[1][0]
+        output2 = self.eap_output_queue.queue[2][0]
+        self.assertIsInstance(output0, IdentityMessage)
+        self.assertIsInstance(output1, IdentityMessage)
+        self.assertEqual(output0, output1)
+        self.assertEqual(output0, output2)
+        self.assertEqual(self.radius_output_queue.qsize(), 0)
+
+        self.assertEqual(self.sm.currentState, self.sm.TIMEOUT_FAILURE)
+        self.assertEqual(self.MAX_RETRANSMITS, self.eap_output_queue.qsize())
+        self.assertEqual(old_radius_count, self.radius_output_queue.qsize())
+
+    def test_timeout_failure2_from_aaa_timeout(self):
+        """no response from AAA server equals timeout_failure2"""
+        self.test_md5_challenge_response()
+        old_eap_count = self.eap_output_queue.qsize()
+        old_radius_count = self.radius_output_queue.qsize()
+
+        self.timer_scheduler.run()
+
+        self.assertEqual(self.sm.currentState, self.sm.TIMEOUT_FAILURE2)
+        self.assertEqual(old_eap_count, self.eap_output_queue.qsize())
+        self.assertEqual(old_radius_count, self.radius_output_queue.qsize())
+
+    def test_timeout_failure2_from_max_retransmits(self):
+        """If client does not respond when in passthrough mode,
+         send again and again until max retransmit counter is reached."""
+        self.test_md5_challenge_request()
+        self.eap_output_queue.queue.clear()
+        old_radius_count = self.radius_output_queue.qsize()
+
+        self.timer_scheduler.run()
+
+        self.assertEqual(self.sm.currentState, self.sm.TIMEOUT_FAILURE2)
+        self.assertEqual(self.MAX_RETRANSMITS, self.eap_output_queue.qsize())
+        self.assertEqual(old_radius_count, self.radius_output_queue.qsize())
+
+    def test_disabled_state(self):
+        """move to disabled and then from disabled"""
+        self.test_eap_start()
+        self.sm.portEnabled = False
+        self.sm.event(EventMessageReceived(None))
+        self.assertEqual(self.sm.currentState, self.sm.DISABLED)
+
+        self.assertEqual(self.eap_output_queue.qsize(), 1)
+        self.assertEqual(self.radius_output_queue.qsize(), 0)
+
+        self.sm.portEnabled = True
+        self.sm.event(EventMessageReceived(None))
+
+        self.assertEqual(self.sm.currentState, self.sm.IDLE)
+
+        self.assertEqual(self.eap_output_queue.qsize(), 2)
+        self.assertEqual(self.radius_output_queue.qsize(), 0)
+
     def test_identity_response(self):
         self.test_eap_start()
         # input EapIdentityResponse
         # output EapIdentityResponse on radius_output_q
-        message = IdentityMessage(self.src_mac, 1, Eap.RESPONSE, "host1user")
+        _id = self.eap_output_queue.queue[0][0].message_id
+        message = IdentityMessage(self.src_mac, _id, Eap.RESPONSE, "host1user")
         self.sm.event(EventMessageReceived(message))
         self.assertEqual(self.sm.currentState, self.sm.AAA_IDLE)
 
