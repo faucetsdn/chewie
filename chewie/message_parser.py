@@ -165,16 +165,17 @@ class MessagePacker:
 
     @staticmethod
     def radius_pack(eap_message, src_mac, username, radius_packet_id, state, secret):
-        _, _, packed_eap = MessagePacker.eap_pack(eap_message)
         attr_list = list()
         attr_list.append(UserName.parse(username.encode()))
+        # TODO (re)move these hardcoded attributes. ideally user configurable.
         attr_list.append(CalledStationId.parse("44-44-44-44-44-44:".encode()))
-        attr_list.append(NASPortType.parse(bytes.fromhex("00000013")))
+        attr_list.append(NASPortType.parse((15).to_bytes(4, "big")))
         attr_list.append(ServiceType.parse(bytes.fromhex("00000002")))
         attr_list.append(CallingStationId(Text(str(src_mac.address))))
         attr_list.append(FramedMTU.parse(bytes.fromhex("00000578")))
 
-        # TODO could this not be just eap_message
+        # TODO could we remove the 'pack then parse'?
+        _, _, packed_eap = MessagePacker.eap_pack(eap_message)
         attr_list.append(EAPMessage.parse(packed_eap))
 
         if state:
