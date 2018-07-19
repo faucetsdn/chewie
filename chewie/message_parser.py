@@ -1,8 +1,7 @@
 import os
 
 from chewie.radius import RadiusAttributesList, RadiusAccessRequest, Radius
-from chewie.radius_attributes import FramedMTU, CallingStationId, ServiceType, NASPortType, CalledStationId, UserName, \
-    MessageAuthenticator, EAPMessage
+from chewie.radius_attributes import CallingStationId, UserName, MessageAuthenticator, EAPMessage
 from .ethernet_packet import EthernetPacket
 from .auth_8021x import Auth8021x
 from .eap import Eap, EapIdentity, EapMd5Challenge, EapSuccess, EapFailure, EapLegacyNak, EapTTLS
@@ -163,15 +162,15 @@ class MessagePacker:
         return ethernet_packet.pack()
 
     @staticmethod
-    def radius_pack(eap_message, src_mac, username, radius_packet_id, state, secret):
-        attr_list = list()
+    def radius_pack(eap_message, src_mac, username, radius_packet_id, state, secret, extra_attributes=None):
+        if extra_attributes:
+            extra_attributes = []
+
+        attr_list = []
         attr_list.append(UserName.create(username))
-        # TODO (re)move these hardcoded attributes. ideally user configurable.
-        attr_list.append(CalledStationId.create("44-44-44-44-44-44:"))
-        attr_list.append(NASPortType.create(15))
-        attr_list.append(ServiceType.create(2))
         attr_list.append(CallingStationId.create(str(src_mac)))
-        attr_list.append(FramedMTU.create(1400))
+
+        attr_list.extend(extra_attributes)
 
         # TODO could we remove the 'eap_pack then parse'?
         _, _, packed_eap = MessagePacker.eap_pack(eap_message)

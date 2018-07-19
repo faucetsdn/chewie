@@ -9,8 +9,7 @@ from fcntl import ioctl
 import struct
 
 from chewie.eap_state_machine import FullEAPStateMachine
-from chewie.radius_attributes import EAPMessage, State
-from chewie.state_machine import StateMachine
+from chewie.radius_attributes import EAPMessage, State, CalledStationId, NASPortType
 
 from .message_parser import MessageParser, MessagePacker
 from .mac_address import MacAddress
@@ -43,6 +42,9 @@ class Chewie(object):
         self.radius_ip = radius_ip
         self.radius_secret = "SECRET"
         self.radius_listen_port = 0
+
+        self.chewie_id = "44-44-44-44-44-44:"  # used by the RADIUS Attribute 'Called-Station' in Access-Request
+        self.extra_radius_request_attributes = self.prepare_extra_radius_attributes()
 
         self.state_machines = {}  # mac: sm
         self.packet_id_to_mac = {}  # radius_packet_id: mac
@@ -120,8 +122,8 @@ class Chewie(object):
                 radius_packet_id = self.get_next_radius_packet_id()
                 self.packet_id_to_mac[radius_packet_id] = src_mac
                 # message is eap. needs to be wrapped into a radius packet.
-                data = MessagePacker.radius_pack(eap_message, src_mac, username,
-                                                 radius_packet_id, state, self.radius_secret)
+                data = MessagePacker.radius_pack(eap_message, src_mac, username, radius_packet_id, state,
+                                                 self.radius_secret, self.extra_radius_request_attributes)
                 self.radius_socket.sendto(data, (self.radius_ip, self.RADIUS_UDP_PORT))
                 self.logger.info("sent radius message.")
         except Exception as e:
@@ -167,8 +169,9 @@ class Chewie(object):
         self.socket = socket.socket(socket.PF_PACKET, socket.SOCK_RAW, socket.htons(0x888e))
         self.socket.bind((self.interface_name, 0))
 
-    def build_state_machine(self):
-        self.state_machine = StateMachine(self.interface_address, self.auth_success)
+    def prepare_extra_radius_attributes(self):
+        attr_list = [CalledStationId.create(self.chewie_id), NASPortType.create(15)]
+        return attr_list
 
     def get_interface_info(self):
         self.get_interface_address()

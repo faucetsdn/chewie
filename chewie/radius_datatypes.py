@@ -70,12 +70,9 @@ class Integer(DataType):
                 raise ValueError("Integer must be >= 0  and <= 2^32-1, was %d", raw_data)
         self._data = data
 
-
     @classmethod
     def parse(cls, packed_value):
-        # TODO should possibly pad values that are too small
         cls.is_valid_length(packed_value)
-
         return cls(struct.unpack("!I", packed_value)[0])
 
     def pack(self, attribute_type):
@@ -102,7 +99,6 @@ class Enum(DataType):
 
     @classmethod
     def parse(cls, packed_value):
-        # TODO should possibly pad values that are too small
         cls.is_valid_length(packed_value)
         return cls(struct.unpack("!I", packed_value)[0])
 
@@ -139,7 +135,7 @@ class Text(DataType):
 
 
 class String(DataType):
-    # TODO how is this different from Text?? - text is utf8
+    # how is this different from Text?? - text is utf8
     DATA_TYPE_VALUE = 5
 
     def __init__(self, data=None, raw_data=None):
