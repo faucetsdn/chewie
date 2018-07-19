@@ -100,9 +100,9 @@ class RadiusPacket(Radius):
         if not secret:
             raise ValueError("secret cannot be None for hashing")
 
-        original_ma = message_authenticator.data_type.data
+        original_ma = message_authenticator.data_type._data
         # Replace the Original Message Authenticator
-        message_authenticator.data_type.data = bytes.fromhex("00000000000000000000000000000000")
+        message_authenticator.data_type._data = bytes.fromhex("00000000000000000000000000000000")
         radius_packet.authenticator = request_authenticator
         radius_packet.pack()
 
@@ -159,7 +159,7 @@ class RadiusAttributesList(object):
         for value, list_ in attributes_to_concat.items():
             concatenated_data = b""
             for d, i in list_:
-                concatenated_data += d.data_type.data
+                concatenated_data += d.data_type._data
             concatenated_attributes.append(tuple((ATTRIBUTE_TYPES[value].parse(concatenated_data), i)))
         # Remove old Attributes that were concatenated.
         for ca, _ in concatenated_attributes:

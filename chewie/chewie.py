@@ -138,7 +138,7 @@ class Chewie(object):
                 eap_msg = radius.attributes.find(EAPMessage.DESCRIPTION)
                 sm = self.get_state_machine_from_radius_packet_id(radius.packet_id)
                 src_mac = sm.src_mac
-                eap_msg = MessageParser.eap_parse(eap_msg.data_type.data, src_mac)
+                eap_msg = MessageParser.eap_parse(eap_msg.data_type.data(), src_mac)
                 state = radius.attributes.find(State.DESCRIPTION)
                 self.logger.info("radius EAP: %s",  eap_msg)
                 event = EventRadiusMessageReceived(eap_msg, state)

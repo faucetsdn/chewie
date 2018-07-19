@@ -3,7 +3,6 @@ import os
 from chewie.radius import RadiusAttributesList, RadiusAccessRequest, Radius
 from chewie.radius_attributes import FramedMTU, CallingStationId, ServiceType, NASPortType, CalledStationId, UserName, \
     MessageAuthenticator, EAPMessage
-from chewie.radius_datatypes import Text
 from .ethernet_packet import EthernetPacket
 from .auth_8021x import Auth8021x
 from .eap import Eap, EapIdentity, EapMd5Challenge, EapSuccess, EapFailure, EapLegacyNak, EapTTLS
@@ -166,22 +165,23 @@ class MessagePacker:
     @staticmethod
     def radius_pack(eap_message, src_mac, username, radius_packet_id, state, secret):
         attr_list = list()
-        attr_list.append(UserName.parse(username.encode()))
+        attr_list.append(UserName.create(username))
         # TODO (re)move these hardcoded attributes. ideally user configurable.
-        attr_list.append(CalledStationId.parse("44-44-44-44-44-44:".encode()))
-        attr_list.append(NASPortType.parse((15).to_bytes(4, "big")))
-        attr_list.append(ServiceType.parse(bytes.fromhex("00000002")))
-        attr_list.append(CallingStationId(Text(str(src_mac.address))))
-        attr_list.append(FramedMTU.parse(bytes.fromhex("00000578")))
+        attr_list.append(CalledStationId.create("44-44-44-44-44-44:"))
+        attr_list.append(NASPortType.create(15))
+        attr_list.append(ServiceType.create(2))
+        attr_list.append(CallingStationId.create(str(src_mac)))
+        attr_list.append(FramedMTU.create(1400))
 
-        # TODO could we remove the 'pack then parse'?
+        # TODO could we remove the 'eap_pack then parse'?
         _, _, packed_eap = MessagePacker.eap_pack(eap_message)
+        # This is parse (and not create) because 'packed_eap' is already bytes.
         attr_list.append(EAPMessage.parse(packed_eap))
 
         if state:
             attr_list.append(state)
 
-        attr_list.append(MessageAuthenticator.parse(bytes.fromhex("00000000000000000000000000000000")))
+        attr_list.append(MessageAuthenticator.create(bytes.fromhex("00000000000000000000000000000000")))
 
         request_authenticator = os.urandom(16)
         attributes = RadiusAttributesList(attr_list)
