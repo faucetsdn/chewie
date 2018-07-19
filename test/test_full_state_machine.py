@@ -10,7 +10,7 @@ from chewie.mac_address import MacAddress
 from chewie.message_parser import EapolStartMessage, IdentityMessage, Md5ChallengeMessage, SuccessMessage, \
     LegacyNakMessage, TtlsMessage, FailureMessage
 from chewie.eap_state_machine import FullEAPStateMachine
-from chewie.event import EventMessageReceived, EventRadiusMessageReceived
+from chewie.event import EventMessageReceived, EventRadiusMessageReceived, EventPortStatusChange
 
 
 class FullStateMachineStartTestCase(unittest.TestCase):
@@ -41,6 +41,17 @@ class FullStateMachineStartTestCase(unittest.TestCase):
 
         self.assertEqual(self.eap_output_queue.qsize(), 1)
         output = self.eap_output_queue.queue[0][0]
+        self.assertIsInstance(output, IdentityMessage)
+        self.assertEqual(self.radius_output_queue.qsize(), 0)
+
+    def test_eap_restart(self):
+        self.test_eap_start()
+        message = EapolStartMessage(self.src_mac)
+        self.sm.event(EventMessageReceived(message))
+        self.assertEqual(self.sm.currentState, self.sm.IDLE)
+
+        self.assertEqual(self.eap_output_queue.qsize(), 2)
+        output = self.eap_output_queue.queue[1][0]
         self.assertIsInstance(output, IdentityMessage)
         self.assertEqual(self.radius_output_queue.qsize(), 0)
 
@@ -91,16 +102,23 @@ class FullStateMachineStartTestCase(unittest.TestCase):
 
     def test_disabled_state(self):
         """move to disabled and then from disabled"""
+        # move to disabled. e.g. link down.
         self.test_eap_start()
-        self.sm.portEnabled = False
-        self.sm.event(EventMessageReceived(None))
+        self.sm.event(EventPortStatusChange(False))
         self.assertEqual(self.sm.currentState, self.sm.DISABLED)
 
         self.assertEqual(self.eap_output_queue.qsize(), 1)
         self.assertEqual(self.radius_output_queue.qsize(), 0)
 
-        self.sm.portEnabled = True
-        self.sm.event(EventMessageReceived(None))
+        # don't transition to initialize (still not enabled)
+        message = EapolStartMessage(self.src_mac)
+        self.sm.event(EventMessageReceived(message))
+        self.assertEqual(self.sm.currentState, self.sm.DISABLED)
+        self.assertEqual(self.eap_output_queue.qsize(), 1)
+        self.assertEqual(self.radius_output_queue.qsize(), 0)
+
+        # port is enabled again
+        self.sm.event(EventPortStatusChange(True))
 
         self.assertEqual(self.sm.currentState, self.sm.IDLE)
 

@@ -2,7 +2,7 @@
 import random
 
 from chewie.eap import Eap
-from chewie.event import EventMessageReceived, EventRadiusMessageReceived, EventTimerExpired
+from chewie.event import EventMessageReceived, EventRadiusMessageReceived, EventTimerExpired, EventPortStatusChange
 from chewie.message_parser import SuccessMessage, FailureMessage, EapolStartMessage, IdentityMessage
 import chewie.utils as utils
 from chewie.utils import log_method
@@ -21,8 +21,6 @@ class Policy:
     @staticmethod
     def getDecision(eapRespData):
         # TODO if not offloading return success/failure/Continue
-        # if eap start return continue (this is currently short circuited in event())
-
         if eapRespData is None or isinstance(eapRespData, EapolStartMessage):
             return Decision.CONTINUE
         return Decision.PASSTHROUGH
@@ -86,7 +84,6 @@ class MPassthrough:
         return None
 
     def buildReq(self, current_id):
-        # todo change this to identitymessage.
         return IdentityMessage(self.src_mac, current_id, Eap.REQUEST, "")
 
 
@@ -197,7 +194,7 @@ class FullEAPStateMachine:
         return self.eapReqData.message_id
 
     def calculateTimeout(self):
-        """https: // tools.ietf.org / html / rfc3748  # section-4
+        """https://tools.ietf.org/html/rfc3748#section-4.3
         Returns:
             Milliseconds"""
         # TODO actually implement.
@@ -229,8 +226,10 @@ class FullEAPStateMachine:
             #  so the 200 provides a large buffer.
             return random.randint(0, 200)
         else:
-            # TODO what about overflow?
-            return self.currentId + 1
+            _id = self.currentId + 1
+            if _id > 255:
+                return random.randint(0, 200)
+            return _id
 
     @log_method
     def disabled_state(self):
@@ -241,7 +240,6 @@ class FullEAPStateMachine:
     @log_method
     def propose_method_state(self):
         self.currentMethod = Policy.getNextMethod(self.eapRespData)
-        # TODO
         self.m.init(self.src_mac)
         if self.currentMethod == "IDENTITY" or self.currentMethod == "NOTIFICATION":
             self.methodState = MethodState.CONTINUE
@@ -421,7 +419,7 @@ class FullEAPStateMachine:
 
         while self.currentState != last_state:
             last_state = self.currentState
-            if not self.portEnabled:
+            if not self.portEnabled and self.currentState != FullEAPStateMachine.DISABLED:
                 self.disabled_state()
                 self.currentState = FullEAPStateMachine.DISABLED
 
@@ -615,7 +613,6 @@ class FullEAPStateMachine:
         """
 
         self.logger.info("full state machine received event")
-        # TODO provide an event mechanism for setting portEnabled.
         # 'Lower Layer' shim
         if isinstance(event, EventMessageReceived):
             self.logger.info('type: %s, message %s', type(event.message), event.message)
@@ -665,6 +662,8 @@ class FullEAPStateMachine:
             else:
                 self.logger.debug("ignoring timer event, already received a reply.")
                 return
+        elif isinstance(event, EventPortStatusChange):
+                self.portEnabled = event.port_status
 
         self.handle_message_received()
         self.logger.info('end state: %s', self.currentState)
@@ -700,4 +699,4 @@ class FullEAPStateMachine:
                 and self.currentState != self.TIMEOUT_FAILURE and self.currentState != self.TIMEOUT_FAILURE2:
             timeout = self.retransWhile
             self.timer_scheduler.enter(timeout, 10, self.event, argument=[EventTimerExpired(self, self.sent_count)])
-            # TODO could cancel the scheduled events when they're no longer needed (response received)
+            # TODO could cancel the scheduled events when they're no longer needed (i.e. response received)
