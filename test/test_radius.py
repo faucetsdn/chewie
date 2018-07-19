@@ -54,10 +54,22 @@ class RadiusTestCase(unittest.TestCase):
         self.assertEqual(expected_packed_message, packed_message)
 
     def test_invalid_message_authenticator(self):
+
+        # the original message authenticator does not match the computed one
+        #  because there is a change in the packet contents
+        packed_message = build_byte_string(
+            "0b00005056d9280d3e4fed327eb31cf1823f8c244f1801020016041074d3db089b727d9cc5774599e4a32a295012982a0ba06d3557f0dbc8ba6e823822f1181219ddf6d119dff272fa26666666666666")
+
+        self.assertRaises(InvalidMessageAuthenticatorError, Radius.parse, packed_message, secret="SECRET",
+                          request_authenticator=bytes.fromhex("982a0ba06d3557f0dbc8ba6e823822f1"))
+
+        # the original message authenticator does not match the computed one
+        #  because the message authenticator was 'corrupted'
         packed_message = build_byte_string(
             "0b00005056d9280d3e4fed327eb31cf1823f8c244f1801020016041074d3db089b727d9cc5774599e4a32a29501266666666666666666666666666666666181219ddf6d119dff272fa2fe16c34990c7d")
 
-        self.assertRaises(InvalidMessageAuthenticatorError, Radius.parse, packed_message, secret="SECRET", request_authenticator=bytes.fromhex("982a0ba06d3557f0dbc8ba6e823822f1"))
+        self.assertRaises(InvalidMessageAuthenticatorError, Radius.parse, packed_message, secret="SECRET",
+                          request_authenticator=bytes.fromhex("982a0ba06d3557f0dbc8ba6e823822f1"))
 
     def test_secret_none_fails(self):
         packed_message = build_byte_string(
