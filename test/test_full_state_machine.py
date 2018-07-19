@@ -15,7 +15,9 @@ from chewie.event import EventMessageReceived, EventRadiusMessageReceived
 
 class FullStateMachineStartTestCase(unittest.TestCase):
     # TODO tests could be more thorough, and test that
-    # the correct packet (type/content) has been put in its respective queue
+    # the correct packet (type/content) has been put in its respective queue.
+    # Would also be nice to check that the states are correctly transitioned through,
+    # and not just the final resting spot. Not sure how to do that - maybe parse the log??
 
     def setUp(self):
         self.eap_output_queue = Queue()
@@ -26,7 +28,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
                                       self.src_mac, self.timer_scheduler)
         self.MAX_RETRANSMITS = 3
         self.sm.MAX_RETRANS = self.MAX_RETRANSMITS
-        self.sm.DEFAULT_TIMEOUT = 0.01
+        self.sm.DEFAULT_TIMEOUT = 0.1
         self.sm.portEnabled = True
         self.sm.eapRestart = True
 
