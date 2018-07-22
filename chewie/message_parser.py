@@ -1,5 +1,3 @@
-import os
-
 from chewie.radius import RadiusAttributesList, RadiusAccessRequest, Radius
 from chewie.radius_attributes import CallingStationId, UserName, MessageAuthenticator, EAPMessage
 from .ethernet_packet import EthernetPacket
@@ -145,8 +143,9 @@ class MessageParser:
         return MessageParser.one_x_parse(ethernet_packet.data, ethernet_packet.src_mac)
 
     @staticmethod
-    def radius_parse(packed_message):
-        parsed_radius = Radius.parse(packed_message)
+    def radius_parse(packed_message, secret, request_authenticator_callback):
+        """Parses a RADIUS packet"""
+        parsed_radius = Radius.parse(packed_message, secret, request_authenticator_callback=request_authenticator_callback)
         return parsed_radius
 
 
@@ -157,13 +156,37 @@ class EapMessage(object):
 class MessagePacker:
     @staticmethod
     def ethernet_pack(message, src_mac, dst_mac):
+        """
+        Packs a ethernet packet.
+        Args:
+            message: EAP payload
+            src_mac:
+            dst_mac:
+        Returns:
+            packed ethernet packet (bytes)
+        """
         data = MessagePacker.pack(message)
         ethernet_packet = EthernetPacket(dst_mac=dst_mac, src_mac=src_mac, ethertype=0x888e, data=data)
         return ethernet_packet.pack()
 
     @staticmethod
-    def radius_pack(eap_message, src_mac, username, radius_packet_id, state, secret, extra_attributes=None):
-        if extra_attributes:
+    def radius_pack(eap_message, src_mac, username, radius_packet_id, request_authenticator, state, secret, extra_attributes=None):
+        """
+        Packs up a RADIUS message to send to a RADIUS Server.
+        Args:
+            eap_message (Message): e.g. IdentityMessage
+            src_mac (MacAddress): supplicants mac address
+            username (str): supplicants username
+            radius_packet_id (int):
+            request_authenticator (bytes):
+            state (State): RADIUS State
+            secret (str): RADIUS secret used between Chewie and RADIUS Server
+            extra_attributes (list): list of extra RADIUS attributes to send along with the above.
+
+        Returns:
+            packed RADIUS packet (bytes)
+        """
+        if not extra_attributes:
             extra_attributes = []
 
         attr_list = []
@@ -182,58 +205,48 @@ class MessagePacker:
 
         attr_list.append(MessageAuthenticator.create(bytes.fromhex("00000000000000000000000000000000")))
 
-        request_authenticator = os.urandom(16)
         attributes = RadiusAttributesList(attr_list)
         access_request = RadiusAccessRequest(radius_packet_id, request_authenticator, attributes)
         return access_request.build(secret)
 
     @staticmethod
     def eap_pack(message):
-        if isinstance(message, IdentityMessage) or isinstance(message, EapIdentity):
-            if isinstance(message, EapIdentity):
-                eap = message
-            else:
-                eap = EapIdentity(message.code, message.message_id, message.identity)
+        """
+        Pack an EAP message.
+        Args:
+            message (Message):
+
+        Returns:
+            version (int), packet_type (int), packed eap (bytes)
+        """
+        if isinstance(message, IdentityMessage):
+
+            eap = EapIdentity(message.code, message.message_id, message.identity)
             version = 1
             packet_type = 0
             data = eap.pack()
-        elif isinstance(message, LegacyNakMessage) or isinstance(message, EapLegacyNak):
-            if isinstance(message, EapLegacyNak):
-                eap = message
-            else:
-                eap = EapLegacyNak(message.code, message.message_id, message.desired_auth_types)
+        elif isinstance(message, LegacyNakMessage):
+            eap = EapLegacyNak(message.code, message.message_id, message.desired_auth_types)
             version = 1
             packet_type = 0
             data = eap.pack()
-        elif isinstance(message, Md5ChallengeMessage) or isinstance(message, EapMd5Challenge):
-            if isinstance(message, EapMd5Challenge):
-                eap = message
-            else:
-                eap = EapMd5Challenge(message.code, message.message_id, message.challenge, message.extra_data)
+        elif isinstance(message, Md5ChallengeMessage):
+            eap = EapMd5Challenge(message.code, message.message_id, message.challenge, message.extra_data)
             version = 1
             packet_type = 0
             data = eap.pack()
-        elif isinstance(message, TtlsMessage) or isinstance(message, EapTTLS):
-            if isinstance(message, EapTTLS):
-                eap = message
-            else:
-                eap = EapTTLS(message.code, message.message_id, message.flags, message.extra_data)
+        elif isinstance(message, TtlsMessage):
+            eap = EapTTLS(message.code, message.message_id, message.flags, message.extra_data)
             version = 1
             packet_type = 0
             data = eap.pack()
-        elif isinstance(message, SuccessMessage) or isinstance(message, EapSuccess):
-            if isinstance(message, EapSuccess):
-                eap = message
-            else:
-                eap = EapSuccess(message.message_id)
+        elif isinstance(message, SuccessMessage):
+            eap = EapSuccess(message.message_id)
             version = 1
             packet_type = 0
             data = eap.pack()
-        elif isinstance(message, FailureMessage) or isinstance(message, EapFailure):
-            if isinstance(message, EapFailure):
-                eap = message
-            else:
-                eap = EapFailure(message.message_id)
+        elif isinstance(message, FailureMessage):
+            eap = EapFailure(message.message_id)
             version = 1
             packet_type = 0
             data = eap.pack()
@@ -251,6 +264,14 @@ class MessagePacker:
 
     @staticmethod
     def pack(message):
+        """
+        packs the EAPOL
+        Args:
+            message (Message): EAP message
+
+        Returns:
+            Packed EAPOL packet (bytes)
+        """
         version, packet_type, data = MessagePacker.eap_pack(message)
         auth_8021x = Auth8021x(version=version, packet_type=packet_type, data=data)
         return auth_8021x.pack()

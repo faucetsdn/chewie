@@ -1,3 +1,4 @@
+import os
 import sched
 import time
 
@@ -30,7 +31,7 @@ class Chewie(object):
     EAP_ADDRESS = MacAddress.from_string("01:80:c2:00:00:03")
     RADIUS_UDP_PORT = 1812
 
-    def __init__(self, interface_name, credentials, logger=None, auth_handler=None, group_address=None, radius_ip=None):
+    def __init__(self, interface_name, credentials, logger=None, auth_handler=None, group_address=None, radius_server_ip=None):
         self.interface_name = interface_name
         self.credentials = credentials
         self.logger = logger
@@ -39,8 +40,9 @@ class Chewie(object):
         if not group_address:
             self.group_address = self.EAP_ADDRESS
 
-        self.radius_ip = radius_ip
+        self.radius_server_ip = radius_server_ip
         self.radius_secret = "SECRET"
+        self.radius_listen_ip = "0.0.0.0"
         self.radius_listen_port = 0
 
         self.chewie_id = "44-44-44-44-44-44:"  # used by the RADIUS Attribute 'Called-Station' in Access-Request
@@ -48,6 +50,7 @@ class Chewie(object):
 
         self.state_machines = {}  # mac: sm
         self.packet_id_to_mac = {}  # radius_packet_id: mac
+        self.packet_id_to_request_authenticator = {}
 
         self.eap_output_messages = Queue()
         self.radius_output_messages = Queue()
@@ -122,9 +125,11 @@ class Chewie(object):
                 radius_packet_id = self.get_next_radius_packet_id()
                 self.packet_id_to_mac[radius_packet_id] = src_mac
                 # message is eap. needs to be wrapped into a radius packet.
-                data = MessagePacker.radius_pack(eap_message, src_mac, username, radius_packet_id, state,
+                request_authenticator = os.urandom(16)
+                self.packet_id_to_request_authenticator[radius_packet_id] = request_authenticator
+                data = MessagePacker.radius_pack(eap_message, src_mac, username, radius_packet_id, request_authenticator, state,
                                                  self.radius_secret, self.extra_radius_request_attributes)
-                self.radius_socket.sendto(data, (self.radius_ip, self.RADIUS_UDP_PORT))
+                self.radius_socket.sendto(data, (self.radius_server_ip, self.RADIUS_UDP_PORT))
                 self.logger.info("sent radius message.")
         except Exception as e:
             self.logger.exception(e)
@@ -135,7 +140,7 @@ class Chewie(object):
                 sleep(0)
                 self.logger.info("waiting for radius.")
                 packed_message = self.radius_socket.recv(4096)
-                radius = MessageParser.radius_parse(packed_message)
+                radius = MessageParser.radius_parse(packed_message, self.radius_secret, self.request_authenticator_callback)
                 self.logger.info("Received RADIUS message: %s", radius)
                 eap_msg = radius.attributes.find(EAPMessage.DESCRIPTION)
                 sm = self.get_state_machine_from_radius_packet_id(radius.packet_id)
@@ -147,6 +152,9 @@ class Chewie(object):
                 sm.event(event)
         except Exception as e:
             self.logger.exception(e)
+
+    def request_authenticator_callback(self, packet_id):
+        return self.packet_id_to_request_authenticator[packet_id]
 
     def timer_messages(self):
         def scheduler_done():
@@ -162,8 +170,8 @@ class Chewie(object):
 
     def open_radius_socket(self):
         self.radius_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.logger.info("%s %d" % ("127.0.0.1", self.radius_listen_port))
-        self.radius_socket.bind(("", self.radius_listen_port))
+        self.logger.info("Radius Listening on %s:%d" % (self.radius_listen_ip, self.radius_listen_port))
+        self.radius_socket.bind((self.radius_listen_ip, self.radius_listen_port))
 
     def open_socket(self):
         self.socket = socket.socket(socket.PF_PACKET, socket.SOCK_RAW, socket.htons(0x888e))

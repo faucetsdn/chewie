@@ -1,4 +1,5 @@
 import copy
+import hashlib
 import hmac
 import struct
 
@@ -11,9 +12,14 @@ RADIUS_HEADER_LENGTH = 1 + 1 + 2 + 16
 PACKET_TYPE_PARSERS = {}
 
 
+class InvalidResponseAuthenticatorError(Exception):
+    """To be used when the ResponseAuthenticator hashes (received in packet, and calculated) do not match."""
+    pass
+
+
 class InvalidMessageAuthenticatorError(Exception):
     """To be used when the Message-Authenticator hashes (received in packet, and calculated) do not match.
-    Received packets that throw this error should be 'siliently dropped' (logging is fine)."""
+    Received packets that throw this error should be 'silently dropped' (logging is fine)."""
     pass
 
 
@@ -28,13 +34,13 @@ class Radius(object):
     STATUS_CLIENT = 13
 
     @staticmethod
-    def parse(packed_message, secret=None, request_authenticator=None):
-        code, packet_id, length, authenticator = struct.unpack("!BBH16s", packed_message[:RADIUS_HEADER_LENGTH])
-        authenticator = authenticator.hex()
+    def parse(packed_message, secret, request_authenticator_callback=None):
+        code, packet_id, length, response_authenticator = struct.unpack("!BBH16s", packed_message[:RADIUS_HEADER_LENGTH])
+        response_authenticator = response_authenticator.hex()
         if code in PACKET_TYPE_PARSERS.keys():
-            radius_packet = PACKET_TYPE_PARSERS[code](packet_id, authenticator,
+            radius_packet = PACKET_TYPE_PARSERS[code](packet_id, response_authenticator,
                                                       RadiusAttributesList.parse(packed_message[RADIUS_HEADER_LENGTH:]))
-
+            request_authenticator = request_authenticator_callback(packet_id)
             return radius_packet.validate_packet(secret, request_authenticator=request_authenticator)
 
     def pack(self):
@@ -87,8 +93,10 @@ class RadiusPacket(Radius):
 
     def validate_packet(self, secret, request_authenticator=None):
         """Calculates the message authenticator hash and compares with what was provided.
+        Args:
+            secret (str): secret shared between RADIUS and chewie.
+            request_authenticator (
         """
-
         # Copy this packet so we can modify the 'Authenticator' and 'Message-Authenticator'
         radius_packet = copy.deepcopy(self)
         # get the Original Message Authenticator
@@ -100,10 +108,17 @@ class RadiusPacket(Radius):
         if not secret:
             raise ValueError("secret cannot be None for hashing")
 
+        response_authenticator = radius_packet.authenticator
+        radius_packet.authenticator = request_authenticator
+        radius_packet.pack()
+        calculated_response_authenticator = hashlib.md5(radius_packet.packed + bytearray(secret, 'utf-8')).hexdigest()
+        if calculated_response_authenticator != response_authenticator:
+            raise InvalidResponseAuthenticatorError("Original ResponseAuthenticator: '%s', does not match calculated: '%s' %s",
+                                                   response_authenticator, calculated_response_authenticator, radius_packet.packed.hex())
+
         original_ma = message_authenticator.data_type._data
         # Replace the Original Message Authenticator
         message_authenticator.data_type._data = bytes.fromhex("00000000000000000000000000000000")
-        radius_packet.authenticator = request_authenticator
         radius_packet.pack()
 
         # calculate new hash message authenticator
@@ -185,10 +200,9 @@ class RadiusAttributesList(object):
             packed_value = data[:attr_length - Attribute.HEADER_SIZE]
 
             attribute = ATTRIBUTE_TYPES[type_].parse(packed_value)
-
             # keep track of where the concated AVP should be in the attributes list.
             # required so the hashing gives correct hash.
-            if last_data_type_value != attribute.DATA_TYPE.DATA_TYPE_VALUE:
+            if attribute.DATA_TYPE != Concat or last_data_type_value != attribute.DATA_TYPE.DATA_TYPE_VALUE:
                 index += 1
             last_data_type_value = attribute.DATA_TYPE.DATA_TYPE_VALUE
 

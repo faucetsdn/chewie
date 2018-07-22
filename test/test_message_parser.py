@@ -5,6 +5,7 @@ from chewie.message_parser import MessageParser, MessagePacker, IdentityMessage,
 from chewie.message_parser import EapolStartMessage, EapolLogoffMessage, SuccessMessage, FailureMessage
 from chewie.mac_address import MacAddress
 from chewie.eap import Eap
+from chewie.radius_attributes import State, CalledStationId, NASPortType
 
 
 class MessageParserTestCase(unittest.TestCase):
@@ -165,3 +166,31 @@ class MessageParserTestCase(unittest.TestCase):
         packed_message = MessagePacker.ethernet_pack(message, MacAddress.from_string("00:00:00:11:11:01"),
                                                      MacAddress.from_string("01:80:c2:00:00:03"))
         self.assertEqual(expected_packed_message, packed_message)
+
+    def test_radius_packs(self):
+
+        packed_message = build_byte_string("010a0073"
+                                           "be5df1f3b3366c69b977e56a7da47cba"
+                                           "010675736572"
+                                           "1f1330323a34323a61633a31373a30303a3666"
+                                           "1e1434342d34342d34342d34342d34342d34343a"
+                                           "3d060000000f"
+                                           "4f08027100061500"
+                                           "1812f51d90b0f76c85835ed4ac882e522748501201531ea8051d136941fece17473f6b4a")
+
+        src_mac = MacAddress.from_string("02:42:ac:17:00:6f")
+        username = "user"
+        radius_packet_id = 10
+        request_authenticator = bytes.fromhex("be5df1f3b3366c69b977e56a7da47cba")
+        state = State.create(bytes.fromhex("f51d90b0f76c85835ed4ac882e522748"))
+        secret = "SECRET"
+        extra_attributes = []
+        extra_attributes.append(CalledStationId.create('44-44-44-44-44-44:'))
+        extra_attributes.append(NASPortType.create(15))
+
+        eap_message = TtlsMessage(src_mac, 113, Eap.RESPONSE, 0, b'')
+
+        packed_radius = MessagePacker.radius_pack(eap_message, src_mac, username, radius_packet_id,
+                                                  request_authenticator, state, secret, extra_attributes)
+
+        self.assertEqual(packed_message, packed_radius)
