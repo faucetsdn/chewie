@@ -9,6 +9,7 @@ from chewie.utils import log_method
 
 
 class Policy:
+    """Fleshed out enough to support passthrough mode."""
 
     @staticmethod
     def getNextMethod(eapRespData):
@@ -57,11 +58,13 @@ class MPassthrough:
 
     def check(self, eapRespData):
         """
-
-        :param eapRespData:
-        :return: True if packet should be ignored. otherwise False if packet is good.
+        Args:
+             eapRespData (Message):
+        Returns:
+            True if packet should be ignored. otherwise False if packet is good.
         """
-        # TODO if packet is not the one we're expecting ignore it.
+        # TODO check the *integrity* of the packet.
+        #  The IDs already match (done on entry to INTEGRITY_CHECK state)
         return False
 
     def process(self, eapRespData):
@@ -88,6 +91,9 @@ class MPassthrough:
 
 
 class FullEAPStateMachine:
+    """Based on RFC 4137 section 7 (EAP Full Authenticator).
+    Only acts in passthrough mode (no local method support).
+    """
 
     # non RFC 4137 variables/CONSTANTs
     currentState = None
@@ -176,6 +182,14 @@ class FullEAPStateMachine:
     eapKeyAvailable = None  # bool
 
     def __init__(self, eap_output_queue, radius_output_queue, src_mac, timer_scheduler):
+        """
+
+        Args:
+            eap_output_queue (Queue): where to put Messages to send to supplicant
+            radius_output_queue (Queue): where to put Messages to send to AAA server
+            src_mac (MacAddress): MAC address this statemachine (sm) belongs to.
+            timer_scheduler (Scheduler): where to put timer events. (useful for Retransmits)
+        """
         self.eap_output_messages = eap_output_queue
         self.radius_output_messages = radius_output_queue
         self.src_mac = src_mac
@@ -193,14 +207,24 @@ class FullEAPStateMachine:
          The return value is an integer."""
         return self.eapReqData.message_id
 
-    def calculateTimeout(self):
+    def calculateTimeout(self, retransCount, eapSRTT, eapRTTVAR, methodTimeout):
         """https://tools.ietf.org/html/rfc3748#section-4.3
+        Args:
+            retransCount:
+            eapSRTT:
+            eapRTTVAR:
+            methodTimeout:
+
         Returns:
             Milliseconds"""
         # TODO actually implement.
         return self.DEFAULT_TIMEOUT
 
     def parseEapResp(self):
+        """
+        Returns:
+            int, int, EAP Type (str)
+        """
         eap = self.eapRespData
         respMethod = None
 
@@ -208,7 +232,7 @@ class FullEAPStateMachine:
 
         if isinstance(eap, IdentityMessage):
             respMethod = MethodState.IDENTITY
-
+        # RFC 4137 #section 5.4 says eap.code should actually be a bool
         return eap.code, _id, respMethod
 
     def buildSuccess(self):
@@ -271,7 +295,7 @@ class FullEAPStateMachine:
     @log_method
     def idle_state(self):
         """The state machine spends most of its time here, waiting for something to happen"""
-        self.retransWhile = self.calculateTimeout()
+        self.retransWhile = self.calculateTimeout(self.retransCount, self.eapSRTT, self.eapRTTVAR, self.methodTimeout)
 
     @log_method
     def recieved_state(self):
@@ -335,7 +359,7 @@ class FullEAPStateMachine:
 
     @log_method
     def idle2_state(self):
-        self.retransWhile = self.calculateTimeout()
+        self.retransWhile = self.calculateTimeout(self.retransCount, self.eapSRTT, self.eapRTTVAR, self.methodTimeout)
 
     @log_method
     def received2_state(self):
@@ -400,6 +424,7 @@ class FullEAPStateMachine:
         self.eapTimeout = True
 
     def handle_message_received(self):
+        """Main state machine loop"""
 
         # RFC 4137 Figure 6
         # the *_state() method is the box.
@@ -608,8 +633,9 @@ class FullEAPStateMachine:
 
     def event(self, event):
         """Processes an event.
-        Event should have message attribute which is of the ***Message types (e.g. SuccessMessage, IdentityMessage,...)
         Output is via the eap/radius queue. and again will be of type ***Message.
+        Args:
+            Event: should have message attribute which is of the ***Message types (e.g. SuccessMessage, IdentityMessage,...)
         """
 
         self.logger.info("full state machine received event")
@@ -694,6 +720,8 @@ class FullEAPStateMachine:
             self.logger.info('oh authentication not successful %s', self.src_mac)
 
     def set_timer(self):
+        """Sets a timer to trigger a retransmit if no packet received.
+        """
         if self.currentState != self.SUCCESS and self.currentState != self.SUCCESS2 \
                 and self.currentState != self.FAILURE and self.currentState != self.FAILURE2 \
                 and self.currentState != self.TIMEOUT_FAILURE and self.currentState != self.TIMEOUT_FAILURE2:
