@@ -162,7 +162,6 @@ class EapTTLS(Eap):
         fmt_str = "!B"
         if value_len > 1:
             fmt_str += "%ds" % (value_len - 1)
-        print(len(packed_msg), packed_msg)
         unpacked = struct.unpack(fmt_str, packed_msg)
         extra_data = b""
         if value_len > 1:
