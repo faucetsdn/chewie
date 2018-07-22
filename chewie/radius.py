@@ -191,7 +191,7 @@ class RadiusAttributesList(object):
         total_length = len(attributes_data)
         pos = 0
         index = -1
-        last_data_type_value = -1
+        last_attribute = -1
         while pos < total_length:
             type_, attr_length = struct.unpack("!BB", attributes_data[pos:pos + Attribute.HEADER_SIZE])
             data = attributes_data[pos + Attribute.HEADER_SIZE: pos + attr_length]
@@ -202,9 +202,9 @@ class RadiusAttributesList(object):
             attribute = ATTRIBUTE_TYPES[type_].parse(packed_value)
             # keep track of where the concated AVP should be in the attributes list.
             # required so the hashing gives correct hash.
-            if attribute.DATA_TYPE != Concat or last_data_type_value != attribute.DATA_TYPE.DATA_TYPE_VALUE:
+            if attribute.DATA_TYPE != Concat or last_attribute != attribute.TYPE:
                 index += 1
-            last_data_type_value = attribute.DATA_TYPE.DATA_TYPE_VALUE
+            last_attribute = attribute.TYPE
 
             if attribute.DATA_TYPE.DATA_TYPE_VALUE == Concat.DATA_TYPE_VALUE:
                 if attribute.TYPE not in attributes_to_concat:

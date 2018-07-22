@@ -230,3 +230,25 @@ class RadiusTestCase(unittest.TestCase):
 
         # Cannot test Concat datatype, it does not check length
         # Cannot test VSA datatype, Nothing is using it at the moment.
+
+    def test_radius_extract_attributes(self):
+
+        # This list of radius AVP, contains multiple VSA attributes.
+        attributes = []
+        attributes_data = build_byte_string("1a3a000001371134904a76cd1ffff59a3e1365e09441c41d83454aedafc1d9099d32ade23714a4d2c0898ff23997c89f59f1149bcb709fb889dc1a3a0000013710349e92efe66d278d977e3fe87faa650b391c43103d3d8e662bb3881807f1b3313ed975d3cfa85d45a6f3b83f6b98364a99135e4f06032a0004501256aef88d10224c30e6b3563acf963758010b686f73743175736572")
+        attributes_to_concat = {}
+        RadiusAttributesList.extract_attributes(attributes, attributes_data, attributes_to_concat)
+        self.assertEqual(len(attributes), 5)
+        self.assertEqual(len(attributes_to_concat), 1)
+        self.assertEqual(list(attributes_to_concat.values())[0][0][1], 2)
+        # check that the concated EAPMessage is marked position 2
+
+        # This list of radius AVP contains multiple EAPMessages.
+        attributes = []
+        attributes_data = build_byte_string("4fff012802bc158000000a76130101ff040530030101ff30360603551d1f042f302d302ba029a0278625687474703a2f2f7777772e6578616d706c652e6f72672f6578616d706c655f63612e63726c300d06092a864886f70d01010b05000382010100139e9c2b1e9bf30c6567759ffb57af9f031a59b6a8adb1702a55de2e51f2286715ef1399ebdc593d38db3ad4794c3e78037d3de5612cba33cefc5b830c3a2118bfc0572d201c07105b7c0ef5bb64225d959afef6a4527a88d1e5fd552fd16775a5c90802d11ad793da157441f7a181f85a2908ebcb87a86960c6d3ae631019bc73f850bc5be494a97084ccaea1cc13c44a4fdf0ef123c067b688e47a4fff4d223c15fd56798051ff4912c721f15c96061ef683b1ade02b5449b06184f59d4218f2287d35cfa0a3a4f65e40c8750d0c70dc00d65a8981e0a2cf6961b1355c10d399ce583a426e211b0feef37da67a57bbbc81d912d5379668cfdc3666bacf5e9d9c7d160303014d0c0001490300174104b275c284c5c067b9c3104305ba6704b4b0e083f0e285d9b205a8d7307e503907478f314679d084a0f1ccbc3ceaa6b6d56c588654d223fd16514bba463c5f8d7006010100bca760ef9aab5f1cf9239bab7d0bbf585e12f9c6440b9dd36affc87ff8f334b0dbea94686edbcff9143bd40a5136b065d5599742665fa27d5ec5e86898b7c8cc2c375d190646c64fc444df7911f41a12a7219f667527cfc4ba99b684fb763a01f4dc361a891906e3ade0c6e787c096f868726a5aafafb76ce71ce896b50015c9db89e9c3d13c90e90b5d82a1327941404298c1e358cbc7bbbf8e4fe2e1ecafbcbddfbe0b1a7d3f0769306f16f3ed4972b14b8af0f51761053754ec73a1a41b294fe0d00a9281e3d9c0175651d2bbaf28df32a25bfbae85983a3935891f0a955b636b3540cde3aba4ec20d62988a81a608b450e87b3eefcb66f50cf3104a4b367122d16030300040e00000050125f3ac1f2c8e65dab1bf90b9604cd65aa1812cefe6083cad675dd64722c274ec35372")
+        attributes_to_concat = {}
+        RadiusAttributesList.extract_attributes(attributes, attributes_data, attributes_to_concat)
+        self.assertEqual(len(attributes), 5)
+        self.assertEqual(len(attributes_to_concat), 1)
+        # check that the concated EAPMessage is marked position 0
+        self.assertEqual(list(attributes_to_concat.values())[0][0][1], 0)
