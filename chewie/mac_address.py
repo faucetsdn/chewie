@@ -24,6 +24,3 @@ class MacAddress:
 
     def __repr__(self):
         return "%s.from_string(\"%s\")" % (self.__class__.__name__, self.__str__())
-
-    def encode(self):
-        return self.address
