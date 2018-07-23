@@ -433,7 +433,8 @@ class FullEAPStateMachine:
 
         # RFC 4137 Figure 6
         # the *_state() method is the box.
-        # if variable(s) are required by the decision branches they are returned by the *_state() method,
+        # if variable(s) are required by the decision branches
+        #  they are returned by the *_state() method,
         # and stored as a local variable for the next iteration of the loop.
         #
         # so execute zzzz_state(), currentState = zzzz_state.
@@ -641,63 +642,21 @@ class FullEAPStateMachine:
         """Processes an event.
         Output is via the eap/radius queue. and again will be of type ***Message.
         Args:
-            Event: should have message attribute which is of the ***Message types
+            event: should have message attribute which is of the ***Message types
             (e.g. SuccessMessage, IdentityMessage,...)
         """
 
         self.logger.info("full state machine received event")
         # 'Lower Layer' shim
         if isinstance(event, EventMessageReceived):
-            self.logger.info('type: %s, message %s', type(event.message), event.message)
-            if isinstance(event.message, EapolStartMessage):
-                self.eapRestart = True
-            if not isinstance(event, EventRadiusMessageReceived):
-                self.eapRespData = event.message
-                self.eapResp = True
-            else:
-                self.eapRespData = None
-                self.eapResp = False
-
-            self.eapReq = False
-            self.eapNoReq = False
-            self.eapSuccess = False
-            self.eapFail = False
-
-            self.aaaEapNoReq = False
-            self.aaaSuccess = False
-            self.aaaFail = False
-            self.aaaEapKeyAvailable = False
-            self.aaaEapResp = False
-
-            if isinstance(event, EventRadiusMessageReceived):
-                self.radius_state_attribute = event.state
-                self.aaaEapReq = True
-                self.aaaEapReqData = event.message
-                self.logger.info('sm ev.msg: %s', self.aaaEapReqData)
-                if isinstance(self.aaaEapReqData, SuccessMessage):
-                    self.logger.info("aaaSuccess")
-                    self.aaaSuccess = True
-                if isinstance(self.aaaEapReqData, FailureMessage):
-                    self.logger.info("aaaFail")
-                    self.aaaFail = True
-            else:
-                self.aaaEapReq = False
+            self.message_event_received(event)
 
         elif isinstance(event, EventTimerExpired):
-            self.logger.info("Expired Timer Event Received")
-            if self.sent_count == event.sent_count:
-                self.logger.debug("processing timer event. haven't received a reply. %s %s",
-                                  self.sent_count, event.sent_count)
-
-                if self.currentState == self.AAA_IDLE:
-                    self.aaaTimeout = True
-                if self.currentState == self.IDLE2 or self.currentState == self.IDLE:
-                    self.retransWhile = 0
-            else:
-                self.logger.debug("ignoring timer event, already received a reply.")
+            if self.timer_expired_event_received(event):
                 return
+
         elif isinstance(event, EventPortStatusChange):
-            self.portEnabled = event.port_status
+            self.port_status_event_received(event)
 
         self.handle_message_received()
         self.logger.info('end state: %s', self.currentState)
@@ -729,6 +688,72 @@ class FullEAPStateMachine:
         if self.eapFail:
             self.logger.info('oh authentication not successful %s', self.src_mac)
 
+    def port_status_event_received(self, event):
+        """Sets variables for the port status change (link up/down) being received.
+        Args:
+            event (EventPortStatusChange):
+        """
+        self.portEnabled = event.port_status
+
+    def timer_expired_event_received(self, event):
+        """Check if the event has been replied to. and set variables.
+        Args:
+            event (EventTimerExpired): event to process
+
+        Returns:
+            True if this event is being ignored and no further processing is required.
+            Otherwise False.
+        """
+        self.logger.info("Expired Timer Event Received")
+        if self.sent_count == event.sent_count:
+            self.logger.debug("processing timer event. haven't received a reply. %s %s",
+                              self.sent_count, event.sent_count)
+
+            if self.currentState == self.AAA_IDLE:
+                self.aaaTimeout = True
+            if self.currentState == self.IDLE2 or self.currentState == self.IDLE:
+                self.retransWhile = 0
+            return False
+        self.logger.debug("ignoring timer event, already received a reply.")
+        return True
+
+    def message_event_received(self, event):
+        """Sets variables for the Eap message being received.
+        Args:
+            event (EventMessageReceived): event being processed.
+        """
+        self.logger.info('type: %s, message %s', type(event.message), event.message)
+        if isinstance(event.message, EapolStartMessage):
+            self.eapRestart = True
+        if not isinstance(event, EventRadiusMessageReceived):
+            self.eapRespData = event.message
+            self.eapResp = True
+        else:
+            self.eapRespData = None
+            self.eapResp = False
+        self.eapReq = False
+        self.eapNoReq = False
+        self.eapSuccess = False
+        self.eapFail = False
+        self.aaaEapNoReq = False
+        self.aaaSuccess = False
+        self.aaaFail = False
+        self.aaaEapKeyAvailable = False
+        self.aaaEapResp = False
+        if isinstance(event, EventRadiusMessageReceived):
+            self.radius_state_attribute = event.state
+            self.aaaEapReq = True
+            self.aaaEapReqData = event.message
+            self.logger.info('sm ev.msg: %s', self.aaaEapReqData)
+            if isinstance(self.aaaEapReqData, SuccessMessage):
+                self.logger.info("aaaSuccess")
+                self.aaaSuccess = True
+            if isinstance(self.aaaEapReqData, FailureMessage):
+                self.logger.info("aaaFail")
+                self.aaaFail = True
+        else:
+            self.aaaEapReq = False
+
     def set_timer(self):
         """Sets a timer to trigger a retransmit if no packet received.
         """
@@ -740,4 +765,5 @@ class FullEAPStateMachine:
             self.timer_scheduler.enter(timeout, 10,
                                        self.event,
                                        argument=[EventTimerExpired(self, self.sent_count)])
-            # TODO could cancel the scheduled events when they're no longer needed (i.e. response received)
+            # TODO could cancel the scheduled events when
+            # they're no longer needed (i.e. response received)

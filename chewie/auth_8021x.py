@@ -22,7 +22,7 @@ class Auth8021x(object):
         return header + self.data
 
     def __repr__(self):
-        return "%s(ethernet_header=%s, version=%s, packet_type=%s, data=%s)" % \
+        return "%s(version=%s, packet_type=%s, data=%s)" % \
             (self.__class__.__name__, self.version, self.packet_type, self.data)
 
     def __str__(self):
