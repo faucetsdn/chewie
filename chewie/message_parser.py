@@ -5,30 +5,32 @@ from chewie.auth_8021x import Auth8021x
 from chewie.eap import Eap, EapIdentity, EapMd5Challenge, EapSuccess, EapFailure, EapLegacyNak, EapTTLS
 
 
-class SuccessMessage(object):
+class EapMessage(object):
+    src_mac = None
+    message_id = None
+
     def __init__(self, src_mac, message_id):
         self.src_mac = src_mac
         self.message_id = message_id
+
+
+class SuccessMessage(EapMessage):
 
     @classmethod
     def build(cls, src_mac, eap):
         return cls(src_mac, eap.packet_id)
 
 
-class FailureMessage(object):
-    def __init__(self, src_mac, message_id):
-        self.src_mac = src_mac
-        self.message_id = message_id
+class FailureMessage(EapMessage):
 
     @classmethod
     def build(cls, src_mac, eap):
         return cls(src_mac, eap.packet_id)
 
 
-class IdentityMessage(object):
+class IdentityMessage(EapMessage):
     def __init__(self, src_mac, message_id, code, identity):
-        self.src_mac = src_mac
-        self.message_id = message_id
+        super().__init__(src_mac, message_id)
         self.code = code
         self.identity = identity
 
@@ -37,10 +39,9 @@ class IdentityMessage(object):
         return cls(src_mac, eap.packet_id, eap.code, eap.identity)
 
 
-class LegacyNakMessage(object):
+class LegacyNakMessage(EapMessage):
     def __init__(self, src_mac, message_id, code, desired_auth_types):
-        self.src_mac = src_mac
-        self.message_id = message_id
+        super().__init__(src_mac, message_id)
         self.code = code
         self.desired_auth_types = desired_auth_types
 
@@ -49,10 +50,9 @@ class LegacyNakMessage(object):
         return cls(src_mac, eap.packet_id, eap.code, eap.desired_auth_types)
 
 
-class Md5ChallengeMessage(object):
+class Md5ChallengeMessage(EapMessage):
     def __init__(self, src_mac, message_id, code, challenge, extra_data):
-        self.src_mac = src_mac
-        self.message_id = message_id
+        super().__init__(src_mac, message_id)
         self.code = code
         self.challenge = challenge
         self.extra_data = extra_data
@@ -62,10 +62,9 @@ class Md5ChallengeMessage(object):
         return cls(src_mac, eap.packet_id, eap.code, eap.challenge, eap.extra_data)
 
 
-class TtlsMessage(object):
+class TtlsMessage(EapMessage):
     def __init__(self, src_mac, message_id, code, flags, extra_data):
-        self.src_mac = src_mac
-        self.message_id = message_id
+        super().__init__(src_mac, message_id)
         self.code = code
         self.flags = flags
         self.extra_data = extra_data
@@ -75,18 +74,18 @@ class TtlsMessage(object):
         return cls(src_mac, eap.packet_id, eap.code, eap.flags, eap.extra_data)
 
 
-class EapolStartMessage(object):
+class EapolStartMessage(EapMessage):
     def __init__(self, src_mac):
-        self.src_mac = src_mac
+        super().__init__(src_mac, None)
 
     @classmethod
     def build(cls, src_mac):
         return cls(src_mac)
 
 
-class EapolLogoffMessage(object):
+class EapolLogoffMessage(EapMessage):
     def __init__(self, src_mac):
-        self.src_mac = src_mac
+        super().__init__(src_mac, None)
 
     @classmethod
     def build(cls, src_mac):
@@ -152,12 +151,11 @@ class MessageParser:
 class MessagePacker:
     @staticmethod
     def ethernet_pack(message, src_mac, dst_mac):
-        """
-        Packs a ethernet packet.
+        """Packs a ethernet packet.
         Args:
             message: EAP payload
-            src_mac:
-            dst_mac:
+            src_mac (MacAddress):
+            dst_mac (MacAddress):
         Returns:
             packed ethernet packet (bytes)
         """
@@ -193,10 +191,7 @@ class MessagePacker:
 
         attr_list.extend(extra_attributes)
 
-        # TODO could we remove the 'eap_pack then parse'?
-        _, _, packed_eap = MessagePacker.eap_pack(eap_message)
-        # This is parse (and not create) because 'packed_eap' is already bytes.
-        attr_list.append(EAPMessage.parse(packed_eap))
+        attr_list.append(EAPMessage.create(eap_message))
 
         if state:
             attr_list.append(state)

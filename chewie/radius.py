@@ -151,9 +151,9 @@ class RadiusPacket(Radius):
                     calculated_response_authenticator,
                     radius_packet.packed.hex()))
 
-        original_ma = message_authenticator.data_type._data
+        original_ma = message_authenticator.data_type.bytes_data
         # Replace the Original Message Authenticator
-        message_authenticator.data_type._data = bytes.fromhex("00000000000000000000000000000000")
+        message_authenticator.data_type.bytes_data = bytes.fromhex("00000000000000000000000000000000")
         radius_packet.pack()
 
         # calculate new hash message authenticator
@@ -219,7 +219,7 @@ class RadiusAttributesList(object):
         for value, list_ in attributes_to_concat.items():
             concatenated_data = b""
             for d, i in list_:
-                concatenated_data += d.data_type._data
+                concatenated_data += d.data_type.bytes_data
             concatenated_attributes.append(tuple((ATTRIBUTE_TYPES[value].parse(concatenated_data),
                                                   i)))
         # Remove old Attributes that were concatenated.
