@@ -1,8 +1,8 @@
 from chewie.radius import RadiusAttributesList, RadiusAccessRequest, Radius
 from chewie.radius_attributes import CallingStationId, UserName, MessageAuthenticator, EAPMessage
-from .ethernet_packet import EthernetPacket
-from .auth_8021x import Auth8021x
-from .eap import Eap, EapIdentity, EapMd5Challenge, EapSuccess, EapFailure, EapLegacyNak, EapTTLS
+from chewie.ethernet_packet import EthernetPacket
+from chewie.auth_8021x import Auth8021x
+from chewie.eap import Eap, EapIdentity, EapMd5Challenge, EapSuccess, EapFailure, EapLegacyNak, EapTTLS
 
 
 class SuccessMessage(object):
@@ -123,8 +123,7 @@ class MessageParser:
     def eap_parse(data, src_mac):
         """Parses the actual EAP payload"""
         eap = Eap.parse(data)
-        if isinstance(eap, EapIdentity) or isinstance(eap, EapMd5Challenge) \
-                or isinstance(eap, EapLegacyNak) or isinstance(eap, EapTTLS):
+        if isinstance(eap, (EapIdentity, EapMd5Challenge, EapLegacyNak, EapTTLS)):
             return EAP_MESSAGES[eap.PACKET_TYPE].build(src_mac, eap)
         elif isinstance(eap, EapSuccess):
             return SuccessMessage.build(src_mac, eap)
@@ -145,12 +144,9 @@ class MessageParser:
     @staticmethod
     def radius_parse(packed_message, secret, request_authenticator_callback):
         """Parses a RADIUS packet"""
-        parsed_radius = Radius.parse(packed_message, secret, request_authenticator_callback=request_authenticator_callback)
+        parsed_radius = Radius.parse(packed_message, secret,
+                                     request_authenticator_callback=request_authenticator_callback)
         return parsed_radius
-
-
-class EapMessage(object):
-    pass
 
 
 class MessagePacker:
@@ -166,11 +162,13 @@ class MessagePacker:
             packed ethernet packet (bytes)
         """
         data = MessagePacker.pack(message)
-        ethernet_packet = EthernetPacket(dst_mac=dst_mac, src_mac=src_mac, ethertype=0x888e, data=data)
+        ethernet_packet = EthernetPacket(dst_mac=dst_mac, src_mac=src_mac,
+                                         ethertype=0x888e, data=data)
         return ethernet_packet.pack()
 
     @staticmethod
-    def radius_pack(eap_message, src_mac, username, radius_packet_id, request_authenticator, state, secret, extra_attributes=None):
+    def radius_pack(eap_message, src_mac, username, radius_packet_id,
+                    request_authenticator, state, secret, extra_attributes=None):
         """
         Packs up a RADIUS message to send to a RADIUS Server.
         Args:
@@ -203,7 +201,8 @@ class MessagePacker:
         if state:
             attr_list.append(state)
 
-        attr_list.append(MessageAuthenticator.create(bytes.fromhex("00000000000000000000000000000000")))
+        attr_list.append(MessageAuthenticator.create(
+            bytes.fromhex("00000000000000000000000000000000")))
 
         attributes = RadiusAttributesList(attr_list)
         access_request = RadiusAccessRequest(radius_packet_id, request_authenticator, attributes)
@@ -231,7 +230,8 @@ class MessagePacker:
             packet_type = 0
             data = eap.pack()
         elif isinstance(message, Md5ChallengeMessage):
-            eap = EapMd5Challenge(message.code, message.message_id, message.challenge, message.extra_data)
+            eap = EapMd5Challenge(message.code, message.message_id,
+                                  message.challenge, message.extra_data)
             version = 1
             packet_type = 0
             data = eap.pack()

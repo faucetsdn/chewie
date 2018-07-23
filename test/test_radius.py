@@ -22,17 +22,21 @@ class RadiusTestCase(unittest.TestCase):
         self.assertEqual(msg_attr.find(AcctSessionId.DESCRIPTION).data_type.data(), "C648004A9C905579")
         self.assertEqual(msg_attr.find(FramedMTU.DESCRIPTION).data_type.data(), 1400)
         self.assertEqual(msg_attr.find(EAPMessage.DESCRIPTION).data_type.data().hex(), "0201000e01686f73743175736572")
-        self.assertEqual(msg_attr.find(MessageAuthenticator.DESCRIPTION).data_type.data().hex(), "73f82750f6f261a95a7cc7d318b9f573")
+        self.assertEqual(msg_attr.find(MessageAuthenticator.DESCRIPTION).data_type.data().hex(),
+                         "73f82750f6f261a95a7cc7d318b9f573")
 
     def test_radius_access_accept_parses(self):
         packed_message = build_byte_string("0201004602970aff2ef0700780f70848e90d24101a0f00003039010973747564656e744f06030200045012d7ec84e8864dd6cd00916c1d5a3cf41b010b686f73743175736572")
-        message = Radius.parse(packed_message, secret="SECRET", request_authenticator_callback=lambda x: bytes.fromhex("a0b4ace0b367114b1a16d76e2bfed5d8"))
+        message = Radius.parse(packed_message, secret="SECRET",
+                               request_authenticator_callback=
+                               lambda x: bytes.fromhex("a0b4ace0b367114b1a16d76e2bfed5d8"))
         self.assertEqual(message.packet_id, 1)
         self.assertEqual(message.authenticator, "02970aff2ef0700780f70848e90d2410")
         msg_attr = message.attributes
         self.assertEqual(len(msg_attr.attributes), 4)
         self.assertEqual(msg_attr.find(EAPMessage.DESCRIPTION).data_type.data().hex(), "03020004")
-        self.assertEqual(msg_attr.find(MessageAuthenticator.DESCRIPTION).data_type.data().hex(), "d7ec84e8864dd6cd00916c1d5a3cf41b")
+        self.assertEqual(msg_attr.find(MessageAuthenticator.DESCRIPTION).data_type.data().hex(),
+                         "d7ec84e8864dd6cd00916c1d5a3cf41b")
         self.assertEqual(msg_attr.find(UserName.DESCRIPTION).data_type.data(), 'host1user')
 
     def test_radius_access_accept_packs(self):
@@ -79,19 +83,23 @@ class RadiusTestCase(unittest.TestCase):
         packed_message = build_byte_string(
             "0b00005056d9280d3e4fed327eb31cf1823f8c244f1801020016041074d3db089b727d9cc5774599e4a32a295012ecc840b316217c851bd6708afb554b24181219ddf6d119dff272fa2fe16c34990c7d")
 
-        self.assertRaises(ValueError, Radius.parse, packed_message, secret="", request_authenticator_callback=lambda x:bytes.fromhex("982a0ba06d3557f0dbc8ba6e823822f1"))
-
+        self.assertRaises(ValueError, Radius.parse, packed_message, secret="",
+                          request_authenticator_callback=lambda x: bytes.fromhex("982a0ba06d3557f0dbc8ba6e823822f1"))
 
     def test_radius_access_challenge_parses(self):
         packed_message = build_byte_string(
             "0b00005056d9280d3e4fed327eb31cf1823f8c244f1801020016041074d3db089b727d9cc5774599e4a32a295012ecc840b316217c851bd6708afb554b24181219ddf6d119dff272fa2fe16c34990c7d")
-        message = Radius.parse(packed_message, secret="SECRET",  request_authenticator_callback=lambda x: bytes.fromhex("982a0ba06d3557f0dbc8ba6e823822f1"))
+        message = Radius.parse(packed_message, secret="SECRET",
+                               request_authenticator_callback=
+                               lambda x: bytes.fromhex("982a0ba06d3557f0dbc8ba6e823822f1"))
         self.assertEqual(message.packet_id, 0)
         self.assertEqual(message.authenticator, "56d9280d3e4fed327eb31cf1823f8c24")
         msg_attr = message.attributes
         self.assertEqual(len(msg_attr.attributes), 3)
-        self.assertEqual(msg_attr.find(EAPMessage.DESCRIPTION).data_type.data().hex(), "01020016041074d3db089b727d9cc5774599e4a32a29")
-        self.assertEqual(msg_attr.find(MessageAuthenticator.DESCRIPTION).data_type.data().hex(), "ecc840b316217c851bd6708afb554b24")
+        self.assertEqual(msg_attr.find(EAPMessage.DESCRIPTION).data_type.data().hex(),
+                         "01020016041074d3db089b727d9cc5774599e4a32a29")
+        self.assertEqual(msg_attr.find(MessageAuthenticator.DESCRIPTION).data_type.data().hex(),
+                         "ecc840b316217c851bd6708afb554b24")
         self.assertEqual(msg_attr.find(State.DESCRIPTION).data_type.data().hex(), "19ddf6d119dff272fa2fe16c34990c7d")
 
     def test_radius_access_challenge_ttls_parses(self):
@@ -237,7 +245,7 @@ class RadiusTestCase(unittest.TestCase):
         attributes = []
         attributes_data = build_byte_string("1a3a000001371134904a76cd1ffff59a3e1365e09441c41d83454aedafc1d9099d32ade23714a4d2c0898ff23997c89f59f1149bcb709fb889dc1a3a0000013710349e92efe66d278d977e3fe87faa650b391c43103d3d8e662bb3881807f1b3313ed975d3cfa85d45a6f3b83f6b98364a99135e4f06032a0004501256aef88d10224c30e6b3563acf963758010b686f73743175736572")
         attributes_to_concat = {}
-        RadiusAttributesList.extract_attributes(attributes, attributes_data, attributes_to_concat)
+        RadiusAttributesList.extract_attributes(attributes_data, attributes, attributes_to_concat)
         self.assertEqual(len(attributes), 5)
         self.assertEqual(len(attributes_to_concat), 1)
         self.assertEqual(list(attributes_to_concat.values())[0][0][1], 2)
@@ -247,7 +255,7 @@ class RadiusTestCase(unittest.TestCase):
         attributes = []
         attributes_data = build_byte_string("4fff012802bc158000000a76130101ff040530030101ff30360603551d1f042f302d302ba029a0278625687474703a2f2f7777772e6578616d706c652e6f72672f6578616d706c655f63612e63726c300d06092a864886f70d01010b05000382010100139e9c2b1e9bf30c6567759ffb57af9f031a59b6a8adb1702a55de2e51f2286715ef1399ebdc593d38db3ad4794c3e78037d3de5612cba33cefc5b830c3a2118bfc0572d201c07105b7c0ef5bb64225d959afef6a4527a88d1e5fd552fd16775a5c90802d11ad793da157441f7a181f85a2908ebcb87a86960c6d3ae631019bc73f850bc5be494a97084ccaea1cc13c44a4fdf0ef123c067b688e47a4fff4d223c15fd56798051ff4912c721f15c96061ef683b1ade02b5449b06184f59d4218f2287d35cfa0a3a4f65e40c8750d0c70dc00d65a8981e0a2cf6961b1355c10d399ce583a426e211b0feef37da67a57bbbc81d912d5379668cfdc3666bacf5e9d9c7d160303014d0c0001490300174104b275c284c5c067b9c3104305ba6704b4b0e083f0e285d9b205a8d7307e503907478f314679d084a0f1ccbc3ceaa6b6d56c588654d223fd16514bba463c5f8d7006010100bca760ef9aab5f1cf9239bab7d0bbf585e12f9c6440b9dd36affc87ff8f334b0dbea94686edbcff9143bd40a5136b065d5599742665fa27d5ec5e86898b7c8cc2c375d190646c64fc444df7911f41a12a7219f667527cfc4ba99b684fb763a01f4dc361a891906e3ade0c6e787c096f868726a5aafafb76ce71ce896b50015c9db89e9c3d13c90e90b5d82a1327941404298c1e358cbc7bbbf8e4fe2e1ecafbcbddfbe0b1a7d3f0769306f16f3ed4972b14b8af0f51761053754ec73a1a41b294fe0d00a9281e3d9c0175651d2bbaf28df32a25bfbae85983a3935891f0a955b636b3540cde3aba4ec20d62988a81a608b450e87b3eefcb66f50cf3104a4b367122d16030300040e00000050125f3ac1f2c8e65dab1bf90b9604cd65aa1812cefe6083cad675dd64722c274ec35372")
         attributes_to_concat = {}
-        RadiusAttributesList.extract_attributes(attributes, attributes_data, attributes_to_concat)
+        RadiusAttributesList.extract_attributes(attributes_data, attributes, attributes_to_concat)
         self.assertEqual(len(attributes), 5)
         self.assertEqual(len(attributes_to_concat), 1)
         # check that the concated EAPMessage is marked position 0

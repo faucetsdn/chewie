@@ -1,16 +1,19 @@
+"""Radius Attribute Datatypes"""
 import abc
 import math
 import struct
 
 
 class DataType(object):
+    """Parent datatype class, subclass should provide implementation for abstractmethods.
+    May """
     DATA_TYPE_VALUE = None
     AVP_HEADER_LEN = 1 + 1
     MAX_DATA_LENGTH = 253
     MIN_DATA_LENGTH = 1
 
-    _data = None
-    raw_data = None
+    _data = None  # bytes version of raw_data
+    raw_data = None  # the original data used by Attribute.create(). e.g. str, int.
 
     def __init__(self, raw_data):
         self.raw_data = raw_data
@@ -26,9 +29,9 @@ class DataType(object):
         return
 
     def data(self):
-        """
-
-        :return: The python type (int, str, bytes) of the _data.
+        """Subclass should override this as needed.
+        Returns:
+             The python type (int, str, bytes) of the _data.
          This will perform any decoding as required instead of using the unprocessed _data.
         """
         return self._data
@@ -36,12 +39,18 @@ class DataType(object):
     @abc.abstractmethod
     def data_length(self):
         """
-        :return: length of the data field, and not total length of the attribute (including the type and length).
-        If total is required user full_length.
+        Returns:
+             length of the data field, and not total length of the attribute (including the
+         type and length).
+        If total is required use full_length.
         """
         return 0
 
     def full_length(self):
+        """
+        Returns:
+            Length of the whole field include the header (type and length)
+        """
         return self.data_length() + self.AVP_HEADER_LEN
 
     @classmethod
@@ -67,7 +76,7 @@ class Integer(DataType):
             try:
                 data = raw_data.to_bytes(self.MAX_DATA_LENGTH, "big")
             except OverflowError:
-                raise ValueError("Integer must be >= 0  and <= 2^32-1, was %d", raw_data)
+                raise ValueError("Integer must be >= 0  and <= 2^32-1, was %d" % raw_data)
         self._data = data
 
     @classmethod
@@ -93,9 +102,8 @@ class Enum(DataType):
             try:
                 data = raw_data.to_bytes(self.MAX_DATA_LENGTH, "big")
             except OverflowError:
-                raise ValueError("Integer must be >= 0  and <= 2^32-1, was %d", raw_data)
+                raise ValueError("Integer must be >= 0  and <= 2^32-1, was %d" % raw_data)
         self._data = data
-
 
     @classmethod
     def parse(cls, packed_value):
@@ -169,9 +177,8 @@ class Concat(DataType):
         super().__init__(raw_data)
         if raw_data:
             data = bytes.fromhex(raw_data)
-            #self.is_valid_length(data)
+            # self.is_valid_length(data)
         self._data = data
-
 
     @classmethod
     def parse(cls, packed_value):
@@ -221,7 +228,6 @@ class Vsa(DataType):
             data = raw_data
             self.is_valid_length(data)
         self._data = data
-
 
     @classmethod
     def parse(cls, packed_value):

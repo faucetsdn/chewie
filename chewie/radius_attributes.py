@@ -1,3 +1,4 @@
+"""Radius Attributes"""
 # TODO if attributes have requirements e.g. length must be above minimum, can enforce that here.
 # TODO could we auto generate this from the radius-types-2.csv available from iana.org?
 
@@ -10,6 +11,7 @@ ATTRIBUTE_TYPES = {}
 
 
 class Attribute(object):
+    """Parent class for the Attributes."""
 
     TYPE = None  # e.g. 1
     DATA_TYPE = None  # e.g. Text
@@ -22,26 +24,38 @@ class Attribute(object):
 
     @classmethod
     def create(cls, data):
-        """
-        :param data: object of python type (int, str, bytes, ...)
-        :return:
+        """Factory method.
+        Args:
+            data: object of python type (int, str, bytes, ...)
+        Returns:
+            Attribute subclass.
         """
         return cls(cls.DATA_TYPE(raw_data=data))
 
     @classmethod
     def parse(cls, packed_value):
         """
-        :param packed_value: pre-packed value
-        :return:
+        Args:
+            packed_value (bytes): pre-packed value
+        Returns:
+            Attribute subclass.
         """
         return cls(cls.DATA_TYPE.parse(packed_value))
 
     def pack(self):
+        """
+        Returns:
+            packed attribute (including header) bytes
+        """
         tl = struct.pack("!BB", self.TYPE, self.full_length())
         v = self.data_type.pack(self.TYPE)
         return tl + v
 
     def full_length(self):
+        """
+        Returns:
+            length (including header).
+        """
         return self.data_type.full_length()
 
 

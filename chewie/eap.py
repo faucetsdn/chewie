@@ -172,7 +172,7 @@ class EapTTLS(Eap):
         return cls(code, packet_id, flags, extra_data)
 
     def pack(self):
-        if len(self.extra_data):
+        if self.extra_data:
             packed = struct.pack("!B%ds" % len(self.extra_data), self.flags, self.extra_data)
         else:
             packed = struct.pack("!B", self.flags)

@@ -1,10 +1,11 @@
+"""Utility Functions"""
 import logging
 import sys
 
 
 def get_logger(name, log_level=logging.DEBUG):
     logger = logging.getLogger(name)
-    if not len(logger.handlers):
+    if not logger.handlers:
         logger.setLevel(log_level)
         ch = logging.StreamHandler(sys.stdout)
         ch.setLevel(log_level)
