@@ -4,7 +4,8 @@ import random
 from chewie.eap import Eap
 from chewie.event import EventMessageReceived, EventRadiusMessageReceived, EventTimerExpired, \
     EventPortStatusChange
-from chewie.message_parser import SuccessMessage, FailureMessage, EapolStartMessage, IdentityMessage
+from chewie.message_parser import SuccessMessage, FailureMessage, EapolStartMessage, \
+    IdentityMessage, EapolLogoffMessage
 import chewie.utils as utils
 from chewie.utils import log_method
 
@@ -135,6 +136,10 @@ class FullEAPStateMachine:
     FAILURE2 = "FAILURE2"
     TIMEOUT_FAILURE2 = "TIMEOUT_FAILURE2"
 
+    # Non RFC 4137 state, when logoff message received sm goes here.
+    LOGOFF = "LOGOFF"
+    LOGOFF2 = "LOGOFF2"
+
     # RFC 4137
     MAX_RETRANS = 5  # Configurable  max for retransmissions before aborting.
 
@@ -161,6 +166,7 @@ class FullEAPStateMachine:
     retransCount = None     # integer
     lastReqData = None      # EAP packet
     methodTimeout = None    # integer
+    logoff = None           # bool
 
     # Lower Later  to Stand-Alone Authenticator
     eapResp = None      # bool
@@ -180,6 +186,8 @@ class FullEAPStateMachine:
     eapReqData = None   # EAP Packet
     eapKeyData = None   # EAP Key
     eapKeyAvailable = None  # bool
+    # Non RFC 4137
+    eapLogoff = None    # bool
 
     def __init__(self, eap_output_queue, radius_output_queue, src_mac, timer_scheduler):
         """
@@ -294,6 +302,8 @@ class FullEAPStateMachine:
         self.eapTimeout = False
         self.eapKeyData = None
         self.eapRestart = False
+
+        self.eapLogoff = False
 
     @log_method
     def idle_state(self):
@@ -428,6 +438,16 @@ class FullEAPStateMachine:
     def timeout_failure2_state(self):
         self.eapTimeout = True
 
+    @log_method
+    def logoff_state(self):
+        self.eapSuccess = False
+        self.eapLogoff = True
+
+    @log_method
+    def logoff2_state(self):
+        self.eapSuccess = False
+        self.eapLogoff = True
+
     def handle_message_received(self):
         """Main state machine loop"""
 
@@ -485,8 +505,12 @@ class FullEAPStateMachine:
                 pass
 
             if self.currentState == FullEAPStateMachine.SUCCESS:
-                # Do nothing.
-                pass
+                # RFC 4137 says do nothing from success(2), but we're adding a logoff state.
+                # hopefully it will work as intended.
+                # Otherwise allow transition to logoff from all states.
+                if self.eapLogoff:
+                    self.logoff_state()
+                    self.currentState = FullEAPStateMachine.LOGOFF
 
             if self.currentState == FullEAPStateMachine.TIMEOUT_FAILURE:
                 # Do nothing.
@@ -631,8 +655,13 @@ class FullEAPStateMachine:
                 pass
 
             if self.currentState == FullEAPStateMachine.SUCCESS2:
-                # Do nothing.
-                pass
+                # RFC 4137 says do nothing from success(2), but we're adding a logoff state.
+                # hopefully it will work as intended.
+                # Otherwise allow transition to logoff from all states.
+                if self.logoff:
+                    self.logoff2_state()
+                    self.currentState = FullEAPStateMachine.LOGOFF2
+
 
             if self.currentState == FullEAPStateMachine.TIMEOUT_FAILURE2:
                 # Do nothing.
@@ -723,8 +752,11 @@ class FullEAPStateMachine:
             event (EventMessageReceived): event being processed.
         """
         self.logger.info('type: %s, message %s', type(event.message), event.message)
+        self.logoff = False
         if isinstance(event.message, EapolStartMessage):
             self.eapRestart = True
+        elif isinstance(event.message, EapolLogoffMessage):
+            self.logoff = True
         if not isinstance(event, EventRadiusMessageReceived):
             self.eapRespData = event.message
             self.eapResp = True
@@ -740,6 +772,7 @@ class FullEAPStateMachine:
         self.aaaFail = False
         self.aaaEapKeyAvailable = False
         self.aaaEapResp = False
+        self.eapLogoff = True
         if isinstance(event, EventRadiusMessageReceived):
             self.radius_state_attribute = event.state
             self.aaaEapReq = True

@@ -7,8 +7,9 @@ from netils import build_byte_string
 
 from chewie.eap import Eap
 from chewie.mac_address import MacAddress
-from chewie.message_parser import EapolStartMessage, IdentityMessage, Md5ChallengeMessage, SuccessMessage, \
-    LegacyNakMessage, TtlsMessage, FailureMessage
+from chewie.message_parser import EapolStartMessage, IdentityMessage, Md5ChallengeMessage, \
+    SuccessMessage, \
+    LegacyNakMessage, TtlsMessage, FailureMessage, EapolLogoffMessage
 from chewie.eap_state_machine import FullEAPStateMachine
 from chewie.event import EventMessageReceived, EventRadiusMessageReceived, EventPortStatusChange
 
@@ -28,7 +29,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
                                       self.src_mac, self.timer_scheduler)
         self.MAX_RETRANSMITS = 3
         self.sm.MAX_RETRANS = self.MAX_RETRANSMITS
-        self.sm.DEFAULT_TIMEOUT = 0.1
+        self.sm.DEFAULT_TIMEOUT = 1
         self.sm.portEnabled = True
         self.sm.eapRestart = True
 
@@ -172,6 +173,34 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.assertEqual(self.eap_output_queue.qsize(), 3)
         self.assertIsInstance(self.eap_output_queue.queue[2][0], SuccessMessage)
         self.assertEqual(self.radius_output_queue.qsize(), 2)
+
+    def test_logoff2(self):
+        """Test logoff from success2 state."""
+        self.test_success2()
+
+        message = EapolLogoffMessage(self.src_mac)
+        self.sm.event(EventRadiusMessageReceived(message, None))
+
+        self.assertEqual(self.sm.currentState, self.sm.LOGOFF2)
+        self.assertEqual(self.eap_output_queue.qsize(), 3)
+        self.assertEqual(self.radius_output_queue.qsize(), 2)
+
+        self.eap_output_queue.queue.clear()
+        self.radius_output_queue.queue.clear()
+        self.test_success2()
+
+    def test_logoff_from_idle2(self):
+        """Test logoff from middle of authentication. should be ignored"""
+        self.test_md5_challenge_request()
+
+        message = EapolLogoffMessage(self.src_mac)
+        self.sm.event(EventRadiusMessageReceived(message, None))
+
+        # should be in same state as when test_md5_challenge_request returned.
+        self.assertEqual(self.sm.currentState, self.sm.IDLE2)
+        self.assertEqual(self.eap_output_queue.qsize(), 2)
+        self.assertIsInstance(self.eap_output_queue.queue[1][0], Md5ChallengeMessage)
+        self.assertEqual(self.radius_output_queue.qsize(), 1)
 
     def test_failure2(self):
         self.test_md5_challenge_response()
