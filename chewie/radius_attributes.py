@@ -1,23 +1,21 @@
+"""Radius Attributes"""
 # TODO if attributes have requirements e.g. length must be above minimum, can enforce that here.
 # TODO could we auto generate this from the radius-types-2.csv available from iana.org?
 
 import struct
 
-from chewie.radius_datatypes import Concat, Enum, Integer, String, Text, Vsa, DATA_TYPE_PARSERS
+from chewie.radius_datatypes import Concat, Enum, Integer, String, Text, Vsa
 
 
 ATTRIBUTE_TYPES = {}
 
 
-def get_data_type(attribute_type):
-    return ATTRIBUTE_TYPES[attribute_type].DATA_TYPE.DATA_TYPE_VALUE
-
-
 class Attribute(object):
+    """Parent class for the Attributes."""
 
     TYPE = None  # e.g. 1
     DATA_TYPE = None  # e.g. Text
-    DESCRIPTION = None  # e.g. User-Name
+    DESCRIPTION = None  # e.g. "User-Name"
 
     HEADER_SIZE = 1 + 1
 
@@ -25,16 +23,39 @@ class Attribute(object):
         self.data_type = data_type
 
     @classmethod
+    def create(cls, data):
+        """Factory method.
+        Args:
+            data: object of python type (int, str, bytes, ...)
+        Returns:
+            Attribute subclass.
+        """
+        return cls(cls.DATA_TYPE(raw_data=data))
+
+    @classmethod
     def parse(cls, packed_value):
-        data_type = get_data_type(cls.TYPE)
-        return cls(DATA_TYPE_PARSERS[data_type](packed_value))
+        """
+        Args:
+            packed_value (bytes): pre-packed value
+        Returns:
+            Attribute subclass.
+        """
+        return cls(cls.DATA_TYPE.parse(packed_value))
 
     def pack(self):
+        """
+        Returns:
+            packed attribute (including header) bytes
+        """
         tl = struct.pack("!BB", self.TYPE, self.full_length())
         v = self.data_type.pack(self.TYPE)
         return tl + v
 
     def full_length(self):
+        """
+        Returns:
+            length (including header).
+        """
         return self.data_type.full_length()
 
 

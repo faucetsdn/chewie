@@ -1,5 +1,5 @@
-import struct
 from netils import build_byte_string
+
 
 class MacAddress:
     def __init__(self, address):

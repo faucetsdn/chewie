@@ -1,24 +1,20 @@
+"""Radius Attribute Datatypes"""
 import abc
 import math
 import struct
 
-
-DATA_TYPE_PARSERS = {}
-
-
-def register_datatype_parser(cls):
-    DATA_TYPE_PARSERS[cls.DATA_TYPE_VALUE] = cls.parse
-    return cls
+from chewie import message_parser
 
 
 class DataType(object):
+    """Parent datatype class, subclass should provide implementation for abstractmethods.
+    May """
     DATA_TYPE_VALUE = None
     AVP_HEADER_LEN = 1 + 1
     MAX_DATA_LENGTH = 253
     MIN_DATA_LENGTH = 1
 
-    def __init__(self, data):
-        self.data = data
+    bytes_data = None  # bytes version of raw_data
 
     @abc.abstractmethod
     def parse(self, packed_value):
@@ -30,15 +26,29 @@ class DataType(object):
         """"""
         return
 
+    def data(self):
+        """Subclass should override this as needed.
+        Returns:
+             The python type (int, str, bytes) of the bytes_data.
+         This will perform any decoding as required instead of using the unprocessed bytes_data.
+        """
+        return self.bytes_data
+
     @abc.abstractmethod
     def data_length(self):
         """
-        :return: length of the data field, and not total length of the attribute (including the type and length).
-        If total is required user full_length.
+        Returns:
+             length of the data field, and not total length of the attribute (including the
+         type and length).
+        If total is required use full_length.
         """
         return 0
 
     def full_length(self):
+        """
+        Returns:
+            Length of the whole field include the header (type and length)
+        """
         return self.data_length() + self.AVP_HEADER_LEN
 
     @classmethod
@@ -53,63 +63,70 @@ class DataType(object):
                              % (cls.__name__, cls.MIN_DATA_LENGTH, length, cls.MAX_DATA_LENGTH))
 
 
-@register_datatype_parser
 class Integer(DataType):
     DATA_TYPE_VALUE = 1
     MAX_DATA_LENGTH = 4
     MIN_DATA_LENGTH = 4
 
+    def __init__(self, bytes_data=None, raw_data=None):
+        if raw_data:
+            try:
+                bytes_data = raw_data.to_bytes(self.MAX_DATA_LENGTH, "big")
+            except OverflowError:
+                raise ValueError("Integer must be >= 0  and <= 2^32-1, was %d" % raw_data)
+        self.bytes_data = bytes_data
+
     @classmethod
     def parse(cls, packed_value):
         cls.is_valid_length(packed_value)
-
-        return cls(struct.unpack("!I", packed_value)[0])
+        return cls(bytes_data=struct.unpack("!4s", packed_value)[0])
 
     def pack(self, attribute_type):
-        return struct.pack("!I", self.data)
+        return struct.pack("!4s", self.bytes_data)
+
+    def data(self):
+        return int.from_bytes(self.bytes_data, 'big')
 
     def data_length(self):
         return 4
 
 
-@register_datatype_parser
 class Enum(DataType):
     DATA_TYPE_VALUE = 2
     MAX_DATA_LENGTH = 4
     MIN_DATA_LENGTH = 4
 
+    def __init__(self, bytes_data=None, raw_data=None):
+        if raw_data:
+            try:
+                bytes_data = raw_data.to_bytes(self.MAX_DATA_LENGTH, "big")
+            except OverflowError:
+                raise ValueError("Integer must be >= 0  and <= 2^32-1, was %d" % raw_data)
+        self.bytes_data = bytes_data
+
     @classmethod
     def parse(cls, packed_value):
         cls.is_valid_length(packed_value)
-        return cls(struct.unpack("!I", packed_value)[0])
+        return cls(bytes_data=struct.unpack("!4s", packed_value)[0])
 
     def pack(self, attribute_type):
-        return struct.pack("!I", self.data)
+        return struct.pack("!4s", self.bytes_data)
+
+    def data(self):
+        return int.from_bytes(self.bytes_data, 'big')
 
     def data_length(self):
         return 4
 
 
-@register_datatype_parser
 class Text(DataType):
     DATA_TYPE_VALUE = 4
 
-    @classmethod
-    def parse(cls, packed_value):
-        cls.is_valid_length(packed_value)
-        return cls(struct.unpack("!%ds" % len(packed_value), packed_value)[0].decode('utf-8'))
-
-    def pack(self, attribute_type):
-        return struct.pack("!%ds" % len(self.data), self.data.encode('utf-8'))
-
-    def data_length(self):
-        return len(self.data)
-
-
-@register_datatype_parser
-class String(DataType):
-    # TODO how is this different from Text?? - text is utf8
-    DATA_TYPE_VALUE = 5
+    def __init__(self, bytes_data=None, raw_data=None):
+        if raw_data is not None:
+            bytes_data = raw_data.encode()
+            self.is_valid_length(bytes_data)
+        self.bytes_data = bytes_data
 
     @classmethod
     def parse(cls, packed_value):
@@ -117,17 +134,53 @@ class String(DataType):
         return cls(struct.unpack("!%ds" % len(packed_value), packed_value)[0])
 
     def pack(self, attribute_type):
-        return struct.pack("!%ds" % len(self.data), self.data)
+        return struct.pack("!%ds" % len(self.bytes_data), self.bytes_data)
+
+    def data(self):
+        return self.bytes_data.decode("UTF-8")
 
     def data_length(self):
-        return len(self.data)
+        return len(self.bytes_data)
 
 
-@register_datatype_parser
+class String(DataType):
+    # how is this different from Text?? - text is utf8
+    DATA_TYPE_VALUE = 5
+
+    def __init__(self, bytes_data=None, raw_data=None):
+        if raw_data is not None:
+            if isinstance(raw_data, bytes):
+                bytes_data = raw_data
+            else:
+                bytes_data = raw_data.encode()
+            self.is_valid_length(bytes_data)
+        self.bytes_data = bytes_data
+
+    @classmethod
+    def parse(cls, packed_value):
+        cls.is_valid_length(packed_value)
+        return cls(struct.unpack("!%ds" % len(packed_value), packed_value)[0])
+
+    def pack(self, attribute_type):
+        return struct.pack("!%ds" % len(self.bytes_data), self.bytes_data)
+
+    def data_length(self):
+        return len(self.bytes_data)
+
+
 class Concat(DataType):
     """AttributeTypes that use Concat must override their pack()"""
 
     DATA_TYPE_VALUE = 6
+
+    def __init__(self, bytes_data=None, raw_data=None):
+        if raw_data:
+            if isinstance(raw_data, message_parser.EapMessage):
+                bytes_data = message_parser.MessagePacker.eap_pack(raw_data)[2]
+            else:
+                bytes_data = bytes.fromhex(raw_data)
+            # self.is_valid_length(data)
+        self.bytes_data = bytes_data
 
     @classmethod
     def parse(cls, packed_value):
@@ -141,36 +194,46 @@ class Concat(DataType):
 
     def pack(self, attribute_type):
         packed = bytes()
-        mod = len(self.data) % self.MAX_DATA_LENGTH
+        mod = len(self.bytes_data) % self.MAX_DATA_LENGTH
         if mod == 0:
             mod = self.MAX_DATA_LENGTH
         i = 0
-        if len(self.data) > self.MAX_DATA_LENGTH:
+        if len(self.bytes_data) > self.MAX_DATA_LENGTH:
 
-            for i in range(int(len(self.data) / self.MAX_DATA_LENGTH)):
-                t = struct.pack("!BB253s", attribute_type, self.MAX_DATA_LENGTH + self.AVP_HEADER_LEN,
-                                self.data[i * self.MAX_DATA_LENGTH: (i + 1) * self.MAX_DATA_LENGTH])
+            for i in range(int(len(self.bytes_data) / self.MAX_DATA_LENGTH)):
+                t = struct.pack("!BB253s", attribute_type,
+                                self.MAX_DATA_LENGTH + self.AVP_HEADER_LEN,
+                                self.bytes_data[i * self.MAX_DATA_LENGTH:
+                                           (i + 1) * self.MAX_DATA_LENGTH])
                 packed += t
             i += 1
         packed += struct.pack("!BB%ds" % mod, attribute_type, mod + self.AVP_HEADER_LEN,
-                              self.data[i * self.MAX_DATA_LENGTH:])
+                              self.bytes_data[i * self.MAX_DATA_LENGTH:])
         return packed
+
+    def data(self):
+        return message_parser.MessageParser.eap_parse(self.bytes_data, None)
 
     def full_length(self):
         return self.AVP_HEADER_LEN * \
-               (math.ceil(len(self.data) / self.MAX_DATA_LENGTH + 1))\
-               + len(self.data) - self.AVP_HEADER_LEN
+               (math.ceil(len(self.bytes_data) / self.MAX_DATA_LENGTH + 1))\
+               + len(self.bytes_data) - self.AVP_HEADER_LEN
 
     def data_length(self):
-        return len(self.data)
+        return len(self.bytes_data)
 
 
-@register_datatype_parser
 class Vsa(DataType):
 
     DATA_TYPE_VALUE = 14
     VENDOR_ID_LEN = 4
     MIN_DATA_LENGTH = 5
+
+    def __init__(self, bytes_data=None, raw_data=None):
+        if raw_data:
+            bytes_data = raw_data
+            self.is_valid_length(bytes_data)
+        self.bytes_data = bytes_data
 
     @classmethod
     def parse(cls, packed_value):
@@ -180,7 +243,7 @@ class Vsa(DataType):
         return cls(struct.unpack("!%ds" % len(packed_value), packed_value)[0])
 
     def pack(self, attribute_type):
-        return struct.pack("!%ds" % (self.data_length()), self.data)
+        return struct.pack("!%ds" % (self.data_length()), self.bytes_data)
 
     def data_length(self):
-        return len(self.data)
+        return len(self.bytes_data)
