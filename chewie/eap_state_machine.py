@@ -189,10 +189,12 @@ class FullEAPStateMachine:
     # Non RFC 4137
     eapLogoff = None    # bool
 
-    def __init__(self, eap_output_queue, radius_output_queue, src_mac, timer_scheduler):
+    def __init__(self, eap_output_queue, radius_output_queue, src_mac, timer_scheduler,
+                 auth_handler):
         """
 
         Args:
+            auth_handler (callable): callable that takes input of src_mac. Called on EAP-Success.
             eap_output_queue (Queue): where to put Messages to send to supplicant
             radius_output_queue (Queue): where to put Messages to send to AAA server
             src_mac (MacAddress): MAC address this statemachine (sm) belongs to.
@@ -202,6 +204,7 @@ class FullEAPStateMachine:
         self.radius_output_messages = radius_output_queue
         self.src_mac = src_mac
         self.timer_scheduler = timer_scheduler
+        self.auth_handler = auth_handler
 
         self.currentState = FullEAPStateMachine.NO_STATE
         # TODO dynamically assign this or make a way to give it multiple methods
@@ -662,7 +665,6 @@ class FullEAPStateMachine:
                     self.logoff2_state()
                     self.currentState = FullEAPStateMachine.LOGOFF2
 
-
             if self.currentState == FullEAPStateMachine.TIMEOUT_FAILURE2:
                 # Do nothing.
                 pass
@@ -772,7 +774,7 @@ class FullEAPStateMachine:
         self.aaaFail = False
         self.aaaEapKeyAvailable = False
         self.aaaEapResp = False
-        self.eapLogoff = True
+        self.eapLogoff = False
         if isinstance(event, EventRadiusMessageReceived):
             self.radius_state_attribute = event.state
             self.aaaEapReq = True
@@ -781,6 +783,7 @@ class FullEAPStateMachine:
             if isinstance(self.aaaEapReqData, SuccessMessage):
                 self.logger.info("aaaSuccess")
                 self.aaaSuccess = True
+                self.auth_handler(self.src_mac)
             if isinstance(self.aaaEapReqData, FailureMessage):
                 self.logger.info("aaaFail")
                 self.aaaFail = True

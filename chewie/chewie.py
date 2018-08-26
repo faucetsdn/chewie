@@ -216,8 +216,8 @@ class Chewie(object):
     def get_state_machine(self, src_mac):
         sm = self.state_machines.get(src_mac, None)
         if not sm:
-            sm = FullEAPStateMachine(self.eap_output_messages, self.radius_output_messages,
-                                     src_mac, self.timer_scheduler)
+            sm = FullEAPStateMachine(self.eap_output_messages, self.radius_output_messages, src_mac,
+                                     self.timer_scheduler, self.auth_success)
             sm.eapRestart = True
             # TODO what if port is not actually enabled, but then how did they auth?
             sm.portEnabled = True
