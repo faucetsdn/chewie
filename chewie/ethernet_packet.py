@@ -3,6 +3,7 @@ from .mac_address import MacAddress
 
 ETHERNET_HEADER_LENGTH = 6 + 6 + 2
 
+
 class EthernetPacket(object):
     def __init__(self, dst_mac, src_mac, ethertype, data):
         self.dst_mac = dst_mac
@@ -12,7 +13,8 @@ class EthernetPacket(object):
 
     @classmethod
     def parse(cls, packed_message):
-        dst_mac, src_mac, ethertype = struct.unpack("!6s6sH", packed_message[:ETHERNET_HEADER_LENGTH])
+        dst_mac, src_mac, ethertype = struct.unpack("!6s6sH",
+                                                    packed_message[:ETHERNET_HEADER_LENGTH])
         data = packed_message[ETHERNET_HEADER_LENGTH:]
         return cls(MacAddress(dst_mac), MacAddress(src_mac), ethertype, data)
 
