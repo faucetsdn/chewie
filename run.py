@@ -14,5 +14,5 @@ def auth_handler(address, group_address):
 logger = utils.get_logger("CHEWIE")
 logger.info('starting chewieeeee.')
 
-chewie = Chewie("eth1", credentials, logger, auth_handler, radius_ip="172.24.0.113")
+chewie = Chewie("eth1", credentials, logger, auth_handler, radius_server_ip="172.24.0.113")
 chewie.run()
