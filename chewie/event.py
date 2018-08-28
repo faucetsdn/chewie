@@ -26,7 +26,7 @@ class EventPortStatusChange(Event):
     def __init__(self, port_status):
         """
         Args:
-            status (bool): True if port is enabled, False otherwise.
+            port_status (bool): True if port is enabled, False otherwise.
         """
         self.port_status = port_status
         if port_status:

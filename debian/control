@@ -1,0 +1,22 @@
+Source: chewie
+Section: python
+Priority: optional
+Maintainer: Brad Cowie <brad@faucet.nz>
+Build-Depends: debhelper (>=9),
+               dh-python,
+               python3-all,
+               python3-setuptools,
+               python3-eventlet,
+               python3-netils
+Standards-Version: 3.9.6
+Homepage: https://pypi.org/project/chewie/
+X-Python3-Version: >= 3.2
+#Vcs-Git: git://github.com/faucetsdn/chewie.git
+#Vcs-Browser: https://github.com/faucetsdn/chewie.git
+
+Package: python3-chewie
+Architecture: all
+Depends: ${python3:Depends}, ${misc:Depends}
+Description: Chewie is an EAPOL/802.1x implementation in Python.
+ .
+ This package installs the library for Python 3.
