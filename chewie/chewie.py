@@ -30,10 +30,9 @@ class Chewie(object):
     EAP_ADDRESS = MacAddress.from_string("01:80:c2:00:00:03")
     RADIUS_UDP_PORT = 1812
 
-    def __init__(self, interface_name, credentials, logger=None, auth_handler=None,
+    def __init__(self, interface_name, logger=None, auth_handler=None,
                  group_address=None, radius_server_ip=None):
         self.interface_name = interface_name
-        self.credentials = credentials
         self.logger = logger
         self.auth_handler = auth_handler
         self.group_address = group_address
