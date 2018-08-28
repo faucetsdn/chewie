@@ -190,12 +190,14 @@ class FullEAPStateMachine:
     eapLogoff = None    # bool
 
     def __init__(self, eap_output_queue, radius_output_queue, src_mac, timer_scheduler,
-                 auth_handler):
+                 auth_handler, failure_handler, logoff_handler):
         """
 
         Args:
             auth_handler (callable): callable that takes input of src_mac. Called on EAP-Success.
             eap_output_queue (Queue): where to put Messages to send to supplicant
+            failure_handler (callable): callable that takes input of src_mac. Called on EAP-Failure.
+            logoff_handler (callable): callable that takes input of src_mac. Called on EAP-Logoff.
             radius_output_queue (Queue): where to put Messages to send to AAA server
             src_mac (MacAddress): MAC address this statemachine (sm) belongs to.
             timer_scheduler (Scheduler): where to put timer events. (useful for Retransmits)
@@ -205,6 +207,9 @@ class FullEAPStateMachine:
         self.src_mac = src_mac
         self.timer_scheduler = timer_scheduler
         self.auth_handler = auth_handler
+        self.failure_handler = failure_handler
+        self.logoff_handler = logoff_handler
+
 
         self.currentState = FullEAPStateMachine.NO_STATE
         # TODO dynamically assign this or make a way to give it multiple methods
@@ -716,8 +721,15 @@ class FullEAPStateMachine:
         if self.eapSuccess:
             self.logger.info('Yay authentication successful %s %s',
                              self.src_mac, self.aaaIdentity.identity)
+            self.auth_handler(self.src_mac)
+
         if self.eapFail:
             self.logger.info('oh authentication not successful %s', self.src_mac)
+            self.failure_handler(self.src_mac)
+
+        if self.eapLogoff:
+            self.logger.info('client is logging off %s', self.src_mac)
+            self.logoff_handler(self.src_mac)
 
     def port_status_event_received(self, event):
         """Sets variables for the port status change (link up/down) being received.
@@ -783,7 +795,6 @@ class FullEAPStateMachine:
             if isinstance(self.aaaEapReqData, SuccessMessage):
                 self.logger.info("aaaSuccess")
                 self.aaaSuccess = True
-                self.auth_handler(self.src_mac)
             if isinstance(self.aaaEapReqData, FailureMessage):
                 self.logger.info("aaaFail")
                 self.aaaFail = True

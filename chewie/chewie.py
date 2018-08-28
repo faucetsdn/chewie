@@ -30,12 +30,16 @@ class Chewie(object):
     EAP_ADDRESS = MacAddress.from_string("01:80:c2:00:00:03")
     RADIUS_UDP_PORT = 1812
 
-    def __init__(self, interface_name, credentials, logger=None, auth_handler=None,
+    def __init__(self, interface_name, credentials, logger=None,
+                 auth_handler=None, failure_handler=None, logoff_handler=None,
                  group_address=None, radius_server_ip=None):
         self.interface_name = interface_name
         self.credentials = credentials
         self.logger = logger
         self.auth_handler = auth_handler
+        self.failure_handler = failure_handler
+        self.logoff_handler = logoff_handler
+
         self.group_address = group_address
         if not group_address:
             self.group_address = self.EAP_ADDRESS
@@ -85,6 +89,14 @@ class Chewie(object):
     def auth_success(self, src_mac):
         if self.auth_handler:
             self.auth_handler(src_mac, self.group_address)
+
+    def auth_failure(self, src_mac):
+        if self.failure_handler:
+            self.failure_handler(src_mac)
+
+    def auth_logoff(self, src_mac):
+        if self.logoff_handler:
+            self.logoff_handler(src_mac)
 
     def send_eap_messages(self):
         try:
@@ -217,7 +229,8 @@ class Chewie(object):
         sm = self.state_machines.get(src_mac, None)
         if not sm:
             sm = FullEAPStateMachine(self.eap_output_messages, self.radius_output_messages, src_mac,
-                                     self.timer_scheduler, self.auth_success)
+                                     self.timer_scheduler, self.auth_success,
+                                     self.auth_failure, self.auth_logoff)
             sm.eapRestart = True
             # TODO what if port is not actually enabled, but then how did they auth?
             sm.portEnabled = True
