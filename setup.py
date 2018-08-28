@@ -5,7 +5,7 @@ long_description = """
 
     Currently barely works, useful if you have one user and their password is "microphone"
 
-    More information at https://github.com/samrussell/chewie
+    More information at https://github.com/faucetsdn/chewie
 """
 
 setup(
@@ -13,7 +13,7 @@ setup(
     description='A bare-bones EAPOL/802.1x implementation',
     long_description=long_description,
     version='0.0.2',
-    url='https://github.com/samrussell/chewie',
+    url='https://github.com/faucetsdn/chewie',
     author='Sam Russell',
     author_email='sam.h.russell@gmail.com',
     license='Apache2',

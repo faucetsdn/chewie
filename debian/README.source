@@ -1,0 +1,9 @@
+chewie for Debian
+-----------------
+
+Chewie is an EAPOL/802.1x implementation in Python.
+
+More information at https://github.com/faucetsdn/chewie
+
+ -- Brad Cowie <brad@faucet.nz>  Mon, 18 Jun 2018 13:32:41 +1200
+

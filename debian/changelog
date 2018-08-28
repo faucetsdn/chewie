@@ -1,0 +1,12 @@
+chewie (0.0.2-2) unstable; urgency=medium
+
+  * Add missing dependency on netils.
+
+ -- Brad Cowie <brad@faucet.nz>  Tue, 19 Jun 2018 17:32:41 +1200
+
+chewie (0.0.2-1) unstable; urgency=medium
+
+  * release of 0.0.2
+
+ -- Brad Cowie <brad@faucet.nz>  Mon, 18 Jun 2018 13:32:41 +1200
+
