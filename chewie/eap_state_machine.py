@@ -189,15 +189,11 @@ class FullEAPStateMachine:
     # Non RFC 4137
     eapLogoff = None    # bool
 
-    def __init__(self, eap_output_queue, radius_output_queue, src_mac, timer_scheduler,
-                 auth_handler, failure_handler, logoff_handler):
+    def __init__(self, eap_output_queue, radius_output_queue, src_mac, timer_scheduler):
         """
 
         Args:
-            auth_handler (callable): callable that takes input of src_mac. Called on EAP-Success.
             eap_output_queue (Queue): where to put Messages to send to supplicant
-            failure_handler (callable): callable that takes input of src_mac. Called on EAP-Failure.
-            logoff_handler (callable): callable that takes input of src_mac. Called on EAP-Logoff.
             radius_output_queue (Queue): where to put Messages to send to AAA server
             src_mac (MacAddress): MAC address this statemachine (sm) belongs to.
             timer_scheduler (Scheduler): where to put timer events. (useful for Retransmits)
@@ -206,10 +202,6 @@ class FullEAPStateMachine:
         self.radius_output_messages = radius_output_queue
         self.src_mac = src_mac
         self.timer_scheduler = timer_scheduler
-        self.auth_handler = auth_handler
-        self.failure_handler = failure_handler
-        self.logoff_handler = logoff_handler
-
 
         self.currentState = FullEAPStateMachine.NO_STATE
         # TODO dynamically assign this or make a way to give it multiple methods
@@ -670,6 +662,7 @@ class FullEAPStateMachine:
                     self.logoff2_state()
                     self.currentState = FullEAPStateMachine.LOGOFF2
 
+
             if self.currentState == FullEAPStateMachine.TIMEOUT_FAILURE2:
                 # Do nothing.
                 pass
@@ -721,15 +714,8 @@ class FullEAPStateMachine:
         if self.eapSuccess:
             self.logger.info('Yay authentication successful %s %s',
                              self.src_mac, self.aaaIdentity.identity)
-            self.auth_handler(self.src_mac)
-
         if self.eapFail:
             self.logger.info('oh authentication not successful %s', self.src_mac)
-            self.failure_handler(self.src_mac)
-
-        if self.eapLogoff:
-            self.logger.info('client is logging off %s', self.src_mac)
-            self.logoff_handler(self.src_mac)
 
     def port_status_event_received(self, event):
         """Sets variables for the port status change (link up/down) being received.
@@ -786,7 +772,7 @@ class FullEAPStateMachine:
         self.aaaFail = False
         self.aaaEapKeyAvailable = False
         self.aaaEapResp = False
-        self.eapLogoff = False
+        self.eapLogoff = True
         if isinstance(event, EventRadiusMessageReceived):
             self.radius_state_attribute = event.state
             self.aaaEapReq = True
