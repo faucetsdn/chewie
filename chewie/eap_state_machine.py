@@ -594,7 +594,7 @@ class FullEAPStateMachine:
                     self.currentState = FullEAPStateMachine.METHOD_REQUEST
 
             if self.currentState == FullEAPStateMachine.INITIALIZE_PASSTRHOUGH:
-                if self.currentId:
+                if self.currentId is not None:
                     self.aaa_request_state(respMethod)
                     self.currentState = FullEAPStateMachine.AAA_REQUEST
                 else:
