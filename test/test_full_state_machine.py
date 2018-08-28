@@ -25,23 +25,13 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.radius_output_queue = Queue()
         self.timer_scheduler = sched.scheduler(time.time, time.sleep)
         self.src_mac = MacAddress.from_string("00:12:34:56:78:90")
-        self.sm = FullEAPStateMachine(self.eap_output_queue, self.radius_output_queue, self.src_mac,
-                                      self.timer_scheduler,
-                                      self.auth_handler, self.failure_handler, self.logoff_handler)
+        self.sm = FullEAPStateMachine(self.eap_output_queue, self.radius_output_queue,
+                                      self.src_mac, self.timer_scheduler)
         self.MAX_RETRANSMITS = 3
         self.sm.MAX_RETRANS = self.MAX_RETRANSMITS
-        self.sm.DEFAULT_TIMEOUT = 0.1
+        self.sm.DEFAULT_TIMEOUT = 1
         self.sm.portEnabled = True
         self.sm.eapRestart = True
-
-    def auth_handler(self, src_mac):
-        print('Successful auth from MAC %s' % str(src_mac))
-
-    def failure_handler(self, src_mac):
-        print('failure from MAC %s' % str(src_mac))
-
-    def logoff_handler(self, src_mac):
-        print('logoff from MAC %s' % str(src_mac))
 
     def test_eap_start(self):
         # input EAPStart packet.
