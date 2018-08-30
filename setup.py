@@ -12,7 +12,7 @@ setup(
     name='chewie',
     description='A bare-bones EAPOL/802.1x implementation',
     long_description=long_description,
-    version='0.0.5',
+    version='0.0.6',
     url='https://github.com/faucetsdn/chewie',
     author='Sam Russell',
     author_email='sam.h.russell@gmail.com',
