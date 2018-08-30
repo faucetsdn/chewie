@@ -34,20 +34,20 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.sm.portEnabled = True
         self.sm.eapRestart = True
 
-    def auth_handler(self, client_mac):
+    def auth_handler(self, client_mac, port_id_mac):
         print('Successful auth from MAC %s' % str(client_mac))
 
-    def failure_handler(self, client_mac):
+    def failure_handler(self, client_mac, port_id_mac):
         print('failure from MAC %s' % str(client_mac))
 
-    def logoff_handler(self, client_mac):
+    def logoff_handler(self, client_mac, port_id_mac):
         print('logoff from MAC %s' % str(client_mac))
 
     def test_eap_start(self):
         # input EAPStart packet.
         # output EAPIdentityRequest on eap_output_q
         message = EapolStartMessage(self.src_mac)
-        self.sm.event(EventMessageReceived(message))
+        self.sm.event(EventMessageReceived(message, None))
         self.assertEqual(self.sm.currentState, self.sm.IDLE)
 
         self.assertEqual(self.eap_output_queue.qsize(), 1)
@@ -58,7 +58,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
     def test_eap_restart(self):
         self.test_eap_start()
         message = EapolStartMessage(self.src_mac)
-        self.sm.event(EventMessageReceived(message))
+        self.sm.event(EventMessageReceived(message, None))
         self.assertEqual(self.sm.currentState, self.sm.IDLE)
 
         self.assertEqual(self.eap_output_queue.qsize(), 2)
@@ -123,7 +123,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
 
         # don't transition to initialize (still not enabled)
         message = EapolStartMessage(self.src_mac)
-        self.sm.event(EventMessageReceived(message))
+        self.sm.event(EventMessageReceived(message, None))
         self.assertEqual(self.sm.currentState, self.sm.DISABLED)
         self.assertEqual(self.eap_output_queue.qsize(), 1)
         self.assertEqual(self.radius_output_queue.qsize(), 0)
@@ -142,7 +142,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         # output EapIdentityResponse on radius_output_q
         _id = self.eap_output_queue.queue[0][0].message_id
         message = IdentityMessage(self.src_mac, _id, Eap.RESPONSE, "host1user")
-        self.sm.event(EventMessageReceived(message))
+        self.sm.event(EventMessageReceived(message, None))
         self.assertEqual(self.sm.currentState, self.sm.AAA_IDLE)
 
         self.assertEqual(self.eap_output_queue.qsize(), 1)
@@ -167,7 +167,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
 
         message = Md5ChallengeMessage(self.src_mac, 2, Eap.RESPONSE,
                                       build_byte_string("3a535f0ee8c6b34fe714aa7dad9a0e15"), b"host1user")
-        self.sm.event(EventMessageReceived(message))
+        self.sm.event(EventMessageReceived(message, None))
         self.assertEqual(self.sm.currentState, self.sm.AAA_IDLE)
         self.assertEqual(self.eap_output_queue.qsize(), 2)
         self.assertEqual(self.radius_output_queue.qsize(), 2)
@@ -227,7 +227,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
 
         message = Md5ChallengeMessage(self.src_mac, 222, Eap.RESPONSE,
                                       build_byte_string("3a535f0ee8c6b34fe714aa7dad9a0e15"), b"host1user")
-        self.sm.event(EventMessageReceived(message))
+        self.sm.event(EventMessageReceived(message, None))
         self.assertEqual(self.sm.currentState, self.sm.IDLE2)
         self.assertEqual(self.eap_output_queue.qsize(), 2)
         self.assertEqual(self.radius_output_queue.qsize(), 1)
@@ -236,7 +236,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.test_eap_start()
 
         message = IdentityMessage(self.src_mac, 40, Eap.RESPONSE, "host1user")
-        self.sm.event(EventMessageReceived(message))
+        self.sm.event(EventMessageReceived(message, None))
         self.assertEqual(self.sm.currentState, self.sm.IDLE)
 
         self.assertEqual(self.eap_output_queue.qsize(), 1)
@@ -246,7 +246,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.test_md5_challenge_request()
 
         message = LegacyNakMessage(self.src_mac, 2, Eap.RESPONSE, 21)
-        self.sm.event(EventMessageReceived(message))
+        self.sm.event(EventMessageReceived(message, None))
         self.assertEqual(self.sm.currentState, self.sm.AAA_IDLE)
         self.assertEqual(self.eap_output_queue.qsize(), 2)
         self.assertEqual(self.radius_output_queue.qsize(), 2)
@@ -259,7 +259,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
 
         message = TtlsMessage(self.src_mac, 3, Eap.RESPONSE, 0x00,
                               build_byte_string('16030101280100012403032c36dbf8ee16b94b28efdb8c5603e07823f9b716557b5ef2624b026daea115760000aac030c02cc028c024c014c00a00a500a300a1009f006b006a0069006800390038003700360088008700860085c032c02ec02ac026c00fc005009d003d00350084c02fc02bc027c023c013c00900a400a200a0009e00670040003f003e0033003200310030009a0099009800970045004400430042c031c02dc029c025c00ec004009c003c002f00960041c011c007c00cc00200050004c012c008001600130010000dc00dc003000a00ff01000051000b000403000102000a001c001a00170019001c001b0018001a0016000e000d000b000c0009000a000d0020001e060106020603050105020503040104020403030103020303020102020203000f000101'))
-        self.sm.event(EventMessageReceived(message))
+        self.sm.event(EventMessageReceived(message, None))
         self.assertEqual(self.sm.currentState, self.sm.AAA_IDLE)
         self.assertEqual(self.eap_output_queue.qsize(), 3)
         self.assertEqual(self.radius_output_queue.qsize(), 3)
