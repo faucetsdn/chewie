@@ -15,10 +15,11 @@ class EventTimerExpired(Event):
 
 
 class EventMessageReceived(Event):
-    def __init__(self, message):
+    def __init__(self, message, port_id):
         # will work but please do this properly
         self.type = self.MESSAGE_RECEIVED
         self.message = message
+        self.port_id = port_id
 
 
 class EventPortStatusChange(Event):
@@ -38,7 +39,7 @@ class EventPortStatusChange(Event):
 class EventRadiusMessageReceived(EventMessageReceived):
 
     def __init__(self, message, state):
-        super().__init__(message)
+        super().__init__(message, None)
         self.state = state
 
 

@@ -11,7 +11,7 @@ from chewie.radius_attributes import State, CalledStationId, NASPortType
 class MessageParserTestCase(unittest.TestCase):
     def test_identity_request_message_parses(self):
         packed_message = build_byte_string("0180c2000003001906eab88c888e010000050101000501000000")
-        message = MessageParser.ethernet_parse(packed_message)
+        message = MessageParser.ethernet_parse(packed_message)[0]
         self.assertEqual(MacAddress.from_string("00:19:06:ea:b8:8c"), message.src_mac)
         self.assertEqual(1, message.message_id)
         self.assertEqual(Eap.REQUEST, message.code)
@@ -19,7 +19,7 @@ class MessageParserTestCase(unittest.TestCase):
 
     def test_identity_response_message_parses(self):
         packed_message = build_byte_string("0180c2000003001422e9545e888e0100001102000011014a6f686e2e4d63477569726b")
-        message = MessageParser.ethernet_parse(packed_message)
+        message = MessageParser.ethernet_parse(packed_message)[0]
         self.assertEqual(MacAddress.from_string("00:14:22:e9:54:5e"), message.src_mac)
         self.assertEqual(0, message.message_id)
         self.assertEqual(Eap.RESPONSE, message.code)
@@ -27,7 +27,7 @@ class MessageParserTestCase(unittest.TestCase):
 
     def test_md5_challenge_request_message_parses(self):
         packed_message = build_byte_string("0180c2000003001906eab88c888e01000016010100160410824788d693e2adac6ce15641418228cf0000")
-        message = MessageParser.ethernet_parse(packed_message)
+        message = MessageParser.ethernet_parse(packed_message)[0]
         self.assertEqual(MacAddress.from_string("00:19:06:ea:b8:8c"), message.src_mac)
         self.assertEqual(1, message.message_id)
         self.assertEqual(Eap.REQUEST, message.code)
@@ -36,7 +36,7 @@ class MessageParserTestCase(unittest.TestCase):
 
     def test_md5_challenge_response_message_parses(self):
         packed_message = build_byte_string("0180c2000003001422e9545e888e010000220201002204103a535f0ee8c6b34fe714aa7dad9a0e154a6f686e2e4d63477569726b")
-        message = MessageParser.ethernet_parse(packed_message)
+        message = MessageParser.ethernet_parse(packed_message)[0]
         self.assertEqual(MacAddress.from_string("00:14:22:e9:54:5e"), message.src_mac)
         self.assertEqual(1, message.message_id)
         self.assertEqual(Eap.RESPONSE, message.code)
@@ -81,7 +81,7 @@ class MessageParserTestCase(unittest.TestCase):
 
     def test_eapol_start_message_parses(self):
         packed_message = build_byte_string("0180c2000003001906eab88c888e01010000")
-        message = MessageParser.ethernet_parse(packed_message)
+        message = MessageParser.ethernet_parse(packed_message)[0]
         self.assertEqual(MacAddress.from_string("00:19:06:ea:b8:8c"), message.src_mac)
         self.assertTrue(isinstance(message, EapolStartMessage))
 
@@ -94,7 +94,7 @@ class MessageParserTestCase(unittest.TestCase):
 
     def test_eapol_logoff_message_parses(self):
         packed_message = build_byte_string("0180c2000003001906eab88c888e01020000")
-        message = MessageParser.ethernet_parse(packed_message)
+        message = MessageParser.ethernet_parse(packed_message)[0]
         self.assertEqual(MacAddress.from_string("00:19:06:ea:b8:8c"), message.src_mac)
         self.assertTrue(isinstance(message, EapolLogoffMessage))
 
@@ -107,7 +107,7 @@ class MessageParserTestCase(unittest.TestCase):
 
     def test_success_message_parses(self):
         packed_message = build_byte_string("0180c2000003001906eab88c888e0100000403ff0004")
-        message = MessageParser.ethernet_parse(packed_message)
+        message = MessageParser.ethernet_parse(packed_message)[0]
         self.assertEqual(MacAddress.from_string("00:19:06:ea:b8:8c"), message.src_mac)
         self.assertEqual(255, message.message_id)
         self.assertTrue(isinstance(message, SuccessMessage))
@@ -121,7 +121,7 @@ class MessageParserTestCase(unittest.TestCase):
 
     def test_failure_message_parses(self):
         packed_message = build_byte_string("0180c2000003001906eab88c888e0100000404ff0004")
-        message = MessageParser.ethernet_parse(packed_message)
+        message = MessageParser.ethernet_parse(packed_message)[0]
         self.assertEqual(MacAddress.from_string("00:19:06:ea:b8:8c"), message.src_mac)
         self.assertEqual(255, message.message_id)
         self.assertTrue(isinstance(message, FailureMessage))
@@ -136,7 +136,7 @@ class MessageParserTestCase(unittest.TestCase):
     def test_ttls_message_parses(self):
         packed_message = build_byte_string("000000111101444444444444888e"
                                            "01000006016900061520")
-        message = MessageParser.ethernet_parse(packed_message)
+        message = MessageParser.ethernet_parse(packed_message)[0]
         self.assertEqual(MacAddress.from_string("44:44:44:44:44:44"), message.src_mac)
         self.assertEqual(105, message.message_id)
         self.assertIsInstance(message, TtlsMessage)
@@ -153,7 +153,7 @@ class MessageParserTestCase(unittest.TestCase):
     def test_legacy_nak_message_parses(self):
         packed_message = build_byte_string("0180c2000003000000111101888e"
                                            "01000006026800060315")
-        message = MessageParser.ethernet_parse(packed_message)
+        message = MessageParser.ethernet_parse(packed_message)[0]
         self.assertEqual(MacAddress.from_string("00:00:00:11:11:01"), message.src_mac)
         self.assertEqual(104, message.message_id)
         self.assertIsInstance(message, LegacyNakMessage)
