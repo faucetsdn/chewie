@@ -34,14 +34,14 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.sm.portEnabled = True
         self.sm.eapRestart = True
 
-    def auth_handler(self, src_mac):
-        print('Successful auth from MAC %s' % str(src_mac))
+    def auth_handler(self, client_mac):
+        print('Successful auth from MAC %s' % str(client_mac))
 
-    def failure_handler(self, src_mac):
-        print('failure from MAC %s' % str(src_mac))
+    def failure_handler(self, client_mac):
+        print('failure from MAC %s' % str(client_mac))
 
-    def logoff_handler(self, src_mac):
-        print('logoff from MAC %s' % str(src_mac))
+    def logoff_handler(self, client_mac):
+        print('logoff from MAC %s' % str(client_mac))
 
     def test_eap_start(self):
         # input EAPStart packet.

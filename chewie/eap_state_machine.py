@@ -100,6 +100,8 @@ class FullEAPStateMachine:
     currentState = None
     eap_output_messages = None
     src_mac = None
+    # TODO can use dst_mac to verify where packet came rom more thoughly
+    port_id_mac = None
     radius_state_attribute = None  # the last state from radius server
     sent_count = 0
 
@@ -700,7 +702,7 @@ class FullEAPStateMachine:
         if self.eapReq:
             if (hasattr(self.eapReqData, 'code') and self.eapReqData.code == Eap.REQUEST) \
                     or isinstance(self.eapReqData, (SuccessMessage, FailureMessage)):
-                self.eap_output_messages.put((self.eapReqData, self.src_mac))
+                self.eap_output_messages.put((self.eapReqData, self.src_mac, self.port_id_mac))
                 self.sent_count += 1
                 self.set_timer()
             else:
@@ -721,15 +723,15 @@ class FullEAPStateMachine:
         if self.eapSuccess:
             self.logger.info('Yay authentication successful %s %s',
                              self.src_mac, self.aaaIdentity.identity)
-            self.auth_handler(self.src_mac)
+            self.auth_handler(self.src_mac, str(self.port_id_mac))
 
         if self.eapFail:
             self.logger.info('oh authentication not successful %s', self.src_mac)
-            self.failure_handler(self.src_mac)
+            self.failure_handler(self.src_mac, str(self.port_id_mac))
 
         if self.eapLogoff:
             self.logger.info('client is logging off %s', self.src_mac)
-            self.logoff_handler(self.src_mac)
+            self.logoff_handler(self.src_mac, str(self.port_id_mac))
 
     def port_status_event_received(self, event):
         """Sets variables for the port status change (link up/down) being received.
@@ -765,7 +767,9 @@ class FullEAPStateMachine:
         Args:
             event (EventMessageReceived): event being processed.
         """
-        self.logger.info('type: %s, message %s', type(event.message), event.message)
+        self.logger.info('type: %s, message %s ', type(event.message), event.message)
+        if event.port_id:
+            self.port_id_mac = event.port_id
         self.logoff = False
         if isinstance(event.message, EapolStartMessage):
             self.eapRestart = True

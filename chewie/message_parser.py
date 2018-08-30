@@ -138,7 +138,8 @@ class MessageParser:
         if ethernet_packet.ethertype != 0x888e:
             raise ValueError("Ethernet packet with bad ethertype received: %s" % ethernet_packet)
 
-        return MessageParser.one_x_parse(ethernet_packet.data, ethernet_packet.src_mac)
+        return MessageParser.one_x_parse(ethernet_packet.data, ethernet_packet.src_mac), \
+               ethernet_packet.dst_mac
 
     @staticmethod
     def radius_parse(packed_message, secret, request_authenticator_callback):

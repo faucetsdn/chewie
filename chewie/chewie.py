@@ -32,16 +32,12 @@ class Chewie(object):
 
     def __init__(self, interface_name, logger=None,
                  auth_handler=None, failure_handler=None, logoff_handler=None,
-                 group_address=None, radius_server_ip=None):
+                 radius_server_ip=None):
         self.interface_name = interface_name
         self.logger = logger
         self.auth_handler = auth_handler
         self.failure_handler = failure_handler
         self.logoff_handler = logoff_handler
-
-        self.group_address = group_address
-        if not group_address:
-            self.group_address = self.EAP_ADDRESS
 
         self.radius_server_ip = radius_server_ip
         self.radius_secret = "SECRET"
@@ -85,25 +81,26 @@ class Chewie(object):
 
         self.pool.waitall()
 
-    def auth_success(self, src_mac):
+    def auth_success(self, src_mac, port_id):
         if self.auth_handler:
-            self.auth_handler(src_mac, self.group_address)
+            self.auth_handler(src_mac, port_id)
 
-    def auth_failure(self, src_mac):
+    def auth_failure(self, src_mac, port_id):
         if self.failure_handler:
-            self.failure_handler(src_mac)
+            self.failure_handler(src_mac, port_id)
 
-    def auth_logoff(self, src_mac):
+    def auth_logoff(self, src_mac, port_id):
         if self.logoff_handler:
-            self.logoff_handler(src_mac)
+            self.logoff_handler(src_mac, port_id)
 
     def send_eap_messages(self):
         try:
             while True:
                 sleep(0)
-                message, src_mac = self.eap_output_messages.get()
-                self.logger.info("Sending message %s to %s" % (message, str(self.group_address)))
-                self.socket.send(MessagePacker.ethernet_pack(message, src_mac, self.group_address))
+                message, src_mac, port_mac = self.eap_output_messages.get()
+                self.logger.info("Sending message %s from %s to %s" %
+                                 (message, str(port_mac), str(src_mac)))
+                self.socket.send(MessagePacker.ethernet_pack(message, port_mac, src_mac))
         except Exception as e:
             self.logger.exception(e)
 
@@ -115,11 +112,11 @@ class Chewie(object):
                 packed_message = self.socket.recv(4096)
                 self.logger.info("Received packed_message: %s", str(packed_message))
 
-                message = MessageParser.ethernet_parse(packed_message)
+                message, dst_mac = MessageParser.ethernet_parse(packed_message)
                 self.logger.info("eap EAP(): %s", message)
                 self.logger.info("Received message: %s" % message.__dict__)
                 sm = self.get_state_machine(message.src_mac)
-                event = EventMessageReceived(message)
+                event = EventMessageReceived(message, dst_mac)
                 sm.event(event)
         except Exception as e:
             self.logger.exception(e)
