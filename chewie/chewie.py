@@ -14,6 +14,7 @@ from chewie.radius_attributes import EAPMessage, State, CalledStationId, NASPort
 from chewie.message_parser import MessageParser, MessagePacker
 from chewie.mac_address import MacAddress
 from chewie.event import EventMessageReceived, EventRadiusMessageReceived
+from chewie.utils import get_logger
 
 
 def unpack_byte_string(byte_string):
@@ -34,7 +35,7 @@ class Chewie(object):
                  auth_handler=None, failure_handler=None, logoff_handler=None,
                  radius_server_ip=None):
         self.interface_name = interface_name
-        self.logger = logger
+        self.logger = get_logger(logger.name + "." + Chewie.__name__)
         self.auth_handler = auth_handler
         self.failure_handler = failure_handler
         self.logoff_handler = logoff_handler
@@ -226,7 +227,7 @@ class Chewie(object):
         if not sm:
             sm = FullEAPStateMachine(self.eap_output_messages, self.radius_output_messages, src_mac,
                                      self.timer_scheduler, self.auth_success,
-                                     self.auth_failure, self.auth_logoff)
+                                     self.auth_failure, self.auth_logoff, self.logger.name)
             sm.eapRestart = True
             # TODO what if port is not actually enabled, but then how did they auth?
             sm.portEnabled = True
