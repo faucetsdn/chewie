@@ -1,5 +1,6 @@
 """RADIUS Packets"""
 import copy
+import binascii
 import hashlib
 import hmac
 import struct
@@ -51,7 +52,7 @@ class Radius(object):
         """
         code, packet_id, length, response_authenticator = struct.unpack("!BBH16s",
                                                                         packed_message[:RADIUS_HEADER_LENGTH])
-        response_authenticator = response_authenticator.hex()
+        response_authenticator = binascii.hexlify(response_authenticator)
         if code in PACKET_TYPE_PARSERS.keys():
             radius_packet = PACKET_TYPE_PARSERS[code](packet_id, response_authenticator,
                                                       RadiusAttributesList.parse(
@@ -142,14 +143,14 @@ class RadiusPacket(Radius):
         response_authenticator = radius_packet.authenticator
         radius_packet.authenticator = request_authenticator
         radius_packet.pack()
-        calculated_response_authenticator = hashlib.md5(radius_packet.packed +
-                                                        bytearray(secret, 'utf-8')).hexdigest()
+        calculated_response_authenticator = binascii.hexlify(hashlib.md5(radius_packet.packed +
+                                                        bytearray(secret, 'utf-8')).digest())
         if calculated_response_authenticator != response_authenticator:
             raise InvalidResponseAuthenticatorError(
                 "Original ResponseAuthenticator: '%s', does not match calculated: '%s' %s" % (
                     response_authenticator,
                     calculated_response_authenticator,
-                    radius_packet.packed.hex()))
+                    binascii.hexlify(radius_packet.packed)))
 
         original_ma = message_authenticator.data_type.bytes_data
         # Replace the Original Message Authenticator
@@ -163,7 +164,7 @@ class RadiusPacket(Radius):
         if original_ma != new_ma:
             raise InvalidMessageAuthenticatorError(
                 "Original Message-Authenticator: '%s', does not match calculated: '%s'" %
-                (original_ma.hex(), new_ma.hex()))
+                (binascii.hexlify(original_ma), binascii.hexlify(new_ma)))
         return self
 
 
