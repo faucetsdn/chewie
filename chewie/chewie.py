@@ -1,4 +1,3 @@
-import logging
 from fcntl import ioctl
 import os
 import sched
