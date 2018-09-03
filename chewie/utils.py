@@ -1,10 +1,17 @@
 """Utility Functions"""
 import logging
+import sys
 
 
-def get_logger(logname):
-    """Create and return a logger object."""
-    logger = logging.getLogger(logname)
+def get_logger(name, log_level=logging.DEBUG):
+    logger = logging.getLogger(name)
+    if not logger.handlers:
+        logger.setLevel(log_level)
+        ch = logging.StreamHandler(sys.stdout)
+        ch.setLevel(log_level)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        ch.setFormatter(formatter)
+        logger.addHandler(ch)
     return logger
 
 
