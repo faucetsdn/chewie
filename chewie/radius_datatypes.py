@@ -3,7 +3,7 @@ import abc
 import math
 import struct
 
-import chewie.message_parser
+from chewie import message_parser
 
 
 class DataType(object):
