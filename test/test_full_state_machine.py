@@ -27,7 +27,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.src_mac = MacAddress.from_string("00:12:34:56:78:90")
         self.sm = FullEAPStateMachine(self.eap_output_queue, self.radius_output_queue, self.src_mac,
                                       self.timer_scheduler,
-                                      self.auth_handler, self.failure_handler, self.logoff_handler)
+                                      self.auth_handler, self.failure_handler, self.logoff_handler, 'Chewie')
         self.MAX_RETRANSMITS = 3
         self.sm.MAX_RETRANS = self.MAX_RETRANSMITS
         self.sm.DEFAULT_TIMEOUT = 0.1
