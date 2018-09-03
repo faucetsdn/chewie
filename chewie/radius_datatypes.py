@@ -3,7 +3,7 @@ import abc
 import math
 import struct
 
-from chewie import message_parser
+from chewie.message_parser import EapMessage, MessagePacker, MessageParser
 
 
 class DataType(object):
@@ -175,8 +175,8 @@ class Concat(DataType):
 
     def __init__(self, bytes_data=None, raw_data=None):
         if raw_data:
-            if isinstance(raw_data, message_parser.EapMessage):
-                bytes_data = message_parser.MessagePacker.eap_pack(raw_data)[2]
+            if isinstance(raw_data, EapMessage):
+                bytes_data = MessagePacker.eap_pack(raw_data)[2]
             else:
                 bytes_data = bytes.fromhex(raw_data)
             # self.is_valid_length(data)
@@ -212,7 +212,7 @@ class Concat(DataType):
         return packed
 
     def data(self):
-        return message_parser.MessageParser.eap_parse(self.bytes_data, None)
+        return MessageParser.eap_parse(self.bytes_data, None)
 
     def full_length(self):
         return self.AVP_HEADER_LEN * \
