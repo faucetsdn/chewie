@@ -1,14 +1,18 @@
 import binascii
 import unittest
+
 from netils import build_byte_string
 
 from chewie.message_parser import  SuccessMessage
-from chewie.radius import *
+from chewie.radius import Radius, RadiusAccessAccept, RadiusAttributesList, \
+    InvalidResponseAuthenticatorError, RadiusAccessChallenge, RadiusAccessRequest
 from chewie.radius_attributes import UserName, ServiceType, FramedMTU, CalledStationId,\
     AcctSessionId, NASPortType, ConnectInfo, EAPMessage, MessageAuthenticator, State,\
     VendorSpecific, CallingStationId
 from chewie.radius_datatypes import Vsa, String, Enum, Text, Integer
 
+
+# pylint: disable=line-too-long
 
 class RadiusTestCase(unittest.TestCase):
     def test_radius_access_request_parses(self):
