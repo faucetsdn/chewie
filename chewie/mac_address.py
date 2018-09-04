@@ -1,12 +1,20 @@
+"""MAC address helper"""
 from netils import build_byte_string
 
 
 class MacAddress:
+    """Class for comparing mac addresses"""
     def __init__(self, address):
         self.address = address
 
     @classmethod
     def from_string(cls, address_string):
+        """Create a MacAddress from a string
+        Args:
+            address_string (str):
+        Returns:
+            MacAddress
+        """
         address_bytes = "".join(address_string.split(":"))
         address = build_byte_string(address_bytes)
 

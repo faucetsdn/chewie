@@ -1,3 +1,6 @@
+
+# pylint: disable=missing-docstring
+
 import unittest
 from netils import build_byte_string
 from chewie.message_parser import MessageParser, MessagePacker, IdentityMessage, Md5ChallengeMessage, TtlsMessage, \
@@ -38,7 +41,7 @@ class MessageParserTestCase(unittest.TestCase):
 
     def test_md5_challenge_response_message_parses(self):
         packed_message = build_byte_string(
-            "0180c2000003001422e9545e888e010000220201002204103a535f0ee8c6b34fe714aa7dad9a0e154a6f686e2e4d63477569726b")
+            "0180c2000003001422e9545e888e010000220201002204103a535f0ee8c6b34fe714aa7dad9a0e154a6f686e2e4d63477569726b")  # pylint: disable=line-too-long
         message = MessageParser.ethernet_parse(packed_message)[0]
         self.assertEqual(MacAddress.from_string("00:14:22:e9:54:5e"), message.src_mac)
         self.assertEqual(1, message.message_id)
@@ -81,7 +84,8 @@ class MessageParserTestCase(unittest.TestCase):
         self.assertEqual(expected_packed_message, packed_message)
 
     def test_md5_challenge_response_message_packs(self):
-        expected_packed_message = build_byte_string("0180c2000003001422e9545e888e010000220201002204103a535f0ee8c6b34fe714aa7dad9a0e154a6f686e2e4d63477569726b")
+        expected_packed_message = build_byte_string(
+            "0180c2000003001422e9545e888e010000220201002204103a535f0ee8c6b34fe714aa7dad9a0e154a6f686e2e4d63477569726b")  # pylint: disable=line-too-long
         message = Md5ChallengeMessage(src_mac=MacAddress.from_string("00:14:22:e9:54:5e"),
                                       message_id=1,
                                       code=Eap.RESPONSE,
@@ -201,7 +205,7 @@ class MessageParserTestCase(unittest.TestCase):
                                            "1e1434342d34342d34342d34342d34342d34343a"
                                            "3d060000000f"
                                            "4f08027100061500"
-                                           "1812f51d90b0f76c85835ed4ac882e522748501201531ea8051d136941fece17473f6b4a")
+                                           "1812f51d90b0f76c85835ed4ac882e522748501201531ea8051d136941fece17473f6b4a")  # pylint: disable=line-too-long
 
         src_mac = MacAddress.from_string("02:42:ac:17:00:6f")
         username = "user"

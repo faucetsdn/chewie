@@ -1,3 +1,6 @@
+
+# pylint: disable=missing-docstring
+
 import unittest
 from netils import build_byte_string
 from chewie.ethernet_packet import EthernetPacket

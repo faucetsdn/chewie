@@ -1,5 +1,7 @@
 """Various Events used by Chewie"""
 
+# pylint: disable=too-few-public-methods
+
 
 class Event:
     """Base event class"""

@@ -1,6 +1,10 @@
+
+# pylint: disable=missing-docstring
+
 import unittest
 from netils import build_byte_string
 from chewie.eap import Eap, EapIdentity, EapMd5Challenge, EapSuccess, EapFailure
+
 
 class EapTestCase(unittest.TestCase):
     def test_eap_identity_parses(self):

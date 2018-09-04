@@ -1,3 +1,6 @@
+
+# pylint: disable=too-few-public-methods
+
 from chewie.radius import RadiusAttributesList, RadiusAccessRequest, Radius
 from chewie.radius_attributes import CallingStationId, UserName, MessageAuthenticator, EAPMessage
 from chewie.ethernet_packet import EthernetPacket
@@ -98,6 +101,7 @@ EAP_MESSAGES = {
     Eap.LEGACY_NAK: LegacyNakMessage,
     Eap.TTLS: TtlsMessage,
 }
+
 
 AUTH_8021X_MESSAGES = {
     0: "eap",

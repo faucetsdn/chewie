@@ -1,3 +1,7 @@
+
+# pylint: disable=line-too-long
+# pylint: disable=missing-docstring
+
 import binascii
 import unittest
 
@@ -11,8 +15,6 @@ from chewie.radius_attributes import UserName, ServiceType, FramedMTU, CalledSta
     VendorSpecific, CallingStationId
 from chewie.radius_datatypes import Vsa, String, Enum, Text, Integer
 
-
-# pylint: disable=line-too-long
 
 class RadiusTestCase(unittest.TestCase):
     def test_radius_access_request_parses(self):
