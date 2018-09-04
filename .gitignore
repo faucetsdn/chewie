@@ -1,5 +1,6 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+pytype_output/
 *.py[cod]
 *$py.class
 
@@ -105,3 +106,4 @@ ENV/
 
 # IntelliJ IDE files
 .idea/
+*.bak

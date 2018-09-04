@@ -17,6 +17,10 @@ class Eap(object):
     MD5_CHALLENGE = 4
     TTLS = 21
 
+    code = None
+    packet_id = None
+    PACKET_TYPE = None
+
     @staticmethod
     def parse(packed_message):
         code, packet_id, length = struct.unpack("!BBH", packed_message[:EAP_HEADER_LENGTH])

@@ -58,6 +58,7 @@ class Chewie(object):
         self.timer_scheduler = sched.scheduler(time.time, sleep)
 
         self.radius_id = -1
+        self.socket = None
 
     def run(self):
         self.logger.info("Starting")

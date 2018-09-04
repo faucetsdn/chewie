@@ -1,5 +1,4 @@
 """Radius Attribute Datatypes"""
-import abc
 import math
 import struct
 
@@ -16,12 +15,10 @@ class DataType(object):
 
     bytes_data = None  # bytes version of raw_data
 
-    @abc.abstractmethod
     def parse(self, packed_value):
         """"""
         return
 
-    @abc.abstractmethod
     def pack(self, attribute_type):
         """"""
         return
@@ -34,7 +31,6 @@ class DataType(object):
         """
         return self.bytes_data
 
-    @abc.abstractmethod
     def data_length(self):
         """
         Returns:
@@ -85,7 +81,7 @@ class Integer(DataType):
         return struct.pack("!4s", self.bytes_data)
 
     def data(self):
-        return int.from_bytes(self.bytes_data, 'big')
+        return int.from_bytes(self.bytes_data, 'big') # pytype: disable=attribute-error
 
     def data_length(self):
         return 4
@@ -113,7 +109,7 @@ class Enum(DataType):
         return struct.pack("!4s", self.bytes_data)
 
     def data(self):
-        return int.from_bytes(self.bytes_data, 'big')
+        return int.from_bytes(self.bytes_data, 'big') # pytype: disable=attribute-error
 
     def data_length(self):
         return 4
