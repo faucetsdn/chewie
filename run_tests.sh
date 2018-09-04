@@ -7,10 +7,15 @@ else
     PYTYPE_TARGET_VERSION=$TRAVIS_PYTHON_VERSION
 fi
 
+echo "=============== Running UnitTests ================="
+
 PYTHONPATH=./ pytest --cov=chewie --cov-report term --cov-report=xml:coverage.xml test/test_*.py || exit 1
 
+echo "=============== Running PyType ===================="
 pytype -V$PYTYPE_TARGET_VERSION chewie/*py || exit 1
+
 cd test/codecheck
+echo "=============== Running Pylint ===================="
 ./pylint.sh || exit 1
 
 exit 0
