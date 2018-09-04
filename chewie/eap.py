@@ -142,7 +142,7 @@ class EapLegacyNak(Eap):
         return cls(code, packet_id, desired_auth_types)
 
     def pack(self):
-        packed_legacy_nak = struct.pack("!%ds" % len(self.desired_auth_types), *self.desired_auth_types)
+        packed_legacy_nak = struct.pack("!%ds" % len(self.desired_auth_types), *self.desired_auth_types)  # pytype: disable=wrong-arg-types
         return super(EapLegacyNak, self).pack(packed_legacy_nak)
 
     def __repr__(self):
