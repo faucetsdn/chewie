@@ -8,4 +8,6 @@ else
     PYTYPE_TARGET_VERSION=$TRAVIS_PYTHON_VERSION
 fi
 
-PYTHONPATH=./ pytest --cov=chewie --cov-report term --cov-report=xml:coverage.xml test/test_*.py && pytype -V$PYTYPE_TARGET_VERSION chewie/*py
+PYTHONPATH=./ pytest --cov=chewie --cov-report term --cov-report=xml:coverage.xml test/test_*.py
+pytype -V$PYTYPE_TARGET_VERSION chewie/*py
+pylint -j4 chewie/*.py
