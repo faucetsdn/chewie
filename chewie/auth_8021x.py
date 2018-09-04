@@ -5,7 +5,7 @@ def hwaddr_to_string(hwaddr):
 
 AUTH_8021X_HEADER_LENGTH = 1 + 1 + 2
 
-class Auth8021x(object):
+class Auth8021x():
     def __init__(self, version, packet_type, data):
         self.version = version
         self.packet_type = packet_type

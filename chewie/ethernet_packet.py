@@ -4,7 +4,7 @@ from chewie.mac_address import MacAddress
 ETHERNET_HEADER_LENGTH = 6 + 6 + 2
 
 
-class EthernetPacket(object):
+class EthernetPacket:
     def __init__(self, dst_mac, src_mac, ethertype, data):
         self.dst_mac = dst_mac
         self.src_mac = src_mac

@@ -6,7 +6,7 @@ EAP_TYPE_LENGTH = 1
 PARSERS = {}
 
 
-class Eap(object):
+class Eap():
     REQUEST = 1
     RESPONSE = 2
     SUCCESS = 3

@@ -27,7 +27,7 @@ class InvalidMessageAuthenticatorError(Exception):
     pass
 
 
-class Radius(object):
+class Radius:
     """Radius packet interface which will determin the correct RadiusPacket child class to use"""
     ACCESS_REQUEST = 1
     ACCESS_ACCEPT = 2
@@ -188,7 +188,7 @@ class RadiusAccessChallenge(RadiusPacket):
     CODE = Radius.ACCESS_CHALLENGE
 
 
-class RadiusAttributesList(object):
+class RadiusAttributesList():
     """Container class for the Radius Attribute Value Pairs"""
 
     def __init__(self, attributes):

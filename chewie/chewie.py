@@ -1,3 +1,5 @@
+"""Entry point for 802.1X speaker.
+"""
 from fcntl import ioctl
 import os
 import sched
@@ -17,10 +19,12 @@ from chewie.event import EventMessageReceived, EventRadiusMessageReceived
 
 
 def unpack_byte_string(byte_string):
+    """unpacks a byte string"""
     return "".join("%02x" % x for x in byte_string)
 
 
-class Chewie(object):
+class Chewie:
+    """Facilitates EAP supplicant and RADIUS server communication"""
     SIOCGIFHWADDR = 0x8927
     SIOCGIFINDEX = 0x8933
     PACKET_MR_MULTICAST = 0
@@ -59,8 +63,13 @@ class Chewie(object):
 
         self.radius_id = -1
         self.socket = None
+        self.pool = None
+        self.eventlets = None
+        self.radius_socket = None
+        self.interface_index = None
 
     def run(self):
+        """setup chewie and start socket eventlet threads"""
         self.logger.info("Starting")
         self.open_socket()
         self.open_radius_socket()
@@ -69,6 +78,7 @@ class Chewie(object):
         self.start_threads_and_wait()
 
     def start_threads_and_wait(self):
+        """Start the thread and wait until they complete (hopefully never)"""
         self.pool = GreenPool()
         self.eventlets = []
 
@@ -83,18 +93,31 @@ class Chewie(object):
         self.pool.waitall()
 
     def auth_success(self, src_mac, port_id):
+        """authentication shim between faucet and chewie
+        Args:
+            src_mac (MacAddress): the mac of the successful supplicant
+            port_id (MacAddress): the 'mac' identifier of what switch port the success is on"""
         if self.auth_handler:
             self.auth_handler(src_mac, port_id)
 
     def auth_failure(self, src_mac, port_id):
+        """failure shim between faucet and chewie
+                Args:
+                    src_mac (MacAddress): the mac of the failed supplicant
+                    port_id (MacAddress): the 'mac' identifier of what switch port the failure is on"""
         if self.failure_handler:
             self.failure_handler(src_mac, port_id)
 
     def auth_logoff(self, src_mac, port_id):
+        """logoff shim between faucet and chewie
+                Args:
+                    src_mac (MacAddress): the mac of the logoff supplicant
+                    port_id (MacAddress): the 'mac' identifier of what switch port the logoff is on"""
         if self.logoff_handler:
             self.logoff_handler(src_mac, port_id)
 
     def send_eap_messages(self):
+        """send eap messages to supplicant forever."""
         try:
             while True:
                 sleep(0)
@@ -106,6 +129,7 @@ class Chewie(object):
             self.logger.exception(e)
 
     def receive_eap_messages(self):
+        """receive eap messages from supplicant forever."""
         try:
             while True:
                 sleep(0)
@@ -123,6 +147,8 @@ class Chewie(object):
             self.logger.exception(e)
 
     def send_radius_messages(self):
+        """send RADIUS messages to RADIUS Server forever."""
+
         try:
             while True:
                 sleep(0)
@@ -149,6 +175,8 @@ class Chewie(object):
             self.logger.exception(e)
 
     def receive_radius_messages(self):
+        """receive RADIUS messages from RADIUS server forever."""
+
         try:
             while True:
                 sleep(0)

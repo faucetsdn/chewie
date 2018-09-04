@@ -5,7 +5,7 @@ from chewie.auth_8021x import Auth8021x
 from chewie.eap import Eap, EapIdentity, EapMd5Challenge, EapSuccess, EapFailure, EapLegacyNak, EapTTLS
 
 
-class EapMessage(object):
+class EapMessage:
     src_mac = None
     message_id = None
 

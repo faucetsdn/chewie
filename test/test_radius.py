@@ -97,7 +97,8 @@ class RadiusTestCase(unittest.TestCase):
                           request_authenticator_callback=
                           lambda x: bytes.fromhex("982a0ba06d3557f0dbc8ba6e823822f1"))
 
-        # TODO How can we test that response authenticator is correct but message authenticator is not?
+        # TODO How can we test that response authenticator is correct
+        #  but message authenticator is not?
         #  response authenticator relies on the message authenticator being correct.
         #  unless there is a hashing collision when messageauthenticator is wrong.
 
@@ -164,7 +165,8 @@ class RadiusTestCase(unittest.TestCase):
         attr_list.append(EAPMessage.create("6572746966696361746520417574686f72697479301e170d3138303630353033353134345a170d3138303830343033353134345a307c310b3009060355040613024652310f300d06035504080c0652616469757331153013060355040a0c0c4578616d706c6520496e632e3123302106035504030c1a4578616d706c65205365727665722043657274696669636174653120301e06092a864886f70d010901161161646d696e406578616d706c652e6f726730820122300d06092a864886f70d01010105000382010f003082010a0282010100cf5456d7e6142383101cf79275f6396e2c9b3f7cb2878d35e5ecc6f47ee11ef20bc8a8b3217a89351c55"))
         attr_list.append(EAPMessage.create("856e5cd5eed2d10037c9bcce89fbdf927e4cc4f069863acbac4accee7e80f2105ad80d837fa50a931c5b41d03c993f5e338cfd8e69e23818360053501c34c08132ec3d6e14df89ff29c5cec5c7a87d48c4afdcf9d3f8290050be5b903ba6a2a5ce2eb79c922cae70869618c75923059f9a8d62144e8ecdaf0a9f02886afa0e73e3d68037ea9fdca2bdd0f0785e05f5ac88031010c105575dbb09eb4f307547622120ee384ab454376de8e14e0afea02f1211801b6c932324ef6dba7abf3f48f8e3e84716c40b59041ec936cb273d684b22aa1c9d24e10203010001a34f304d30130603551d25040c300a06082b0601050507030130360603551d1f042f"))
         attr_list.append(EAPMessage.create("302d302ba029a0278625687474703a2f2f7777772e6578616d706c652e636f6d2f6578616d706c655f63612e63726c300d06092a864886f70d01010b0500038201010054fdcdabdc3a153dc167d6b210d1b324ecfac0e3b8d385704463a7f8ebf46e2e6952f249f4436ec66760868860e5ed50b519ec14628179472c312f507bc9349971d21f8f2b7d6b329b02fab448bd90fd4ce4dfbc78f23a8c4eed74d5589f4c3bd11b552535b8ab8a1a6ab9d1dfda21f247a93354702c12fdde1113cb8dd0e46e2a3a94547c9871df2a88943751d8276dc43f7f6aed921f43f6a33f9beba804c3d2b5781d754abe36ba58461798be8585b8b2"))
-        attr_list.append(MessageAuthenticator.create(bytes.fromhex("26e219fc875fd78976eb2b9b475b1488")))
+        attr_list.append(MessageAuthenticator.create(
+            bytes.fromhex("26e219fc875fd78976eb2b9b475b1488")))
         attr_list.append(State.create(bytes.fromhex("c1591073c33305b4fa8bd26dd27eafd9")))
         attributes = RadiusAttributesList(attr_list)
         access_challenge = RadiusAccessChallenge(6,
@@ -232,11 +234,12 @@ class RadiusTestCase(unittest.TestCase):
         self.assertRaises(ValueError, Enum.parse, bytes.fromhex("01234567890123456789"))
 
         self.assertRaises(ValueError, Text.parse, "".encode())
-        self.assertRaises(ValueError, Text.parse, "260CharacterLengthUserName260CharacterLengthUserName"
-                                                  "260CharacterLengthUserName260CharacterLengthUserName"
-                                                  "260CharacterLengthUserName260CharacterLengthUserName"
-                                                  "260CharacterLengthUserName260CharacterLengthUserName"
-                                                  "260CharacterLengthUserName260CharacterLengthUserName".encode())
+        self.assertRaises(ValueError, Text.parse,
+                          "260CharacterLengthUserName260CharacterLengthUserName"
+                          "260CharacterLengthUserName260CharacterLengthUserName"
+                          "260CharacterLengthUserName260CharacterLengthUserName"
+                          "260CharacterLengthUserName260CharacterLengthUserName"
+                          "260CharacterLengthUserName260CharacterLengthUserName".encode())
 
         self.assertRaises(ValueError, String.parse, "".encode())
         self.assertRaises(ValueError, String.parse, "260CharacterLengthState260CharacterLengthState"
@@ -247,11 +250,12 @@ class RadiusTestCase(unittest.TestCase):
                                                     "260CharacterLengthState260Char".encode())
 
         self.assertRaises(ValueError, Vsa.parse, "abcd".encode())
-        self.assertRaises(ValueError, Vsa.parse, "270CharacterLengthVSAAttribute270CharacterLengthVSAAttribute"
-                                                 "270CharacterLengthVSAAttribute270CharacterLengthVSAAttribute"
-                                                 "270CharacterLengthVSAAttribute270CharacterLengthVSAAttribute"
-                                                 "270CharacterLengthVSAAttribute270CharacterLengthVSAAttribute"
-                                                 "270CharacterLen270CharacterLen".encode())
+        self.assertRaises(ValueError, Vsa.parse,
+                          "270CharacterLengthVSAAttribute270CharacterLengthVSAAttribute"
+                          "270CharacterLengthVSAAttribute270CharacterLengthVSAAttribute"
+                          "270CharacterLengthVSAAttribute270CharacterLengthVSAAttribute"
+                          "270CharacterLengthVSAAttribute270CharacterLengthVSAAttribute"
+                          "270CharacterLen270CharacterLen".encode())
         # Cannot test Concat datatype, it does not check length
 
     def test_pack_illegal_radius_datatype_lengths(self):
@@ -262,19 +266,21 @@ class RadiusTestCase(unittest.TestCase):
         self.assertRaises(ValueError, ServiceType.create, 10000000000)
 
         self.assertRaises(ValueError, UserName.create, "")
-        self.assertRaises(ValueError, UserName.create, "260CharacterLengthUserName260CharacterLengthUserName"
-                                                       "260CharacterLengthUserName260CharacterLengthUserName"
-                                                       "260CharacterLengthUserName260CharacterLengthUserName"
-                                                       "260CharacterLengthUserName260CharacterLengthUserName"
-                                                       "260CharacterLengthUserName260CharacterLengthUserName")
+        self.assertRaises(ValueError, UserName.create,
+                          "260CharacterLengthUserName260CharacterLengthUserName"
+                          "260CharacterLengthUserName260CharacterLengthUserName"
+                          "260CharacterLengthUserName260CharacterLengthUserName"
+                          "260CharacterLengthUserName260CharacterLengthUserName"
+                          "260CharacterLengthUserName260CharacterLengthUserName")
 
         self.assertRaises(ValueError, State.create, "")
-        self.assertRaises(ValueError, State.create, "260CharacterLengthState260CharacterLengthState"
-                                                    "260CharacterLengthState260CharacterLengthState"
-                                                    "260CharacterLengthState260CharacterLengthState"
-                                                    "260CharacterLengthState260CharacterLengthState"
-                                                    "260CharacterLengthState260CharacterLengthState"
-                                                    "260CharacterLengthState260Char")
+        self.assertRaises(ValueError, State.create,
+                          "260CharacterLengthState260CharacterLengthState"
+                          "260CharacterLengthState260CharacterLengthState"
+                          "260CharacterLengthState260CharacterLengthState"
+                          "260CharacterLengthState260CharacterLengthState"
+                          "260CharacterLengthState260CharacterLengthState"
+                          "260CharacterLengthState260Char")
 
         # Cannot test Concat datatype, it does not check length
         # Cannot test VSA datatype, Nothing is using it at the moment.

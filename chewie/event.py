@@ -1,4 +1,8 @@
-class Event(object):
+"""Various Events used by Chewie"""
+
+
+class Event:
+    """Base event class"""
     TIMER_EXPIRED = 1
     MESSAGE_RECEIVED = 2
     SHUTDOWN = 3
@@ -7,7 +11,13 @@ class Event(object):
 
 
 class EventTimerExpired(Event):
+    """Used when a timer has expired."""
     def __init__(self, state_machine=None, sent_count=None):
+        """
+        Args:
+            state_machine: state machine that triggered the event
+            sent_count: number of packets sent at time of event creation.
+        """
         # will work but please do this properly
         self.type = self.TIMER_EXPIRED
         self.state_machine = state_machine
@@ -15,7 +25,13 @@ class EventTimerExpired(Event):
 
 
 class EventMessageReceived(Event):
+    """Message (EAP) Received. Radius Message event is a child"""
     def __init__(self, message, port_id):
+        """
+        Args:
+            message:
+            port_id: id of switch port where message was received.
+        """
         # will work but please do this properly
         self.type = self.MESSAGE_RECEIVED
         self.message = message
@@ -23,6 +39,7 @@ class EventMessageReceived(Event):
 
 
 class EventPortStatusChange(Event):
+    """Port status has changed (up/down)"""
 
     def __init__(self, port_status):
         """
@@ -37,13 +54,20 @@ class EventPortStatusChange(Event):
 
 
 class EventRadiusMessageReceived(EventMessageReceived):
+    """Radius Message Received."""
 
     def __init__(self, message, state):
+        """
+        Args:
+            message:
+            state: the RADIUS state attribute
+        """
         super().__init__(message, None)
         self.state = state
 
 
 class EventShutdown(Event):
+    """Shutdown has been signaled (is this even used?)"""
     def __init__(self):
         # will work but please do this properly
         self.type = self.SHUTDOWN

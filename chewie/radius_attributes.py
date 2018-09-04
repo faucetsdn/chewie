@@ -10,7 +10,7 @@ from chewie.radius_datatypes import Concat, Enum, Integer, String, Text, Vsa
 ATTRIBUTE_TYPES = {}
 
 
-class Attribute(object):
+class Attribute():
     """Parent class for the Attributes."""
 
     TYPE = None  # e.g. 1
