@@ -1,3 +1,2 @@
 eventlet
 netils==0.0.1
-pytype==2018.8.10
