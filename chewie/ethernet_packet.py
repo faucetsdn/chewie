@@ -1,5 +1,5 @@
 import struct
-from .mac_address import MacAddress
+from chewie.mac_address import MacAddress
 
 ETHERNET_HEADER_LENGTH = 6 + 6 + 2
 
