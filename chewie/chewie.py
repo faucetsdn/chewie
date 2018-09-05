@@ -16,6 +16,7 @@ from chewie.radius_attributes import EAPMessage, State, CalledStationId, NASPort
 from chewie.message_parser import MessageParser, MessagePacker
 from chewie.mac_address import MacAddress
 from chewie.event import EventMessageReceived, EventRadiusMessageReceived
+from chewie.utils import get_logger
 
 
 def unpack_byte_string(byte_string):
@@ -36,20 +37,26 @@ class Chewie:
 
     def __init__(self, interface_name, logger=None,
                  auth_handler=None, failure_handler=None, logoff_handler=None,
-                 radius_server_ip=None):
+                 radius_server_ip=None, radius_server_port=None, radius_server_secret=None,
+                 chewie_id=None):
         self.interface_name = interface_name
-        self.logger = logger
+        self.logger = get_logger(logger.name + "." + Chewie.__name__)
         self.auth_handler = auth_handler
         self.failure_handler = failure_handler
         self.logoff_handler = logoff_handler
 
         self.radius_server_ip = radius_server_ip
-        self.radius_secret = "SECRET"
+        self.radius_secret = radius_server_secret
+        self.radius_server_port = self.RADIUS_UDP_PORT
+        if radius_server_port:
+            self.radius_server_port = radius_server_port
         self.radius_listen_ip = "0.0.0.0"
         self.radius_listen_port = 0
 
         self.chewie_id = "44-44-44-44-44-44:"  # used by the RADIUS Attribute
                                                # 'Called-Station' in Access-Request
+        if chewie_id:
+            self.chewie_id = chewie_id
         self.extra_radius_request_attributes = self.prepare_extra_radius_attributes()
 
         self.state_machines = {}  # mac: sm
@@ -172,7 +179,7 @@ class Chewie:
                                                  radius_packet_id, request_authenticator, state,
                                                  self.radius_secret,
                                                  self.extra_radius_request_attributes)
-                self.radius_socket.sendto(data, (self.radius_server_ip, self.RADIUS_UDP_PORT))
+                self.radius_socket.sendto(data, (self.radius_server_ip, self.radius_server_port))
                 self.logger.info("sent radius message.")
         except Exception as e:
             self.logger.exception(e)
@@ -285,7 +292,7 @@ class Chewie:
         if not sm:
             sm = FullEAPStateMachine(self.eap_output_messages, self.radius_output_messages, src_mac,
                                      self.timer_scheduler, self.auth_success,
-                                     self.auth_failure, self.auth_logoff)
+                                     self.auth_failure, self.auth_logoff, self.logger.name)
             sm.eapRestart = True
             # TODO what if port is not actually enabled, but then how did they auth?
             sm.portEnabled = True
