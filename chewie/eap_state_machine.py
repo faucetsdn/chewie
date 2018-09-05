@@ -192,7 +192,7 @@ class FullEAPStateMachine:
     eapLogoff = None    # bool
 
     def __init__(self, eap_output_queue, radius_output_queue, src_mac, timer_scheduler,
-                 auth_handler, failure_handler, logoff_handler):
+                 auth_handler, failure_handler, logoff_handler, log_prefix):
         """
 
         Args:
@@ -219,7 +219,8 @@ class FullEAPStateMachine:
         # if we want to deal with each method locally.
         self.m = MPassthrough()
 
-        self.logger = utils.get_logger("SM - %s" % self.src_mac)
+        logname = ".SM - %s" % self.src_mac
+        self.logger = utils.get_logger(log_prefix + logname)
 
     def getId(self):
         """Determines the identifier value chosen by the AAA server for the current EAP request.
