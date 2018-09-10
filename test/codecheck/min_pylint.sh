@@ -3,7 +3,7 @@
 CHEWIEHOME=`dirname $0`"/../.."
 PYTHONPATH=$CHEWIEHOME
 
-MINRATING=5.1
+MINRATING=8.0
 
 lintfile=`mktemp`.lint
 

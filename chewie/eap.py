@@ -6,7 +6,7 @@ EAP_TYPE_LENGTH = 1
 PARSERS = {}
 
 
-class Eap(object):
+class Eap:
     REQUEST = 1
     RESPONSE = 2
     SUCCESS = 3
@@ -24,8 +24,10 @@ class Eap(object):
     @staticmethod
     def parse(packed_message):
         code, packet_id, length = struct.unpack("!BBH", packed_message[:EAP_HEADER_LENGTH])
-        if code == Eap.REQUEST or code == Eap.RESPONSE:
-            packet_type, = struct.unpack("!B", packed_message[EAP_HEADER_LENGTH:EAP_HEADER_LENGTH+EAP_TYPE_LENGTH])
+        if code in (Eap.REQUEST, Eap.RESPONSE):
+            packet_type, = struct.unpack("!B",
+                                         packed_message[EAP_HEADER_LENGTH :
+                                                        EAP_HEADER_LENGTH + EAP_TYPE_LENGTH])
             data = packed_message[EAP_HEADER_LENGTH+EAP_TYPE_LENGTH:length]
             return PARSERS[packet_type](code, packet_id, data)
         elif code == Eap.SUCCESS:
@@ -36,7 +38,8 @@ class Eap(object):
 
     def pack(self, packed_body):
         header = struct.pack("!BBHB", self.code, self.packet_id,
-                             EAP_HEADER_LENGTH + EAP_TYPE_LENGTH + len(packed_body), self.PACKET_TYPE)
+                             EAP_HEADER_LENGTH + EAP_TYPE_LENGTH + len(packed_body),
+                             self.PACKET_TYPE)
         return header + packed_body
 
 
@@ -142,7 +145,8 @@ class EapLegacyNak(Eap):
         return cls(code, packet_id, desired_auth_types)
 
     def pack(self):
-        packed_legacy_nak = struct.pack("!%ds" % len(self.desired_auth_types), *self.desired_auth_types)  # pytype: disable=wrong-arg-types
+        packed_legacy_nak = struct.pack("!%ds" % len(self.desired_auth_types),
+                                        *self.desired_auth_types)  # pytype: disable=wrong-arg-types
         return super(EapLegacyNak, self).pack(packed_legacy_nak)
 
     def __repr__(self):

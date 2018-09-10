@@ -5,7 +5,7 @@ import struct
 import chewie.message_parser
 
 
-class DataType(object):
+class DataType():
     """Parent datatype class, subclass should provide implementation for abstractmethods.
     May """
     DATA_TYPE_VALUE = None

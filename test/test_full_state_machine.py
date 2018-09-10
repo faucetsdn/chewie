@@ -1,3 +1,6 @@
+
+# pylint: disable=missing-docstring
+
 import sched
 import time
 from queue import Queue
@@ -152,7 +155,8 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.test_identity_response()
 
         eap_message = Md5ChallengeMessage(self.src_mac, 2, Eap.REQUEST,
-                                          build_byte_string("74d3db089b727d9cc5774599e4a32a29"), b"host1user")
+                                          build_byte_string("74d3db089b727d9cc5774599e4a32a29"),
+                                          b"host1user")
         self.sm.event(EventRadiusMessageReceived(eap_message, None))
         self.assertEqual(self.sm.currentState, self.sm.IDLE2)
 
@@ -165,7 +169,8 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.test_md5_challenge_request()
 
         message = Md5ChallengeMessage(self.src_mac, 2, Eap.RESPONSE,
-                                      build_byte_string("3a535f0ee8c6b34fe714aa7dad9a0e15"), b"host1user")
+                                      build_byte_string("3a535f0ee8c6b34fe714aa7dad9a0e15"),
+                                      b"host1user")
         self.sm.event(EventMessageReceived(message, None))
         self.assertEqual(self.sm.currentState, self.sm.AAA_IDLE)
         self.assertEqual(self.eap_output_queue.qsize(), 0)
@@ -222,7 +227,8 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.test_md5_challenge_request()
 
         message = Md5ChallengeMessage(self.src_mac, 222, Eap.RESPONSE,
-                                      build_byte_string("3a535f0ee8c6b34fe714aa7dad9a0e15"), b"host1user")
+                                      build_byte_string("3a535f0ee8c6b34fe714aa7dad9a0e15"),
+                                      b"host1user")
         self.sm.event(EventMessageReceived(message, None))
         self.assertEqual(self.sm.currentState, self.sm.IDLE2)
         self.assertEqual(self.eap_output_queue.qsize(), 0)

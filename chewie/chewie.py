@@ -1,3 +1,5 @@
+"""Entry point for 802.1X speaker.
+"""
 from fcntl import ioctl
 import os
 import sched
@@ -18,10 +20,12 @@ from chewie.utils import get_logger
 
 
 def unpack_byte_string(byte_string):
+    """unpacks a byte string"""
     return "".join("%02x" % x for x in byte_string)
 
 
-class Chewie(object):
+class Chewie:
+    """Facilitates EAP supplicant and RADIUS server communication"""
     SIOCGIFHWADDR = 0x8927
     SIOCGIFINDEX = 0x8933
     PACKET_MR_MULTICAST = 0
@@ -66,8 +70,14 @@ class Chewie(object):
 
         self.radius_id = -1
         self.socket = None
+        self.pool = None
+        self.eventlets = None
+        self.radius_socket = None
+        self.interface_index = None
+        self.interface_address = None
 
     def run(self):
+        """setup chewie and start socket eventlet threads"""
         self.logger.info("Starting")
         self.open_socket()
         self.open_radius_socket()
@@ -76,6 +86,7 @@ class Chewie(object):
         self.start_threads_and_wait()
 
     def start_threads_and_wait(self):
+        """Start the thread and wait until they complete (hopefully never)"""
         self.pool = GreenPool()
         self.eventlets = []
 
@@ -90,18 +101,33 @@ class Chewie(object):
         self.pool.waitall()
 
     def auth_success(self, src_mac, port_id):
+        """authentication shim between faucet and chewie
+        Args:
+            src_mac (MacAddress): the mac of the successful supplicant
+            port_id (MacAddress): the 'mac' identifier of what switch port the success is on"""
         if self.auth_handler:
             self.auth_handler(src_mac, port_id)
 
     def auth_failure(self, src_mac, port_id):
+        """failure shim between faucet and chewie
+                Args:
+                    src_mac (MacAddress): the mac of the failed supplicant
+                    port_id (MacAddress): the 'mac' identifier of what switch port
+                     the failure is on"""
         if self.failure_handler:
             self.failure_handler(src_mac, port_id)
 
     def auth_logoff(self, src_mac, port_id):
+        """logoff shim between faucet and chewie
+                Args:
+                    src_mac (MacAddress): the mac of the logoff supplicant
+                    port_id (MacAddress): the 'mac' identifier of what switch port
+                     the logoff is on"""
         if self.logoff_handler:
             self.logoff_handler(src_mac, port_id)
 
     def send_eap_messages(self):
+        """send eap messages to supplicant forever."""
         try:
             while True:
                 sleep(0)
@@ -113,6 +139,7 @@ class Chewie(object):
             self.logger.exception(e)
 
     def receive_eap_messages(self):
+        """receive eap messages from supplicant forever."""
         try:
             while True:
                 sleep(0)
@@ -130,6 +157,8 @@ class Chewie(object):
             self.logger.exception(e)
 
     def send_radius_messages(self):
+        """send RADIUS messages to RADIUS Server forever."""
+
         try:
             while True:
                 sleep(0)
@@ -156,6 +185,8 @@ class Chewie(object):
             self.logger.exception(e)
 
     def receive_radius_messages(self):
+        """receive RADIUS messages from RADIUS server forever."""
+
         try:
             while True:
                 sleep(0)
@@ -175,9 +206,16 @@ class Chewie(object):
             self.logger.exception(e)
 
     def request_authenticator_callback(self, packet_id):
+        """Callback to get the RADIUS request Authenticator
+        Args:
+            packet_id (int):
+        Returns:
+            the request authenticator sent with the packet_id
+            """
         return self.packet_id_to_request_authenticator[packet_id]
 
     def timer_messages(self):
+        """Process timer based events forever."""
         def scheduler_done():
             self.logger.info("scheduler has processed it's last job.")
         try:
@@ -190,24 +228,29 @@ class Chewie(object):
             self.logger.exception(e)
 
     def open_radius_socket(self):
-        self.radius_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        """Setup RADIUS Socket"""
+        self.radius_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # pylint: disable=no-member
         self.logger.info("Radius Listening on %s:%d" % (self.radius_listen_ip,
                                                         self.radius_listen_port))
         self.radius_socket.bind((self.radius_listen_ip, self.radius_listen_port))
 
     def open_socket(self):
-        self.socket = socket.socket(socket.PF_PACKET, socket.SOCK_RAW, socket.htons(0x888e))
+        """Setup EAP socket"""
+        self.socket = socket.socket(socket.PF_PACKET, socket.SOCK_RAW, socket.htons(0x888e)) # pylint: disable=no-member
         self.socket.bind((self.interface_name, 0))
 
     def prepare_extra_radius_attributes(self):
+        """Create RADIUS Attirbutes to be sent with every RADIUS request"""
         attr_list = [CalledStationId.create(self.chewie_id), NASPortType.create(15)]
         return attr_list
 
     def get_interface_info(self):
+        """Get information about the EAP socket"""
         self.get_interface_address()
         self.get_interface_index()
 
     def get_interface_address(self):
+        """Get MAC address of the EAP socket."""
         # http://man7.org/linux/man-pages/man7/netdevice.7.html
         ifreq = struct.pack('16sH6s', self.interface_name.encode("utf-8"), 0, b"")
         response = ioctl(self.socket, self.SIOCGIFHWADDR, ifreq)
@@ -215,21 +258,36 @@ class Chewie(object):
         self.interface_address = MacAddress(interface_address)
 
     def get_interface_index(self):
+        """Get the interface index of the EAP Socket"""
         # http://man7.org/linux/man-pages/man7/netdevice.7.html
         ifreq = struct.pack('16sI', self.interface_name.encode("utf-8"), 0)
         response = ioctl(self.socket, self.SIOCGIFINDEX, ifreq)
         _ifname, self.interface_index = struct.unpack('16sI', response)
 
     def join_multicast_group(self):
+        """Sets the EAP interface to be able to receive EAP messages"""
         # TODO this works but should blank out the end bytes
         mreq = struct.pack("IHH8s", self.interface_index, self.PACKET_MR_PROMISC,
                            len(self.EAP_ADDRESS.address), self.EAP_ADDRESS.address)
         self.socket.setsockopt(self.SOL_PACKET, self.PACKET_ADD_MEMBERSHIP, mreq)
 
     def get_state_machine_from_radius_packet_id(self, packet_id):
+        """Gets a FullEAPStateMachine from the RADIUS message packet_id
+        Args:
+            packet_id (int): id of the received RADIUS message
+        Returns:
+            FullEAPStateMachine
+        """
         return self.get_state_machine(self.packet_id_to_mac[packet_id])
 
     def get_state_machine(self, src_mac):
+        """Gets or creates if it does not already exist an FullEAPStateMachine for the src_mac.
+        Args:
+            src_mac (MACAddress): who's to get.
+
+        Returns:
+            FullEAPStateMachine
+        """
         sm = self.state_machines.get(src_mac, None)
         if not sm:
             sm = FullEAPStateMachine(self.eap_output_messages, self.radius_output_messages, src_mac,
@@ -242,6 +300,10 @@ class Chewie(object):
         return sm
 
     def get_next_radius_packet_id(self):
+        """Calulate the next RADIUS Packet ID
+        Returns:
+            int
+        """
         self.radius_id += 1
         if self.radius_id > 255:
             self.radius_id = 0
