@@ -134,9 +134,14 @@ class Chewie:
                 message, src_mac, port_mac = self.eap_output_messages.get()
                 self.logger.info("Sending message %s from %s to %s" %
                                  (message, str(port_mac), str(src_mac)))
-                self.socket.send(MessagePacker.ethernet_pack(message, port_mac, src_mac))
+                self.eap_send(MessagePacker.ethernet_pack(message, port_mac, src_mac))
         except Exception as e:
             self.logger.exception(e)
+
+    def eap_send(self, data):
+        """send on eap socket.
+            data (bytes): data to send"""
+        self.socket.send(data)
 
     def receive_eap_messages(self):
         """receive eap messages from supplicant forever."""
@@ -144,7 +149,7 @@ class Chewie:
             while True:
                 sleep(0)
                 self.logger.info("waiting for eap.")
-                packed_message = self.socket.recv(4096)
+                packed_message = self.eap_receive()
                 self.logger.info("Received packed_message: %s", str(packed_message))
 
                 message, dst_mac = MessageParser.ethernet_parse(packed_message)
@@ -155,6 +160,10 @@ class Chewie:
                 sm.event(event)
         except Exception as e:
             self.logger.exception(e)
+
+    def eap_receive(self):
+        """receive from eap socket"""
+        return self.socket.recv(4096)
 
     def send_radius_messages(self):
         """send RADIUS messages to RADIUS Server forever."""
@@ -179,10 +188,15 @@ class Chewie:
                                                  radius_packet_id, request_authenticator, state,
                                                  self.radius_secret,
                                                  self.extra_radius_request_attributes)
-                self.radius_socket.sendto(data, (self.radius_server_ip, self.radius_server_port))
+                self.radius_send(data)
                 self.logger.info("sent radius message.")
         except Exception as e:
             self.logger.exception(e)
+
+    def radius_send(self, data):
+        """Sends on the radius socket
+            data (bytes): what to send"""
+        self.radius_socket.sendto(data, (self.radius_server_ip, self.radius_server_port))
 
     def receive_radius_messages(self):
         """receive RADIUS messages from RADIUS server forever."""
@@ -191,7 +205,7 @@ class Chewie:
             while True:
                 sleep(0)
                 self.logger.info("waiting for radius.")
-                packed_message = self.radius_socket.recv(4096)
+                packed_message = self.radius_receive()
                 radius = MessageParser.radius_parse(packed_message, self.radius_secret,
                                                     self.request_authenticator_callback)
                 self.logger.info("Received RADIUS message: %s", radius)
@@ -204,6 +218,10 @@ class Chewie:
                 sm.event(event)
         except Exception as e:
             self.logger.exception(e)
+
+    def radius_receive(self):
+        """Receives from the radius socket"""
+        return self.radius_socket.recv(4096)
 
     def request_authenticator_callback(self, packet_id):
         """Callback to get the RADIUS request Authenticator
