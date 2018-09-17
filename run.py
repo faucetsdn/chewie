@@ -31,5 +31,5 @@ def logoff_handler(address, group_address):
 logger = get_logger("CHEWIE")
 logger.info('starting chewieeeee.')
 
-chewie = Chewie("eth1", logger, auth_handler, failure_handler, logoff_handler, radius_server_ip="172.24.0.113")
+chewie = Chewie("eth1", logger, auth_handler, failure_handler, logoff_handler, radius_server_ip="172.24.0.113", radius_server_secret="SECRET")
 chewie.run()
