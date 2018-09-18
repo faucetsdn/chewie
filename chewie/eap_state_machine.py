@@ -712,7 +712,8 @@ class FullEAPStateMachine:
             if self.aaaEapRespData.code == Eap.RESPONSE:
                 self.radius_output_messages.put((self.aaaEapRespData, self.src_mac,
                                                  self.aaaIdentity.identity,
-                                                 self.radius_state_attribute))
+                                                 self.radius_state_attribute,
+                                                 self.port_id_mac))
                 self.sent_count += 1
                 self.set_timer()
             self.aaaEapResp = False
