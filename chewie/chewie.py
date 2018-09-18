@@ -15,7 +15,7 @@ from chewie.eap_state_machine import FullEAPStateMachine
 from chewie.radius_attributes import EAPMessage, State, CalledStationId, NASPortType
 from chewie.message_parser import MessageParser, MessagePacker
 from chewie.mac_address import MacAddress
-from chewie.event import EventMessageReceived, EventRadiusMessageReceived
+from chewie.event import EventMessageReceived, EventRadiusMessageReceived, EventPortStatusChange
 from chewie.utils import get_logger
 
 
@@ -110,21 +110,51 @@ class Chewie:
 
     def auth_failure(self, src_mac, port_id):
         """failure shim between faucet and chewie
-                Args:
-                    src_mac (MacAddress): the mac of the failed supplicant
-                    port_id (MacAddress): the 'mac' identifier of what switch port
-                     the failure is on"""
+        Args:
+            src_mac (MacAddress): the mac of the failed supplicant
+            port_id (MacAddress): the 'mac' identifier of what switch port
+             the failure is on"""
         if self.failure_handler:
             self.failure_handler(src_mac, port_id)
 
     def auth_logoff(self, src_mac, port_id):
         """logoff shim between faucet and chewie
-                Args:
-                    src_mac (MacAddress): the mac of the logoff supplicant
-                    port_id (MacAddress): the 'mac' identifier of what switch port
-                     the logoff is on"""
+        Args:
+            src_mac (MacAddress): the mac of the logoff supplicant
+            port_id (MacAddress): the 'mac' identifier of what switch port
+             the logoff is on"""
         if self.logoff_handler:
             self.logoff_handler(src_mac, port_id)
+
+    def port_down(self, port_id):
+        """
+        should be called by faucet when port has gone down.
+        Args:
+            port_id (str): id of port.
+        """
+        # all chewie needs to do is change its internal state.
+        # faucet will remove the acls by itself.
+        self.set_port_status(port_id, False)
+
+    def port_up(self, port_id):
+        """
+        should be called by faucet when port has come up
+        Args:
+            port_id (str): id of port.
+        """
+        if port_id not in self.state_machines:
+            self.state_machines[port_id] = {}
+
+        self.set_port_status(port_id, True)
+
+        # TODO send eapol identity request to group address (from port_id) to let supplicant know
+        # this port is 802.1X enabled
+
+    def set_port_status(self, port_id, status):
+        if port_id in self.state_machines:
+            for src_mac, sm in self.state_machines[port_id]:
+                event = EventPortStatusChange(status)
+                sm.event(event)
 
     def send_eap_messages(self):
         """send eap messages to supplicant forever."""
@@ -307,10 +337,10 @@ class Chewie:
         Returns:
             FullEAPStateMachine
         """
-        port_sms = self.state_machines.get(port_id, None)
+        port_sms = self.state_machines.get(str(port_id), None)
         if port_sms is None:
-            self.state_machines[port_id] = {}
-        sm = self.state_machines[port_id].get(src_mac, None)
+            self.state_machines[str(port_id)] = {}
+        sm = self.state_machines[str(port_id)].get(src_mac, None)
         if not sm:
             sm = FullEAPStateMachine(self.eap_output_messages, self.radius_output_messages, src_mac,
                                      self.timer_scheduler, self.auth_success,
@@ -318,7 +348,7 @@ class Chewie:
             sm.eapRestart = True
             # TODO what if port is not actually enabled, but then how did they auth?
             sm.portEnabled = True
-            self.state_machines[port_id][src_mac] = sm
+            self.state_machines[str(port_id)][src_mac] = sm
         return sm
 
     def get_next_radius_packet_id(self):
