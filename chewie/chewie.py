@@ -152,7 +152,7 @@ class Chewie:
 
     def set_port_status(self, port_id, status):
         if port_id in self.state_machines:
-            for src_mac, sm in self.state_machines[port_id]:
+            for src_mac, sm in self.state_machines[port_id].items():
                 event = EventPortStatusChange(status)
                 sm.event(event)
 
