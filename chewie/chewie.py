@@ -1,11 +1,12 @@
 """Entry point for 802.1X speaker.
 """
 from fcntl import ioctl
+import heapq
 import os
-import sched
 import struct
 import time
 
+from chewie.eap import Eap
 from eventlet import sleep, GreenPool
 from eventlet.green import socket
 from eventlet.queue import Queue
@@ -13,10 +14,10 @@ from eventlet.queue import Queue
 
 from chewie.eap_state_machine import FullEAPStateMachine
 from chewie.radius_attributes import EAPMessage, State, CalledStationId, NASPortType
-from chewie.message_parser import MessageParser, MessagePacker
+from chewie.message_parser import MessageParser, MessagePacker, IdentityMessage
 from chewie.mac_address import MacAddress
 from chewie.event import EventMessageReceived, EventRadiusMessageReceived, EventPortStatusChange
-from chewie.utils import get_logger
+from chewie.utils import get_logger, push_job
 
 
 def unpack_byte_string(byte_string):
@@ -66,7 +67,7 @@ class Chewie:
         self.eap_output_messages = Queue()
         self.radius_output_messages = Queue()
 
-        self.timer_scheduler = sched.scheduler(time.time, sleep)
+        self.timer_heap = []
 
         self.radius_id = -1
         self.socket = None
@@ -147,12 +148,21 @@ class Chewie:
 
         self.set_port_status(port_id, True)
 
-        # TODO send eapol identity request to group address (from port_id) to let supplicant know
-        # this port is 802.1X enabled
+        self.logger.info('scheduling preemptive id request')
+        push_job(self.timer_heap, 10, self.send_preemptive_eap_identity_request, [port_id])
+        self.logger.info('sched:\n%s', self.timer_heap)
+
+        # TODO what happens when supplicant receives the request? (when already in Success)
+
+    def send_preemptive_eap_identity_request(self, port_id_mac):
+        self.logger.info('sending preemptive id request')
+        # TODO make 0 (currentId) a random number
+        self.eap_output_messages.put((IdentityMessage(self.EAP_ADDRESS, 0, Eap.REQUEST, ""),
+                                      self.EAP_ADDRESS, MacAddress.from_string(port_id_mac)))
 
     def set_port_status(self, port_id, status):
         if port_id in self.state_machines:
-            for src_mac, sm in self.state_machines[port_id]:
+            for src_mac, sm in self.state_machines[port_id].items():
                 event = EventPortStatusChange(status)
                 sm.event(event)
 
@@ -263,15 +273,19 @@ class Chewie:
         return self.packet_id_to_request_authenticator[packet_id]
 
     def timer_messages(self):
-        """Process timer based events forever."""
-        def scheduler_done():
-            self.logger.info("scheduler has processed it's last job.")
         try:
             while True:
-                # TODO how else could this be made to never end?
-                self.timer_scheduler.enter(999999, 99, scheduler_done)
-                self.timer_scheduler.run()
-                self.logger.info("scheduler completed")
+                if len(self.timer_heap):
+                    if self.timer_heap[0][0] < time.time():
+                        _, job = heapq.heappop(self.timer_heap)
+                        self.logger.info('running job %s', job['func'].__name__)
+                        job['func'](*job['args'])
+                    else:
+                        self.logger.info('too early for job - sleeping')
+                        sleep(1)
+                else:
+                    self.logger.info('job Queue empty - sleeping')
+                    sleep(1)
         except Exception as e:
             self.logger.exception(e)
 
@@ -343,7 +357,7 @@ class Chewie:
         sm = self.state_machines[str(port_id)].get(src_mac, None)
         if not sm:
             sm = FullEAPStateMachine(self.eap_output_messages, self.radius_output_messages, src_mac,
-                                     self.timer_scheduler, self.auth_success,
+                                     self.timer_heap, self.auth_success,
                                      self.auth_failure, self.auth_logoff, self.logger.name)
             sm.eapRestart = True
             # TODO what if port is not actually enabled, but then how did they auth?
