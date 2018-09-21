@@ -1,5 +1,11 @@
 """MAC address helper"""
-from netils import build_byte_string
+
+import re
+
+# pylint: disable=too-few-public-methods
+
+
+_MAC_REGEX = re.compile(r'(?:[0-9a-f]{1,2}:){5}[0-9a-f]{1,2}\Z', re.IGNORECASE)
 
 
 class MacAddress:
@@ -9,15 +15,20 @@ class MacAddress:
 
     @classmethod
     def from_string(cls, address_string):
-        """Create a MacAddress from a string
+        """Create a MacAddress from a string.
+
         Args:
-            address_string (str):
+            address_string (str): Colon-delimited MAC address.
+
         Returns:
             MacAddress
-        """
-        address_bytes = "".join(address_string.split(":"))
-        address = build_byte_string(address_bytes)
 
+        Raises:
+            ValueError: If address_string is invalid.
+        """
+        if not _MAC_REGEX.match(address_string):
+            raise ValueError("'%s' does not appear to be a MAC address" % address_string)
+        address = bytes(int(x, 16) for x in address_string.split(':'))
         return cls(address)
 
     def __str__(self):
