@@ -17,7 +17,8 @@ class Policy:
         # TODO Probably should do something else
         if isinstance(eapRespData, EapolStartMessage):
             return "IDENTITY"
-        return "NOTIFICATION"
+        return "IDENTITY"
+        # return "NOTIFICATION"
 
     @staticmethod
     def getDecision(eapRespData):  # pylint: disable=invalid-name

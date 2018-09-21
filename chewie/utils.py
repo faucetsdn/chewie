@@ -20,4 +20,6 @@ def log_method(method):
 def push_job(heap, delay, func, args=None):
     if not args:
         args = []
-    heapq.heappush(heap, (time.time() + delay, {'func': func, 'args': args}))
+    job = (time.time() + delay, {'func': func, 'args': args, 'alive': True})
+    heapq.heappush(heap, job)
+    return job

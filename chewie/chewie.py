@@ -147,18 +147,7 @@ class Chewie:
             self.state_machines[port_id] = {}
 
         self.set_port_status(port_id, True)
-
-        self.logger.info('scheduling preemptive id request')
-        push_job(self.timer_heap, 10, self.send_preemptive_eap_identity_request, [port_id])
-        self.logger.info('sched:\n%s', self.timer_heap)
-
-        # TODO what happens when supplicant receives the request? (when already in Success)
-
-    def send_preemptive_eap_identity_request(self, port_id_mac):
-        self.logger.info('sending preemptive id request')
-        # TODO make 0 (currentId) a random number
-        self.eap_output_messages.put((IdentityMessage(self.EAP_ADDRESS, 0, Eap.REQUEST, ""),
-                                      self.EAP_ADDRESS, MacAddress.from_string(port_id_mac)))
+        # TODO send preemptive identity request.
 
     def set_port_status(self, port_id, status):
         if port_id in self.state_machines:
@@ -278,8 +267,11 @@ class Chewie:
                 if len(self.timer_heap):
                     if self.timer_heap[0][0] < time.time():
                         _, job = heapq.heappop(self.timer_heap)
-                        self.logger.info('running job %s', job['func'].__name__)
-                        job['func'](*job['args'])
+                        if job['alive']:
+                            self.logger.info('running job %s', job['func'].__name__)
+                            job['func'](*job['args'])
+                        else:
+                            self.logger.info('job %s has been cancelled', job['func'].__name__)
                     else:
                         self.logger.info('too early for job - sleeping')
                         sleep(1)
