@@ -675,6 +675,17 @@ class FullEAPStateMachine:
                 # Do nothing.
                 pass
 
+    def lower_layer_reset(self):
+        """Sets variables that are meant to be set by the lower layer
+        RFC4137 5.1.2 (standalone authenticator to Lower Layer)"""
+        self.eapReq = False
+        self.eapNoReq = False
+        self.eapSuccess = False
+        self.eapFail = False
+        self.eapTimeout = False
+
+        self.aaaEapResp = False
+
     def event(self, event):
         """Processes an event.
         Output is via the eap/radius queue. and again will be of type ***Message.
@@ -682,7 +693,7 @@ class FullEAPStateMachine:
             event: should have message attribute which is of the ***Message types
             (e.g. SuccessMessage, IdentityMessage,...)
         """
-
+        self.lower_layer_reset()
         self.logger.info("full state machine received event")
         # 'Lower Layer' shim
         if isinstance(event, EventMessageReceived):
