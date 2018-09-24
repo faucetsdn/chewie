@@ -1,13 +1,13 @@
 
 # pylint: disable=missing-docstring
 import heapq
-import sched
 import time
 from queue import Queue
 import unittest
 
 from netils import build_byte_string
 
+from chewie import timer_scheduler
 from chewie.eap import Eap
 from chewie.mac_address import MacAddress
 from chewie.message_parser import EapolStartMessage, IdentityMessage, Md5ChallengeMessage, \
@@ -15,6 +15,7 @@ from chewie.message_parser import EapolStartMessage, IdentityMessage, Md5Challen
     LegacyNakMessage, TtlsMessage, FailureMessage, EapolLogoffMessage
 from chewie.eap_state_machine import FullEAPStateMachine
 from chewie.event import EventMessageReceived, EventRadiusMessageReceived, EventPortStatusChange
+from chewie.utils import get_logger
 
 
 class FullStateMachineStartTestCase(unittest.TestCase):
@@ -26,10 +27,10 @@ class FullStateMachineStartTestCase(unittest.TestCase):
     def setUp(self):
         self.eap_output_queue = Queue()
         self.radius_output_queue = Queue()
-        self.timer_heap = []
+        self.timer_scheduler = timer_scheduler.TimerScheduler(get_logger('chewie'))
         self.src_mac = MacAddress.from_string("00:12:34:56:78:90")
         self.sm = FullEAPStateMachine(self.eap_output_queue, self.radius_output_queue, self.src_mac,
-                                      self.timer_heap,
+                                      self.timer_scheduler,
                                       self.auth_handler, self.failure_handler, self.logoff_handler,
                                       'Chewie')
         self.MAX_RETRANSMITS = 3
@@ -39,13 +40,14 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.sm.eapRestart = True
 
     def run_scheduler(self):
+        """use this to run the scheduler without the whole threading/eventlet thing
+         (this returns when empty)"""
         while True:
-            if len(self.timer_heap):
-                if self.timer_heap[0][0] < time.time():
-                    _, job = heapq.heappop(self.timer_heap)
+            if len(self.timer_scheduler.timer_heap):
+                if self.timer_scheduler.timer_heap[0][0] < time.time():
+                    _, job = heapq.heappop(self.timer_scheduler.timer_heap)
                     if job['alive']:
-                        job['func'](*job['args'])
-
+                        job['func'](*(job['args']))
                 else:
                     time.sleep(1)
             else:

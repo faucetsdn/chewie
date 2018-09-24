@@ -6,7 +6,7 @@ from chewie.event import EventMessageReceived, EventRadiusMessageReceived, Event
     EventPortStatusChange
 from chewie.message_parser import SuccessMessage, FailureMessage, EapolStartMessage, \
     IdentityMessage, EapolLogoffMessage
-from chewie.utils import get_logger, log_method, push_job
+from chewie.utils import get_logger, log_method
 
 
 class Policy:
@@ -825,7 +825,8 @@ class FullEAPStateMachine:
                                      self.FAILURE, self.FAILURE2,
                                      self.TIMEOUT_FAILURE, self.TIMEOUT_FAILURE2]:
             timeout = self.retransWhile
-            push_job(self.timer_scheduler, timeout,
-                     self.event, [EventTimerExpired(self, self.sent_count)])
+            self.timer_scheduler.call_later(timeout,
+                                            self.event,
+                                            EventTimerExpired(self, self.sent_count))
             # TODO could cancel the scheduled events when
             # they're no longer needed (i.e. response received)

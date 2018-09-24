@@ -1,23 +1,19 @@
 """Entry point for 802.1X speaker.
 """
 from fcntl import ioctl
-import heapq
-import os
 import struct
-import time
-
-from chewie.eap import Eap
+import os
+from chewie import timer_scheduler
 from eventlet import sleep, GreenPool
 from eventlet.green import socket
 from eventlet.queue import Queue
 
-
 from chewie.eap_state_machine import FullEAPStateMachine
 from chewie.radius_attributes import EAPMessage, State, CalledStationId, NASPortType
-from chewie.message_parser import MessageParser, MessagePacker, IdentityMessage
+from chewie.message_parser import MessageParser, MessagePacker
 from chewie.mac_address import MacAddress
 from chewie.event import EventMessageReceived, EventRadiusMessageReceived, EventPortStatusChange
-from chewie.utils import get_logger, push_job
+from chewie.utils import get_logger
 
 
 def unpack_byte_string(byte_string):
@@ -67,7 +63,7 @@ class Chewie:
         self.eap_output_messages = Queue()
         self.radius_output_messages = Queue()
 
-        self.timer_heap = []
+        self.timer_scheduler = timer_scheduler.TimerScheduler(self.logger)
 
         self.radius_id = -1
         self.socket = None
@@ -97,7 +93,7 @@ class Chewie:
         self.eventlets.append(self.pool.spawn(self.send_radius_messages))
         self.eventlets.append(self.pool.spawn(self.receive_radius_messages))
 
-        self.eventlets.append(self.pool.spawn(self.timer_messages))
+        self.eventlets.append(self.pool.spawn(self.timer_scheduler.run))
 
         self.pool.waitall()
 
@@ -261,26 +257,6 @@ class Chewie:
             """
         return self.packet_id_to_request_authenticator[packet_id]
 
-    def timer_messages(self):
-        try:
-            while True:
-                if len(self.timer_heap):
-                    if self.timer_heap[0][0] < time.time():
-                        _, job = heapq.heappop(self.timer_heap)
-                        if job['alive']:
-                            self.logger.info('running job %s', job['func'].__name__)
-                            job['func'](*job['args'])
-                        else:
-                            self.logger.info('job %s has been cancelled', job['func'].__name__)
-                    else:
-                        self.logger.info('too early for job - sleeping')
-                        sleep(1)
-                else:
-                    self.logger.info('job Queue empty - sleeping')
-                    sleep(1)
-        except Exception as e:
-            self.logger.exception(e)
-
     def open_radius_socket(self):
         """Setup RADIUS Socket"""
         self.radius_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # pylint: disable=no-member
@@ -349,7 +325,7 @@ class Chewie:
         sm = self.state_machines[str(port_id)].get(src_mac, None)
         if not sm:
             sm = FullEAPStateMachine(self.eap_output_messages, self.radius_output_messages, src_mac,
-                                     self.timer_heap, self.auth_success,
+                                     self.timer_scheduler, self.auth_success,
                                      self.auth_failure, self.auth_logoff, self.logger.name)
             sm.eapRestart = True
             # TODO what if port is not actually enabled, but then how did they auth?
