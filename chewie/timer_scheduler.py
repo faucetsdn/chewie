@@ -17,7 +17,7 @@ class TimerScheduler:
             self.sleep = sleep
 
     def call_later(self, timeout, func, *args):
-        """
+        """Scheduler callback.
 
         Args:
             timeout: number of seconds to delay executing func
@@ -35,9 +35,9 @@ class TimerScheduler:
 
     def run(self):
         """Main loop. should run forever"""
-        try:
-            while True:
-                if len(self.timer_heap):
+        while True:
+            try:
+                if self.timer_heap:
                     if self.timer_heap[0][0] < time.time():
                         _, job = heapq.heappop(self.timer_heap)
                         if job['alive']:
@@ -49,5 +49,5 @@ class TimerScheduler:
                         self.sleep(1)
                 else:
                     self.sleep(1)
-        except Exception as e:
-            self.logger.exception(e)
+            except Exception as e:
+                self.logger.exception(e)
