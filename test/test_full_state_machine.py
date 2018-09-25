@@ -161,9 +161,11 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.assertEqual(self.sm.currentState, self.sm.IDLE2)
 
         self.assertEqual(self.eap_output_queue.qsize(), 1)
-        self.assertIsInstance(self.eap_output_queue.get_nowait()[0], Md5ChallengeMessage)
+        output = self.eap_output_queue.get_nowait()[0]
+        self.assertIsInstance(output, Md5ChallengeMessage)
 
         self.assertEqual(self.radius_output_queue.qsize(), 0)
+        return output
 
     def test_md5_challenge_response(self):
         self.test_md5_challenge_request()
@@ -224,9 +226,9 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.assertEqual(self.radius_output_queue.qsize(), 0)
 
     def test_discard2(self):
-        self.test_md5_challenge_request()
+        request = self.test_md5_challenge_request()
 
-        message = Md5ChallengeMessage(self.src_mac, 222, Eap.RESPONSE,
+        message = Md5ChallengeMessage(self.src_mac, request.message_id + 10, Eap.RESPONSE,
                                       build_byte_string("3a535f0ee8c6b34fe714aa7dad9a0e15"),
                                       b"host1user")
         self.sm.event(EventMessageReceived(message, None))
@@ -235,9 +237,9 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.assertEqual(self.radius_output_queue.qsize(), 0)
 
     def test_discard(self):
-        self.test_eap_start()
-
-        message = IdentityMessage(self.src_mac, 40, Eap.RESPONSE, "host1user")
+        message = self.test_eap_start()
+        # Make a message that will be discarded (id here is not sequential)
+        message = IdentityMessage(self.src_mac, message.message_id + 10, Eap.RESPONSE, "host1user")
         self.sm.event(EventMessageReceived(message, None))
         self.assertEqual(self.sm.currentState, self.sm.IDLE)
 
