@@ -70,7 +70,6 @@ class ChewieTestCase(unittest.TestCase):
 
     def test_get_next_radius_packet_id(self):
         """Tests Chewie.get_next_radius_packet_id()"""
-
         for i in range(0, 260):
             _i = i % 256
             self.assertEqual(self.chewie.get_next_radius_packet_id(),
