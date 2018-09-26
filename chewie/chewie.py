@@ -1,7 +1,5 @@
 """Entry point for 802.1X speaker.
 """
-from fcntl import ioctl
-import struct
 import os
 from chewie import timer_scheduler
 from eventlet import sleep, GreenPool
@@ -183,6 +181,7 @@ class Chewie:
                 sm = self.get_state_machine(message.src_mac, dst_mac)
                 event = EventMessageReceived(message, dst_mac)
                 sm.event(event)
+                self.logger.info('done eap event')
         except Exception as e:
             self.logger.exception(e)
 

@@ -1,5 +1,6 @@
 #!/bin/sh
 # TODO: must be run from chewie root
+source venv/bin/activate
 pip install .
 if [ -z "${TRAVIS_PYTHON_VERSION}" ]; then
     PYTYPE_TARGET_VERSION=3.6
