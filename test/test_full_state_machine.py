@@ -381,3 +381,15 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.assertEqual(self.auth_counter, 0)
         self.assertEqual(self.failure_counter, 0)
         self.assertEqual(self.logoff_counter, 0)
+
+    def test_deauth_timer(self):
+        self.sm.SESSION_TIMEOUT = 2
+        self.test_success2()
+
+        self.run_scheduler()
+
+        self.assertEqual(self.sm.currentState, self.sm.LOGOFF2)
+
+        self.assertEqual(self.auth_counter, 1)
+        self.assertEqual(self.failure_counter, 0)
+        self.assertEqual(self.logoff_counter, 1)

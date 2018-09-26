@@ -3,7 +3,7 @@ import random
 
 from chewie.eap import Eap
 from chewie.event import EventMessageReceived, EventRadiusMessageReceived, EventTimerExpired, \
-    EventPortStatusChange
+    EventPortStatusChange, EventSessionTimeout
 from chewie.message_parser import SuccessMessage, FailureMessage, EapolStartMessage, \
     IdentityMessage, EapolLogoffMessage
 from chewie.utils import get_logger, log_method
@@ -108,6 +108,7 @@ class FullEAPStateMachine:
     sent_count = 0
 
     DEFAULT_TIMEOUT = 5  # Number of Seconds
+    SESSION_TIMEOUT = 3600  # Number of Seconds
 
     NO_STATE = "NO_STATE"
     DISABLED = "DISABLED"
@@ -519,7 +520,7 @@ class FullEAPStateMachine:
                 # RFC 4137 says do nothing from success(2), but we're adding a logoff state.
                 # hopefully it will work as intended.
                 # Otherwise allow transition to logoff from all states.
-                if self.eapLogoff:
+                if self.logoff:
                     self.logoff_state()
                     self.currentState = FullEAPStateMachine.LOGOFF
 
@@ -685,7 +686,15 @@ class FullEAPStateMachine:
         self.eapFail = False
         self.eapTimeout = False
 
+        self.logoff = False
+
         self.aaaEapResp = False
+
+        # self.aaaEapNoReq = False
+        # self.aaaSuccess = False
+        # self.aaaFail = False
+        # self.aaaEapKeyAvailable = False  # pylint: disable=invalid-name
+        # self.aaaEapResp = False
 
     def event(self, event):
         """Processes an event.
@@ -706,6 +715,8 @@ class FullEAPStateMachine:
 
         elif isinstance(event, EventPortStatusChange):
             self.port_status_event_received(event)
+        elif isinstance(event, EventSessionTimeout):
+            self.session_timeout_event_received()
 
         self.handle_message_received()
         self.logger.info('end state: %s', self.currentState)
@@ -733,9 +744,7 @@ class FullEAPStateMachine:
             self.logger.error("aaaEapResp is true. but data is false. This should never happen")
 
         if self.eapSuccess:
-            self.logger.info('Yay authentication successful %s %s',
-                             self.src_mac, self.aaaIdentity.identity)
-            self.auth_handler(self.src_mac, str(self.port_id_mac))
+            self.handle_success()
 
         if self.eapFail:
             self.logger.info('oh authentication not successful %s', self.src_mac)
@@ -744,6 +753,17 @@ class FullEAPStateMachine:
         if self.eapLogoff:
             self.logger.info('client is logging off %s', self.src_mac)
             self.logoff_handler(self.src_mac, str(self.port_id_mac))
+
+    def handle_success(self):
+        self.logger.info('Yay authentication successful %s %s',
+                         self.src_mac, self.aaaIdentity.identity)
+        self.auth_handler(self.src_mac, str(self.port_id_mac))
+        self.timer_scheduler.call_later(self.SESSION_TIMEOUT,
+                                        self.event,
+                                        EventSessionTimeout(self))
+
+    def session_timeout_event_received(self):
+        self.logoff = True
 
     def port_status_event_received(self, event):
         """Sets variables for the port status change (link up/down) being received.
@@ -782,27 +802,19 @@ class FullEAPStateMachine:
         self.logger.info('type: %s, message %s ', type(event.message), event.message)
         if event.port_id:
             self.port_id_mac = event.port_id
-        self.logoff = False
+
         if isinstance(event.message, EapolStartMessage):
             self.eapRestart = True
         elif isinstance(event.message, EapolLogoffMessage):
             self.logoff = True
+
         if not isinstance(event, EventRadiusMessageReceived):
             self.eapRespData = event.message  # pylint: disable=invalid-name
             self.eapResp = True
         else:
             self.eapRespData = None
             self.eapResp = False
-        self.eapReq = False
-        self.eapNoReq = False
-        self.eapSuccess = False
-        self.eapFail = False
-        self.aaaEapNoReq = False
-        self.aaaSuccess = False
-        self.aaaFail = False
-        self.aaaEapKeyAvailable = False  # pylint: disable=invalid-name
-        self.aaaEapResp = False
-        self.eapLogoff = False
+
         if isinstance(event, EventRadiusMessageReceived):
             self.radius_state_attribute = event.state
             self.aaaEapReq = True
@@ -814,8 +826,6 @@ class FullEAPStateMachine:
             if isinstance(self.aaaEapReqData, FailureMessage):
                 self.logger.info("aaaFail")
                 self.aaaFail = True
-        else:
-            self.aaaEapReq = False
 
     def set_timer(self):
         """Sets a timer to trigger a retransmit if no packet received.
