@@ -1,13 +1,13 @@
 
 # pylint: disable=missing-docstring
-
-import sched
+import heapq
 import time
 from queue import Queue
 import unittest
 
 from netils import build_byte_string
 
+from chewie import timer_scheduler
 from chewie.eap import Eap
 from chewie.mac_address import MacAddress
 from chewie.message_parser import EapolStartMessage, IdentityMessage, Md5ChallengeMessage, \
@@ -15,6 +15,7 @@ from chewie.message_parser import EapolStartMessage, IdentityMessage, Md5Challen
     LegacyNakMessage, TtlsMessage, FailureMessage, EapolLogoffMessage
 from chewie.eap_state_machine import FullEAPStateMachine
 from chewie.event import EventMessageReceived, EventRadiusMessageReceived, EventPortStatusChange
+from chewie.utils import get_logger
 
 
 class FullStateMachineStartTestCase(unittest.TestCase):
@@ -26,16 +27,32 @@ class FullStateMachineStartTestCase(unittest.TestCase):
     def setUp(self):
         self.eap_output_queue = Queue()
         self.radius_output_queue = Queue()
-        self.timer_scheduler = sched.scheduler(time.time, time.sleep)
+        self.timer_scheduler = timer_scheduler.TimerScheduler(get_logger('chewie'))
         self.src_mac = MacAddress.from_string("00:12:34:56:78:90")
         self.sm = FullEAPStateMachine(self.eap_output_queue, self.radius_output_queue, self.src_mac,
                                       self.timer_scheduler,
-                                      self.auth_handler, self.failure_handler, self.logoff_handler, 'Chewie')
+                                      self.auth_handler, self.failure_handler, self.logoff_handler,
+                                      'Chewie')
         self.MAX_RETRANSMITS = 3
         self.sm.MAX_RETRANS = self.MAX_RETRANSMITS
         self.sm.DEFAULT_TIMEOUT = 0.1
         self.sm.portEnabled = True
         self.sm.eapRestart = True
+
+    def run_scheduler(self):
+        """use this to run the scheduler without the whole threading/eventlet thing
+         (this returns when empty)"""
+        while True:
+            if len(self.timer_scheduler.timer_heap):
+                if self.timer_scheduler.timer_heap[0][0] < time.time():
+                    _, job = heapq.heappop(self.timer_scheduler.timer_heap)
+                    if job['alive']:
+                        job['func'](*(job['args']))
+                else:
+                    time.sleep(1)
+            else:
+                time.sleep(1)
+                return
 
     def auth_handler(self, client_mac, port_id_mac):
         print('Successful auth from MAC %s' % str(client_mac))
@@ -75,7 +92,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         output0 = self.test_eap_start()
 
         old_radius_count = self.radius_output_queue.qsize()
-        self.timer_scheduler.run()
+        self.run_scheduler()
 
         output1 = self.eap_output_queue.get_nowait()[0]
         output2 = self.eap_output_queue.get_nowait()[0]
@@ -95,7 +112,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         old_eap_count = self.eap_output_queue.qsize()
         old_radius_count = self.radius_output_queue.qsize()
 
-        self.timer_scheduler.run()
+        self.run_scheduler()
 
         self.assertEqual(self.sm.currentState, self.sm.TIMEOUT_FAILURE2)
         self.assertEqual(old_eap_count, self.eap_output_queue.qsize())
@@ -108,7 +125,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.assertEqual(self.eap_output_queue.qsize(), 0)
         old_radius_count = self.radius_output_queue.qsize()
 
-        self.timer_scheduler.run()
+        self.run_scheduler()
 
         self.assertEqual(self.sm.currentState, self.sm.TIMEOUT_FAILURE2)
         self.assertEqual(self.MAX_RETRANSMITS, self.eap_output_queue.qsize())

@@ -1,21 +1,18 @@
 """Entry point for 802.1X speaker.
 """
 from fcntl import ioctl
-import os
-import sched
 import struct
-import time
-
+import os
+from chewie import timer_scheduler
 from eventlet import sleep, GreenPool
 from eventlet.green import socket
 from eventlet.queue import Queue
-
 
 from chewie.eap_state_machine import FullEAPStateMachine
 from chewie.radius_attributes import EAPMessage, State, CalledStationId, NASPortType
 from chewie.message_parser import MessageParser, MessagePacker
 from chewie.mac_address import MacAddress
-from chewie.event import EventMessageReceived, EventRadiusMessageReceived
+from chewie.event import EventMessageReceived, EventRadiusMessageReceived, EventPortStatusChange
 from chewie.utils import get_logger
 
 
@@ -59,7 +56,7 @@ class Chewie:
         self.eap_output_messages = Queue()
         self.radius_output_messages = Queue()
 
-        self.timer_scheduler = sched.scheduler(time.time, sleep)
+        self.timer_scheduler = timer_scheduler.TimerScheduler(self.logger)
 
         self.radius_id = -1
         self.socket = None
@@ -85,7 +82,7 @@ class Chewie:
         self.eventlets.append(self.pool.spawn(self.send_radius_messages))
         self.eventlets.append(self.pool.spawn(self.receive_radius_messages))
 
-        self.eventlets.append(self.pool.spawn(self.timer_messages))
+        self.eventlets.append(self.pool.spawn(self.timer_scheduler.run))
 
         self.pool.waitall()
 
@@ -114,6 +111,34 @@ class Chewie:
              the logoff is on"""
         if self.logoff_handler:
             self.logoff_handler(src_mac, port_id)
+
+    def port_down(self, port_id):
+        """
+        should be called by faucet when port has gone down.
+        Args:
+            port_id (str): id of port.
+        """
+        # all chewie needs to do is change its internal state.
+        # faucet will remove the acls by itself.
+        self.set_port_status(port_id, False)
+
+    def port_up(self, port_id):
+        """
+        should be called by faucet when port has come up
+        Args:
+            port_id (str): id of port.
+        """
+        if port_id not in self.state_machines:
+            self.state_machines[port_id] = {}
+
+        self.set_port_status(port_id, True)
+        # TODO send preemptive identity request.
+
+    def set_port_status(self, port_id, status):
+        if port_id in self.state_machines:
+            for src_mac, sm in self.state_machines[port_id].items():
+                event = EventPortStatusChange(status)
+                sm.event(event)
 
     def send_eap_messages(self):
         """send eap messages to supplicant forever."""
@@ -220,19 +245,6 @@ class Chewie:
             the request authenticator sent with the packet_id
             """
         return self.packet_id_to_request_authenticator[packet_id]
-
-    def timer_messages(self):
-        """Process timer based events forever."""
-        def scheduler_done():
-            self.logger.info("scheduler has processed it's last job.")
-        try:
-            while True:
-                # TODO how else could this be made to never end?
-                self.timer_scheduler.enter(999999, 99, scheduler_done)
-                self.timer_scheduler.run()
-                self.logger.info("scheduler completed")
-        except Exception as e:
-            self.logger.exception(e)
 
     def open_radius_socket(self):
         """Setup RADIUS Socket"""

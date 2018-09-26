@@ -17,7 +17,8 @@ class Policy:
         # TODO Probably should do something else
         if isinstance(eapRespData, EapolStartMessage):
             return "IDENTITY"
-        return "NOTIFICATION"
+        return "IDENTITY"
+        # return "NOTIFICATION"
 
     @staticmethod
     def getDecision(eapRespData):  # pylint: disable=invalid-name
@@ -675,6 +676,17 @@ class FullEAPStateMachine:
                 # Do nothing.
                 pass
 
+    def lower_layer_reset(self):
+        """Sets variables that are meant to be set by the lower layer
+        RFC4137 5.1.2 (standalone authenticator to Lower Layer)"""
+        self.eapReq = False
+        self.eapNoReq = False
+        self.eapSuccess = False
+        self.eapFail = False
+        self.eapTimeout = False
+
+        self.aaaEapResp = False
+
     def event(self, event):
         """Processes an event.
         Output is via the eap/radius queue. and again will be of type ***Message.
@@ -682,7 +694,7 @@ class FullEAPStateMachine:
             event: should have message attribute which is of the ***Message types
             (e.g. SuccessMessage, IdentityMessage,...)
         """
-
+        self.lower_layer_reset()
         self.logger.info("full state machine received event")
         # 'Lower Layer' shim
         if isinstance(event, EventMessageReceived):
@@ -813,8 +825,8 @@ class FullEAPStateMachine:
                                      self.FAILURE, self.FAILURE2,
                                      self.TIMEOUT_FAILURE, self.TIMEOUT_FAILURE2]:
             timeout = self.retransWhile
-            self.timer_scheduler.enter(timeout, 10,
-                                       self.event,
-                                       argument=[EventTimerExpired(self, self.sent_count)])
+            self.timer_scheduler.call_later(timeout,
+                                            self.event,
+                                            EventTimerExpired(self, self.sent_count))
             # TODO could cancel the scheduled events when
             # they're no longer needed (i.e. response received)
