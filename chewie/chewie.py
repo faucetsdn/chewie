@@ -1,15 +1,12 @@
 """Entry point for 802.1X speaker.
 """
 from fcntl import ioctl
-import os
-import sched
 import struct
-import time
-
+import os
+from chewie import timer_scheduler
 from eventlet import sleep, GreenPool
 from eventlet.green import socket
 from eventlet.queue import Queue
-
 
 from chewie.eap_state_machine import FullEAPStateMachine
 from chewie.radius_attributes import EAPMessage, State, CalledStationId, NASPortType
@@ -26,13 +23,6 @@ def unpack_byte_string(byte_string):
 
 class Chewie:
     """Facilitates EAP supplicant and RADIUS server communication"""
-    SIOCGIFHWADDR = 0x8927
-    SIOCGIFINDEX = 0x8933
-    PACKET_MR_MULTICAST = 0
-    PACKET_MR_PROMISC = 1
-    SOL_PACKET = 263
-    PACKET_ADD_MEMBERSHIP = 1
-    EAP_ADDRESS = MacAddress.from_string("01:80:c2:00:00:03")
     RADIUS_UDP_PORT = 1812
 
     def __init__(self, interface_name, logger=None,
@@ -66,23 +56,19 @@ class Chewie:
         self.eap_output_messages = Queue()
         self.radius_output_messages = Queue()
 
-        self.timer_scheduler = sched.scheduler(time.time, sleep)
+        self.timer_scheduler = timer_scheduler.TimerScheduler(self.logger)
 
         self.radius_id = -1
         self.socket = None
         self.pool = None
         self.eventlets = None
         self.radius_socket = None
-        self.interface_index = None
-        self.interface_address = None
 
     def run(self):
         """setup chewie and start socket eventlet threads"""
         self.logger.info("Starting")
         self.open_socket()
         self.open_radius_socket()
-        self.get_interface_info()
-        self.join_multicast_group()
         self.start_threads_and_wait()
 
     def start_threads_and_wait(self):
@@ -96,7 +82,7 @@ class Chewie:
         self.eventlets.append(self.pool.spawn(self.send_radius_messages))
         self.eventlets.append(self.pool.spawn(self.receive_radius_messages))
 
-        self.eventlets.append(self.pool.spawn(self.timer_messages))
+        self.eventlets.append(self.pool.spawn(self.timer_scheduler.run))
 
         self.pool.waitall()
 
@@ -146,13 +132,11 @@ class Chewie:
             self.state_machines[port_id] = {}
 
         self.set_port_status(port_id, True)
-
-        # TODO send eapol identity request to group address (from port_id) to let supplicant know
-        # this port is 802.1X enabled
+        # TODO send preemptive identity request.
 
     def set_port_status(self, port_id, status):
         if port_id in self.state_machines:
-            for src_mac, sm in self.state_machines[port_id]:
+            for src_mac, sm in self.state_machines[port_id].items():
                 event = EventPortStatusChange(status)
                 sm.event(event)
 
@@ -262,19 +246,6 @@ class Chewie:
             """
         return self.packet_id_to_request_authenticator[packet_id]
 
-    def timer_messages(self):
-        """Process timer based events forever."""
-        def scheduler_done():
-            self.logger.info("scheduler has processed it's last job.")
-        try:
-            while True:
-                # TODO how else could this be made to never end?
-                self.timer_scheduler.enter(999999, 99, scheduler_done)
-                self.timer_scheduler.run()
-                self.logger.info("scheduler completed")
-        except Exception as e:
-            self.logger.exception(e)
-
     def open_radius_socket(self):
         """Setup RADIUS Socket"""
         self.radius_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # pylint: disable=no-member
@@ -291,33 +262,6 @@ class Chewie:
         """Create RADIUS Attirbutes to be sent with every RADIUS request"""
         attr_list = [CalledStationId.create(self.chewie_id), NASPortType.create(15)]
         return attr_list
-
-    def get_interface_info(self):
-        """Get information about the EAP socket"""
-        self.get_interface_address()
-        self.get_interface_index()
-
-    def get_interface_address(self):
-        """Get MAC address of the EAP socket."""
-        # http://man7.org/linux/man-pages/man7/netdevice.7.html
-        ifreq = struct.pack('16sH6s', self.interface_name.encode("utf-8"), 0, b"")
-        response = ioctl(self.socket, self.SIOCGIFHWADDR, ifreq)
-        _interface_name, _address_family, interface_address = struct.unpack('16sH6s', response)
-        self.interface_address = MacAddress(interface_address)
-
-    def get_interface_index(self):
-        """Get the interface index of the EAP Socket"""
-        # http://man7.org/linux/man-pages/man7/netdevice.7.html
-        ifreq = struct.pack('16sI', self.interface_name.encode("utf-8"), 0)
-        response = ioctl(self.socket, self.SIOCGIFINDEX, ifreq)
-        _ifname, self.interface_index = struct.unpack('16sI', response)
-
-    def join_multicast_group(self):
-        """Sets the EAP interface to be able to receive EAP messages"""
-        # TODO this works but should blank out the end bytes
-        mreq = struct.pack("IHH8s", self.interface_index, self.PACKET_MR_PROMISC,
-                           len(self.EAP_ADDRESS.address), self.EAP_ADDRESS.address)
-        self.socket.setsockopt(self.SOL_PACKET, self.PACKET_ADD_MEMBERSHIP, mreq)
 
     def get_state_machine_from_radius_packet_id(self, packet_id):
         """Gets a FullEAPStateMachine from the RADIUS message packet_id

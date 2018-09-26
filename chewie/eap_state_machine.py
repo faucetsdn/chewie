@@ -17,7 +17,8 @@ class Policy:
         # TODO Probably should do something else
         if isinstance(eapRespData, EapolStartMessage):
             return "IDENTITY"
-        return "NOTIFICATION"
+        return "IDENTITY"
+        # return "NOTIFICATION"
 
     @staticmethod
     def getDecision(eapRespData):  # pylint: disable=invalid-name
@@ -824,8 +825,8 @@ class FullEAPStateMachine:
                                      self.FAILURE, self.FAILURE2,
                                      self.TIMEOUT_FAILURE, self.TIMEOUT_FAILURE2]:
             timeout = self.retransWhile
-            self.timer_scheduler.enter(timeout, 10,
-                                       self.event,
-                                       argument=[EventTimerExpired(self, self.sent_count)])
+            self.timer_scheduler.call_later(timeout,
+                                            self.event,
+                                            EventTimerExpired(self, self.sent_count))
             # TODO could cancel the scheduled events when
             # they're no longer needed (i.e. response received)
