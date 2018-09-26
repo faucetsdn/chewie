@@ -99,19 +99,19 @@ class Chewie:
 
     def auth_failure(self, src_mac, port_id):
         """failure shim between faucet and chewie
-                Args:
-                    src_mac (MacAddress): the mac of the failed supplicant
-                    port_id (MacAddress): the 'mac' identifier of what switch port
-                     the failure is on"""
+        Args:
+            src_mac (MacAddress): the mac of the failed supplicant
+            port_id (MacAddress): the 'mac' identifier of what switch port
+             the failure is on"""
         if self.failure_handler:
             self.failure_handler(src_mac, port_id)
 
     def auth_logoff(self, src_mac, port_id):
         """logoff shim between faucet and chewie
-                Args:
-                    src_mac (MacAddress): the mac of the logoff supplicant
-                    port_id (MacAddress): the 'mac' identifier of what switch port
-                     the logoff is on"""
+        Args:
+            src_mac (MacAddress): the mac of the logoff supplicant
+            port_id (MacAddress): the 'mac' identifier of what switch port
+             the logoff is on"""
         if self.logoff_handler:
             self.logoff_handler(src_mac, port_id)
 
@@ -144,7 +144,7 @@ class Chewie:
                 message, dst_mac = MessageParser.ethernet_parse(packed_message)
                 self.logger.info("eap EAP(): %s", message)
                 self.logger.info("Received message: %s" % message.__dict__)
-                sm = self.get_state_machine(message.src_mac)
+                sm = self.get_state_machine(message.src_mac, dst_mac)
                 event = EventMessageReceived(message, dst_mac)
                 sm.event(event)
         except Exception as e:
@@ -160,7 +160,7 @@ class Chewie:
         try:
             while True:
                 sleep(0)
-                eap_message, src_mac, username, state = self.radius_output_messages.get()
+                eap_message, src_mac, username, state, port_id = self.radius_output_messages.get()
                 self.logger.info("got eap to send to radius.. mac: %s %s, username: %s",
                                  type(src_mac), src_mac, username)
                 state_dict = None
@@ -169,7 +169,7 @@ class Chewie:
                 self.logger.info("Sending to RADIUS eap message %s with state %s",
                                  eap_message.__dict__, state_dict)
                 radius_packet_id = self.get_next_radius_packet_id()
-                self.packet_id_to_mac[radius_packet_id] = src_mac
+                self.packet_id_to_mac[radius_packet_id] = {'src_mac': src_mac, 'port_id': port_id}
                 # message is eap. needs to be wrapped into a radius packet.
                 request_authenticator = os.urandom(16)
                 self.packet_id_to_request_authenticator[radius_packet_id] = request_authenticator
@@ -258,17 +258,21 @@ class Chewie:
         Returns:
             FullEAPStateMachine
         """
-        return self.get_state_machine(self.packet_id_to_mac[packet_id])
+        return self.get_state_machine(**self.packet_id_to_mac[packet_id])
 
-    def get_state_machine(self, src_mac):
+    def get_state_machine(self, src_mac, port_id):
         """Gets or creates if it does not already exist an FullEAPStateMachine for the src_mac.
         Args:
-            src_mac (MACAddress): who's to get.
+            src_mac (MacAddress): who's to get.
+            port_id (MacAddress): ID of the port where the src_mac is.
 
         Returns:
             FullEAPStateMachine
         """
-        sm = self.state_machines.get(src_mac, None)
+        port_sms = self.state_machines.get(str(port_id), None)
+        if port_sms is None:
+            self.state_machines[str(port_id)] = {}
+        sm = self.state_machines[str(port_id)].get(src_mac, None)
         if not sm:
             sm = FullEAPStateMachine(self.eap_output_messages, self.radius_output_messages, src_mac,
                                      self.timer_scheduler, self.auth_success,
@@ -276,7 +280,7 @@ class Chewie:
             sm.eapRestart = True
             # TODO what if port is not actually enabled, but then how did they auth?
             sm.portEnabled = True
-            self.state_machines[src_mac] = sm
+            self.state_machines[str(port_id)][src_mac] = sm
         return sm
 
     def get_next_radius_packet_id(self):
