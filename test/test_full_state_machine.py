@@ -1,11 +1,10 @@
-
+"""Unittests for eap_state_machine.FullEAPStateMachine"""
 # pylint: disable=missing-docstring
 
 import heapq
 import logging
 from queue import Queue
-import sched
-import sys
+import tempfile
 import time
 import unittest
 
@@ -22,10 +21,6 @@ from chewie.event import EventMessageReceived, EventRadiusMessageReceived, Event
 from chewie.utils import get_logger
 
 
-logger = logging.getLogger()
-logger.level = logging.DEBUG
-
-
 class FullStateMachineStartTestCase(unittest.TestCase):
     # TODO tests could be more thorough, and test that
     # the correct packet (type/content) has been put in its respective queue.
@@ -33,6 +28,11 @@ class FullStateMachineStartTestCase(unittest.TestCase):
     # and not just the final resting spot. Not sure how to do that - maybe parse the log??
 
     def setUp(self):
+        logger = logging.getLogger()
+        logger.level = logging.DEBUG
+        self.log_file = tempfile.NamedTemporaryFile()
+        logger.addHandler(logging.FileHandler(self.log_file.name))
+
         self.eap_output_queue = Queue()
         self.radius_output_queue = Queue()
         self.timer_scheduler = timer_scheduler.TimerScheduler(get_logger('chewie'))
@@ -50,6 +50,11 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.auth_counter = 0
         self.failure_counter = 0
         self.logoff_counter = 0
+
+    def tearDown(self):
+        with open(self.log_file.name) as log:
+            self.assertNotIn('aaaEapResp is true. but data is false. This should never happen',
+                             log.read())
 
     def run_scheduler(self):
         """use this to run the scheduler without the whole threading/eventlet thing
@@ -168,11 +173,8 @@ class FullStateMachineStartTestCase(unittest.TestCase):
 
     def test_disabled_state(self):
         """move to disabled and then from disabled"""
-        # move to disabled. e.g. link down.
-        stream_handler = logging.StreamHandler(sys.stdout)
-        logger.addHandler(stream_handler)
-
         self.test_success2()
+        # move to disabled. e.g. link down.
         self.sm.event(EventPortStatusChange(False))
         self.assertEqual(self.sm.currentState, self.sm.DISABLED)
 
