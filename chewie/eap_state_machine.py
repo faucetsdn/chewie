@@ -694,12 +694,6 @@ class FullEAPStateMachine:
 
         self.aaaEapResp = False
 
-        # self.aaaEapNoReq = False
-        # self.aaaSuccess = False
-        # self.aaaFail = False
-        # self.aaaEapKeyAvailable = False  # pylint: disable=invalid-name
-        # self.aaaEapResp = False
-
     def event(self, event):
         """Processes an event.
         Output is via the eap/radius queue. and again will be of type ***Message.
