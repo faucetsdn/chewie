@@ -106,6 +106,7 @@ class FullEAPStateMachine:
     port_id_mac = None
     radius_state_attribute = None  # the last state from radius server
     sent_count = 0
+    session_timeout_job = None
 
     DEFAULT_TIMEOUT = 5  # Number of Seconds
     SESSION_TIMEOUT = 3600  # Number of Seconds
@@ -751,16 +752,25 @@ class FullEAPStateMachine:
             self.failure_handler(self.src_mac, str(self.port_id_mac))
 
         if self.eapLogoff:
-            self.logger.info('client is logging off %s', self.src_mac)
-            self.logoff_handler(self.src_mac, str(self.port_id_mac))
+            self.handle_logoff()
+
+    def handle_logoff(self):
+        self.logger.info('client is logging off %s', self.src_mac)
+        self.logoff_handler(self.src_mac, str(self.port_id_mac))
+        if self.session_timeout_job:
+            self.session_timeout_job.cancel()
 
     def handle_success(self):
         self.logger.info('Yay authentication successful %s %s',
                          self.src_mac, self.aaaIdentity.identity)
         self.auth_handler(self.src_mac, str(self.port_id_mac))
-        self.timer_scheduler.call_later(self.SESSION_TIMEOUT,
-                                        self.event,
-                                        EventSessionTimeout(self))
+        # new authentication so cancel the old session timeout event
+        if self.session_timeout_job:
+            self.session_timeout_job.cancel()
+
+        self.session_timeout_job = self.timer_scheduler.call_later(self.SESSION_TIMEOUT,
+                                                                   self.event,
+                                                                   EventSessionTimeout(self))
 
     def session_timeout_event_received(self):
         self.logoff = True
