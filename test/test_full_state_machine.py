@@ -378,7 +378,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
 
     @check_counters(expected_auth_counter=1, expected_logoff_counter=1)
     def test_deauth_timer(self):
-        self.sm.SESSION_TIMEOUT = 2
+        self.sm.DEFAULT_SESSION_TIMEOUT = 2
         self.test_success2()
 
         self.run_scheduler()

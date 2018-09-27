@@ -69,7 +69,7 @@ class EventPortStatusChange(Event):
 class EventRadiusMessageReceived(EventMessageReceived):
     """Radius Message Received."""
 
-    def __init__(self, message, state):
+    def __init__(self, message, state, attributes=None):
         """
         Args:
             message:
@@ -77,6 +77,7 @@ class EventRadiusMessageReceived(EventMessageReceived):
         """
         super().__init__(message, None)
         self.state = state
+        self.attributes = attributes
 
 
 class EventShutdown(Event):

@@ -188,7 +188,7 @@ class RadiusAccessChallenge(RadiusPacket):
     CODE = Radius.ACCESS_CHALLENGE
 
 
-class RadiusAttributesList():
+class RadiusAttributesList:
     """Container class for the Radius Attribute Value Pairs"""
 
     def __init__(self, attributes):
@@ -309,3 +309,9 @@ class RadiusAttributesList():
         for attr in self.attributes:
             packed_attributes += attr.pack()
         return packed_attributes
+
+    def to_dict(self):
+        ret = {}
+        for a in self.attributes:
+            ret[a.DESCRIPTION] = a.data_type.data()
+        return ret

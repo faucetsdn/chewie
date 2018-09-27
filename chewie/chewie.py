@@ -239,7 +239,7 @@ class Chewie:
                 eap_msg = eap_msg.data_type.data()
                 state = radius.attributes.find(State.DESCRIPTION)
                 self.logger.info("radius EAP: %s", eap_msg)
-                event = EventRadiusMessageReceived(eap_msg, state)
+                event = EventRadiusMessageReceived(eap_msg, state, radius.attributes.to_dict())
                 sm.event(event)
         except Exception as e:
             self.logger.exception(e)
