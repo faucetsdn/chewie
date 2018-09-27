@@ -23,6 +23,13 @@ def unpack_byte_string(byte_string):
 
 class Chewie:
     """Facilitates EAP supplicant and RADIUS server communication"""
+    SIOCGIFHWADDR = 0x8927
+    SIOCGIFINDEX = 0x8933
+    PACKET_MR_MULTICAST = 0
+    PACKET_MR_PROMISC = 1
+    SOL_PACKET = 263
+    PACKET_ADD_MEMBERSHIP = 1
+    EAP_ADDRESS = MacAddress.from_string("01:80:c2:00:00:03")
     RADIUS_UDP_PORT = 1812
 
     def __init__(self, interface_name, logger=None,
@@ -63,12 +70,16 @@ class Chewie:
         self.pool = None
         self.eventlets = None
         self.radius_socket = None
+        self.interface_index = None
+        self.interface_address = None
 
     def run(self):
         """setup chewie and start socket eventlet threads"""
         self.logger.info("Starting")
         self.open_socket()
         self.open_radius_socket()
+        self.get_interface_info()
+        self.join_multicast_group()
         self.start_threads_and_wait()
 
     def start_threads_and_wait(self):
@@ -262,6 +273,33 @@ class Chewie:
         """Create RADIUS Attirbutes to be sent with every RADIUS request"""
         attr_list = [CalledStationId.create(self.chewie_id), NASPortType.create(15)]
         return attr_list
+
+    def get_interface_info(self):
+        """Get information about the EAP socket"""
+        self.get_interface_address()
+        self.get_interface_index()
+
+    def get_interface_address(self):
+        """Get MAC address of the EAP socket."""
+        # http://man7.org/linux/man-pages/man7/netdevice.7.html
+        ifreq = struct.pack('16sH6s', self.interface_name.encode("utf-8"), 0, b"")
+        response = ioctl(self.socket, self.SIOCGIFHWADDR, ifreq)
+        _interface_name, _address_family, interface_address = struct.unpack('16sH6s', response)
+        self.interface_address = MacAddress(interface_address)
+
+    def get_interface_index(self):
+        """Get the interface index of the EAP Socket"""
+        # http://man7.org/linux/man-pages/man7/netdevice.7.html
+        ifreq = struct.pack('16sI', self.interface_name.encode("utf-8"), 0)
+        response = ioctl(self.socket, self.SIOCGIFINDEX, ifreq)
+        _ifname, self.interface_index = struct.unpack('16sI', response)
+
+    def join_multicast_group(self):
+        """Sets the EAP interface to be able to receive EAP messages"""
+        # TODO this works but should blank out the end bytes
+        mreq = struct.pack("IHH8s", self.interface_index, self.PACKET_MR_PROMISC,
+                           len(self.EAP_ADDRESS.address), self.EAP_ADDRESS.address)
+        self.socket.setsockopt(self.SOL_PACKET, self.PACKET_ADD_MEMBERSHIP, mreq)
 
     def get_state_machine_from_radius_packet_id(self, packet_id):
         """Gets a FullEAPStateMachine from the RADIUS message packet_id
