@@ -9,6 +9,7 @@ import time
 import unittest
 from unittest.mock import patch
 
+import eventlet
 from eventlet.queue import Queue
 from netils import build_byte_string
 
@@ -124,6 +125,11 @@ def get_next_radius_packet_id(chewie):
     return chewie.radius_id
 
 
+def wait_all(greenpool):
+    """mocked Chewie.pool.waitall()"""
+    eventlet.sleep(10)
+
+
 def auth_handler(client_mac, port_id_mac):  # pylint: disable=unused-argument
     """dummy handler for successful authentications"""
     print('Successful auth from MAC %s on port: %s' % (str(client_mac), str(port_id_mac)))
@@ -207,7 +213,8 @@ class ChewieTestCase(unittest.TestCase):
             patch('chewie.chewie.Chewie.open_socket', open_socket), \
             patch('chewie.chewie.os.urandom', urandom_helper), \
             patch('chewie.chewie.FullEAPStateMachine.nextId', nextId), \
-            patch('chewie.chewie.Chewie.get_next_radius_packet_id', get_next_radius_packet_id):
+            patch('chewie.chewie.Chewie.get_next_radius_packet_id', get_next_radius_packet_id), \
+            patch('chewie.chewie.GreenPool.waitall', wait_all):
 
             thread = Thread(target=self.chewie.run)
             thread.start()
