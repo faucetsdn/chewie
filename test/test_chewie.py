@@ -4,9 +4,9 @@ import logging
 import random
 import sys
 import tempfile
+from threading import Thread
 import time
 import unittest
-from threading import Thread
 from unittest.mock import patch
 
 from eventlet.queue import Queue
@@ -23,6 +23,7 @@ TO_RADIUS = Queue()
 
 
 def supplicant_replies():
+    """generator for packets supplicant sends"""
     header = "0000000000010242ac17006f888e"
     replies = [build_byte_string(header + "01000009027400090175736572"),
                build_byte_string(header + "010000160275001604103abcadc86714b2d75d09dd7ff53edf6b")]
@@ -31,6 +32,7 @@ def supplicant_replies():
 
 
 def radius_replies():
+    """generator for packets radius sends"""
     replies = [build_byte_string("0b040050e5e40d846576a2310755e906c4b2b5064f180175001604101a16a3baa37a0238f33384f6c11067425012ce61ba97026b7a05b194a930a922405218126aa866456add628e3a55a4737872cad6"),
                build_byte_string("02050032fb4c4926caa21a02f74501a65c96f9c74f06037500045012c060ca6a19c47d0998c7b20fd4d771c1010675736572")]
     for r in replies:
@@ -38,6 +40,7 @@ def radius_replies():
 
 
 def urandom():
+    """generator for urandom"""
     _list = [b'\x87\xf5[\xa71\xeeOA;}\\t\xde\xd7.=',
              b'\xf7\xe0\xaf\xc7Q!\xa2\xa9\xa3\x8d\xf7\xc6\x85\xa8k\x06']
     for l in _list:
@@ -48,6 +51,7 @@ URANDOM_GENERATOR = urandom()
 
 
 def urandom_helper(size):
+    """helper for urandom_generator"""
     return next(URANDOM_GENERATOR)
 
 
@@ -56,13 +60,14 @@ RADIUS_REPLY_GENERATOR = radius_replies()
 
 
 def eap_receive(chewie):
+    """mocked chewie.eap_receive"""
     print('mocked eap_receive')
-    got =  FROM_SUPPLICANT.get()
-    print('got EAP', got)
+    got = FROM_SUPPLICANT.get()
     return got
 
 
 def eap_send(chewie, data):
+    """mocked chewie.eap_send"""
     print('mocked eap_send')
     TO_SUPPLICANT.put(data)
     try:
@@ -74,13 +79,15 @@ def eap_send(chewie, data):
 
 
 def radius_receive(chewie):
+    """mocked chewie.radius_receive"""
     print('mocked radius_receive')
-    got =  FROM_RADIUS.get()
+    got = FROM_RADIUS.get()
     print('got RADIUS', got)
     return got
 
 
 def radius_send(chewie, data):
+    """mocked chewie.radius_send"""
     print('mocked radius_send')
     TO_RADIUS.put(data)
     try:
@@ -92,14 +99,12 @@ def radius_send(chewie, data):
 
 
 def open_socket(chewie):
+    """mocked chewie.open_socket"""
     print('mocked open_socket')
-    pass
 
 
 def nextId(eap_sm):  # pylint: disable=invalid-name
-    """Determines the next identifier value to use, based on the previous one.
-    Returns:
-        integer"""
+    """mocked FullEAPStateMachine.nextId"""
     if eap_sm.currentId is None:
         return 116
     _id = eap_sm.currentId + 1
@@ -109,10 +114,7 @@ def nextId(eap_sm):  # pylint: disable=invalid-name
 
 
 def get_next_radius_packet_id(chewie):
-    """Calulate the next RADIUS Packet ID
-    Returns:
-        int
-    """
+    """mocked Chewie.get_next_radius_packet_id"""
     if chewie.radius_id == -1:
         chewie.radius_id = 4
         return chewie.radius_id
@@ -213,7 +215,7 @@ class ChewieTestCase(unittest.TestCase):
             FROM_SUPPLICANT.put(build_byte_string("0000000000010242ac17006f888e01010000"))
             time.sleep(1)
 
-            self.assertEquals(
+            self.assertEqual(
                 self.chewie.get_state_machine('02:42:ac:17:00:6f',
                                               '00:00:00:00:00:01').currentState,
                 FullEAPStateMachine.SUCCESS2)
