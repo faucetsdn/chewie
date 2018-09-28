@@ -1,15 +1,15 @@
 """Unittests for chewie/chewie.py"""
 
 import logging
+import random
 import sys
 import tempfile
 import time
 import unittest
-from queue import Queue
 from threading import Thread
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
-from eventlet.greenpool import GreenPool
+from eventlet.queue import Queue
 from netils import build_byte_string
 
 from chewie.chewie import Chewie
@@ -96,26 +96,43 @@ def open_socket(chewie):
     pass
 
 
-def run(chewie):
-    print('Starting mocked')
-    chewie.logger.info("Starting mocked")
-    chewie.open_radius_socket()
-    chewie.logger.info('opened radius socket')
-    chewie.start_threads_and_wait()
-    chewie.logger.info("chewie finished")
+def nextId(eap_sm):  # pylint: disable=invalid-name
+    """Determines the next identifier value to use, based on the previous one.
+    Returns:
+        integer"""
+    if eap_sm.currentId is None:
+        return 116
+    _id = eap_sm.currentId + 1
+    if _id > 255:
+        return random.randint(0, 200)
+    return _id
 
 
-def auth_handler(chewie, client_mac, port_id_mac):  # pylint: disable=unused-argument
+def get_next_radius_packet_id(chewie):
+    """Calulate the next RADIUS Packet ID
+    Returns:
+        int
+    """
+    if chewie.radius_id == -1:
+        chewie.radius_id = 4
+        return chewie.radius_id
+    chewie.radius_id += 1
+    if chewie.radius_id > 255:
+        chewie.radius_id = 0
+    return chewie.radius_id
+
+
+def auth_handler(client_mac, port_id_mac):  # pylint: disable=unused-argument
     """dummy handler for successful authentications"""
     print('Successful auth from MAC %s on port: %s' % (str(client_mac), str(port_id_mac)))
 
 
-def failure_handler(chewie, client_mac, port_id_mac):  # pylint: disable=unused-argument
+def failure_handler(client_mac, port_id_mac):  # pylint: disable=unused-argument
     """dummy handler for failed authentications"""
     print('failure from MAC %s on port: %s' % (str(client_mac), str(port_id_mac)))
 
 
-def logoff_handler(chewie, client_mac, port_id_mac):  # pylint: disable=unused-argument
+def logoff_handler(client_mac, port_id_mac):  # pylint: disable=unused-argument
     """dummy handler for logoffs"""
     print('logoff from MAC %s on port: %s' % (str(client_mac), str(port_id_mac)))
 
@@ -123,11 +140,6 @@ def logoff_handler(chewie, client_mac, port_id_mac):  # pylint: disable=unused-a
 class ChewieTestCase(unittest.TestCase):
     """Main chewie.py test class"""
 
-    # @patch('chewie.chewie.Chewie.radius_send', radius_send)
-    # @patch('chewie.chewie.Chewie.radius_receive', radius_receive)
-    # @patch('chewie.chewie.Chewie.eap_send', eap_send)
-    # @patch('chewie.chewie.Chewie.eap_receive', eap_receive)
-    # @patch('chewie.chewie.Chewie.run', run)
     def setUp(self):
         logger = logging.getLogger()
         logger.level = logging.DEBUG
@@ -184,33 +196,24 @@ class ChewieTestCase(unittest.TestCase):
             self.assertEqual(self.chewie.get_next_radius_packet_id(),
                              _i)
 
-    # @unittest.skip('mocking doesnt work yet')
     def test_success_dot1x(self):
         """Test success api"""
-        with patch('chewie.chewie.Chewie.radius_receive', radius_receive):
-            with patch('chewie.chewie.Chewie.radius_send', radius_send):
-                with patch('chewie.chewie.Chewie.eap_send', eap_send):
-                    with patch('chewie.chewie.Chewie.eap_receive', eap_receive):
-                        with patch('chewie.chewie.Chewie.run', run):
-                            thread = Thread(target=self.chewie.run)
+        with patch('chewie.chewie.Chewie.radius_receive', radius_receive), \
+            patch('chewie.chewie.Chewie.radius_send', radius_send), \
+            patch('chewie.chewie.Chewie.eap_send', eap_send), \
+            patch('chewie.chewie.Chewie.eap_receive', eap_receive), \
+            patch('chewie.chewie.Chewie.open_socket', open_socket), \
+            patch('chewie.chewie.os.urandom', urandom_helper), \
+            patch('chewie.chewie.FullEAPStateMachine.nextId', nextId), \
+            patch('chewie.chewie.Chewie.get_next_radius_packet_id', get_next_radius_packet_id):
 
-                            thread.start()
-                            # self.pool = GreenPool()
-                            # self.eventlets = []
-                            #
-                            # self.eventlets.append(self.pool.spawn(self.chewie.run))
+            thread = Thread(target=self.chewie.run)
+            thread.start()
 
-                            time.sleep(15)
-                            FROM_SUPPLICANT.put(build_byte_string("0000000000010242ac17006f888e01010000"))
-                            time.sleep(10)
+            FROM_SUPPLICANT.put(build_byte_string("0000000000010242ac17006f888e01010000"))
+            time.sleep(1)
 
-                            print(self.chewie.eap_output_messages.queue)
-                            print(self.chewie.radius_output_messages.queue)
-
-                            with open(self.log_file.name) as log:
-                                print(log.read())
-
-                            self.assertEquals(
-                                self.chewie.get_state_machine('02:42:ac:17:00:6f',
-                                                              '00:00:00:00:00:01').currentState,
-                                FullEAPStateMachine.SUCCESS2)
+            self.assertEquals(
+                self.chewie.get_state_machine('02:42:ac:17:00:6f',
+                                              '00:00:00:00:00:01').currentState,
+                FullEAPStateMachine.SUCCESS2)
