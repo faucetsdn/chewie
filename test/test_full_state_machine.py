@@ -21,6 +21,32 @@ from chewie.event import EventMessageReceived, EventRadiusMessageReceived, Event
 from chewie.utils import get_logger
 
 
+def check_counters(_func=None, *,
+                   expected_auth_counter=0, expected_failure_counter=0, expected_logoff_counter=0):
+    """Decorator to check the handlers have been called the
+     correct number of times at the end of each test"""
+    def decorator_check_counters(func):
+        def wrapper(self):
+
+            start_auth_counter = self.auth_counter
+            start_failure_counter = self.failure_counter
+            start_logoff_counter = self.logoff_counter
+            ret = func(self)
+            self.assertEqual(self.auth_counter,
+                             start_auth_counter + expected_auth_counter)
+            self.assertEqual(self.failure_counter,
+                             start_failure_counter + expected_failure_counter)
+            self.assertEqual(self.logoff_counter,
+                             start_logoff_counter + expected_logoff_counter)
+            return ret
+
+        return wrapper
+    if _func is None:
+        return decorator_check_counters
+    else:
+        return decorator_check_counters(_func)
+
+
 class FullStateMachineStartTestCase(unittest.TestCase):
     # TODO tests could be more thorough, and test that
     # the correct packet (type/content) has been put in its respective queue.
@@ -63,26 +89,27 @@ class FullStateMachineStartTestCase(unittest.TestCase):
             if len(self.timer_scheduler.timer_heap):
                 if self.timer_scheduler.timer_heap[0][0] < time.time():
                     _, job = heapq.heappop(self.timer_scheduler.timer_heap)
-                    if job['alive']:
-                        job['func'](*(job['args']))
+                    if not job.cancelled():
+                        job.func(*job.args)
                 else:
                     time.sleep(1)
             else:
                 time.sleep(1)
                 return
 
-    def auth_handler(self, client_mac, port_id_mac):
+    def auth_handler(self, client_mac, port_id_mac):  # pylint: disable=unused-argument
         self.auth_counter += 1
         print('Successful auth from MAC %s' % str(client_mac))
 
-    def failure_handler(self, client_mac, port_id_mac):
+    def failure_handler(self, client_mac, port_id_mac):  # pylint: disable=unused-argument
         self.failure_counter += 1
         print('failure from MAC %s' % str(client_mac))
 
-    def logoff_handler(self, client_mac, port_id_mac):
+    def logoff_handler(self, client_mac, port_id_mac):  # pylint: disable=unused-argument
         self.logoff_counter += 1
         print('logoff from MAC %s' % str(client_mac))
 
+    @check_counters
     def test_eap_start(self):
         # input EAPStart packet.
         # output EAPIdentityRequest on eap_output_q
@@ -95,11 +122,9 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.assertIsInstance(output, IdentityMessage)
         self.assertEqual(self.radius_output_queue.qsize(), 0)
 
-        self.assertEqual(self.auth_counter, 0)
-        self.assertEqual(self.failure_counter, 0)
-        self.assertEqual(self.logoff_counter, 0)
         return output  # Used by test_identity_response
 
+    @check_counters
     def test_eap_restart(self):
         self.test_eap_start()
         message = EapolStartMessage(self.src_mac)
@@ -111,10 +136,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.assertIsInstance(output, IdentityMessage)
         self.assertEqual(self.radius_output_queue.qsize(), 0)
 
-        self.assertEqual(self.auth_counter, 0)
-        self.assertEqual(self.failure_counter, 0)
-        self.assertEqual(self.logoff_counter, 0)
-
+    @check_counters
     def test_timeout_failure_from_max_retransmits(self):
         """Go to timeout failure from exceeding max retransmits (also tests retransmitting)"""
         output0 = self.test_eap_start()
@@ -134,10 +156,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.assertEqual(self.eap_output_queue.qsize(), 0)
         self.assertEqual(old_radius_count, self.radius_output_queue.qsize())
 
-        self.assertEqual(self.auth_counter, 0)
-        self.assertEqual(self.failure_counter, 0)
-        self.assertEqual(self.logoff_counter, 0)
-
+    @check_counters
     def test_timeout_failure2_from_aaa_timeout(self):
         """no response from AAA server equals timeout_failure2"""
         self.test_md5_challenge_response()
@@ -150,10 +169,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.assertEqual(old_eap_count, self.eap_output_queue.qsize())
         self.assertEqual(old_radius_count, self.radius_output_queue.qsize())
 
-        self.assertEqual(self.auth_counter, 0)
-        self.assertEqual(self.failure_counter, 0)
-        self.assertEqual(self.logoff_counter, 0)
-
+    @check_counters
     def test_timeout_failure2_from_max_retransmits(self):
         """If client does not respond when in passthrough mode,
          send again and again until max retransmit counter is reached."""
@@ -167,10 +183,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.assertEqual(self.MAX_RETRANSMITS, self.eap_output_queue.qsize())
         self.assertEqual(old_radius_count, self.radius_output_queue.qsize())
 
-        self.assertEqual(self.auth_counter, 0)
-        self.assertEqual(self.failure_counter, 0)
-        self.assertEqual(self.logoff_counter, 0)
-
+    @check_counters(expected_auth_counter=1)
     def test_disabled_state(self):
         """move to disabled and then from disabled"""
         self.test_success2()
@@ -196,10 +209,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.assertEqual(self.eap_output_queue.qsize(), 1)
         self.assertEqual(self.radius_output_queue.qsize(), 0)
 
-        self.assertEqual(self.auth_counter, 1)
-        self.assertEqual(self.failure_counter, 0)
-        self.assertEqual(self.logoff_counter, 0)
-
+    @check_counters
     def test_identity_response(self):
         _id = self.test_eap_start().message_id
         # input EapIdentityResponse
@@ -212,10 +222,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.assertEqual(self.radius_output_queue.qsize(), 1)
         self.assertIsInstance(self.radius_output_queue.get_nowait()[0], IdentityMessage)
 
-        self.assertEqual(self.auth_counter, 0)
-        self.assertEqual(self.failure_counter, 0)
-        self.assertEqual(self.logoff_counter, 0)
-
+    @check_counters
     def test_md5_challenge_request(self):
         self.test_identity_response()
 
@@ -232,10 +239,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.assertEqual(self.radius_output_queue.qsize(), 0)
         return output
 
-        self.assertEqual(self.auth_counter, 0)
-        self.assertEqual(self.failure_counter, 0)
-        self.assertEqual(self.logoff_counter, 0)
-
+    @check_counters
     def test_md5_challenge_response(self):
         self.test_md5_challenge_request()
 
@@ -248,10 +252,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.assertEqual(self.radius_output_queue.qsize(), 1)
         self.assertIsInstance(self.radius_output_queue.get_nowait()[0], Md5ChallengeMessage)
 
-        self.assertEqual(self.auth_counter, 0)
-        self.assertEqual(self.failure_counter, 0)
-        self.assertEqual(self.logoff_counter, 0)
-
+    @check_counters(expected_auth_counter=1)
     def test_success2(self):
         self.test_md5_challenge_response()
 
@@ -263,31 +264,40 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.assertIsInstance(self.eap_output_queue.get_nowait()[0], SuccessMessage)
         self.assertEqual(self.radius_output_queue.qsize(), 0)
 
-        self.assertEqual(self.auth_counter, 1)
-        self.assertEqual(self.failure_counter, 0)
-        self.assertEqual(self.logoff_counter, 0)
+    @check_counters(expected_auth_counter=2)
+    def test_two_success2(self):
+        self.test_success2()
 
+        expiry_job = self.sm.session_timeout_job
+        self.assertFalse(expiry_job.cancelled())
+
+        self.test_success2()
+        self.assertTrue(expiry_job.cancelled())
+
+        expiry_job = self.sm.session_timeout_job
+        self.assertFalse(expiry_job.cancelled())
+
+    @check_counters(expected_auth_counter=2, expected_logoff_counter=1)
     def test_logoff2(self):
         """Test logoff from success2 state."""
         self.test_success2()
 
+        # test the second logon expires the firsts session timeout event.
+        expiry_job = self.sm.session_timeout_job
+        self.assertFalse(expiry_job.cancelled())
+
         message = EapolLogoffMessage(self.src_mac)
         self.sm.event(EventRadiusMessageReceived(message, None))
+
+        self.assertTrue(expiry_job.cancelled())
 
         self.assertEqual(self.sm.currentState, self.sm.LOGOFF2)
         self.assertEqual(self.eap_output_queue.qsize(), 0)
         self.assertEqual(self.radius_output_queue.qsize(), 0)
 
-        self.assertEqual(self.auth_counter, 1)
-        self.assertEqual(self.failure_counter, 0)
-        self.assertEqual(self.logoff_counter, 1)
-
-        self.auth_counter = 0
-        self.failure_counter = 0
-        self.logoff_counter = 0
-
         self.test_success2()
 
+    @check_counters
     def test_logoff_from_idle2(self):
         """Test logoff from middle of authentication. should be ignored"""
         self.test_md5_challenge_request()
@@ -300,10 +310,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.assertEqual(self.eap_output_queue.qsize(), 0)
         self.assertEqual(self.radius_output_queue.qsize(), 0)
 
-        self.assertEqual(self.auth_counter, 0)
-        self.assertEqual(self.failure_counter, 0)
-        self.assertEqual(self.logoff_counter, 0)
-
+    @check_counters(expected_failure_counter=1)
     def test_failure2(self):
         self.test_md5_challenge_response()
         message = FailureMessage(self.src_mac, 3)
@@ -314,10 +321,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.assertIsInstance(self.eap_output_queue.get_nowait()[0], FailureMessage)
         self.assertEqual(self.radius_output_queue.qsize(), 0)
 
-        self.assertEqual(self.auth_counter, 0)
-        self.assertEqual(self.failure_counter, 1)
-        self.assertEqual(self.logoff_counter, 0)
-
+    @check_counters
     def test_discard2(self):
         request = self.test_md5_challenge_request()
 
@@ -329,10 +333,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.assertEqual(self.eap_output_queue.qsize(), 0)
         self.assertEqual(self.radius_output_queue.qsize(), 0)
 
-        self.assertEqual(self.auth_counter, 0)
-        self.assertEqual(self.failure_counter, 0)
-        self.assertEqual(self.logoff_counter, 0)
-
+    @check_counters
     def test_discard(self):
         message = self.test_eap_start()
         # Make a message that will be discarded (id here is not sequential)
@@ -343,10 +344,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.assertEqual(self.eap_output_queue.qsize(), 0)
         self.assertEqual(self.radius_output_queue.qsize(), 0)
 
-        self.assertEqual(self.auth_counter, 0)
-        self.assertEqual(self.failure_counter, 0)
-        self.assertEqual(self.logoff_counter, 0)
-
+    @check_counters
     def test_ttls_request(self):
         self.test_md5_challenge_request()
         self.assertEqual(self.eap_output_queue.qsize(), 0)
@@ -378,6 +376,11 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.assertEqual(self.eap_output_queue.qsize(), 2)
         self.assertEqual(self.radius_output_queue.qsize(), 2)
 
-        self.assertEqual(self.auth_counter, 0)
-        self.assertEqual(self.failure_counter, 0)
-        self.assertEqual(self.logoff_counter, 0)
+    @check_counters(expected_auth_counter=1, expected_logoff_counter=1)
+    def test_deauth_timer(self):
+        self.sm.DEFAULT_SESSION_TIMEOUT = 2
+        self.test_success2()
+
+        self.run_scheduler()
+
+        self.assertEqual(self.sm.currentState, self.sm.LOGOFF2)
