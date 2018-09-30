@@ -1,5 +1,7 @@
 """Entry point for 802.1X speaker.
 """
+from fcntl import ioctl
+import struct
 import os
 from chewie import timer_scheduler
 from eventlet import sleep, GreenPool
