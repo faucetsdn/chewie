@@ -23,63 +23,91 @@ FROM_RADIUS = Queue()
 TO_RADIUS = Queue()
 
 
-def supplicant_replies():
+def patch_things(func):
+    """decorator to mock patch socket operations and random number generators"""
+    @patch('chewie.chewie.Chewie.radius_receive', radius_receive)
+    @patch('chewie.chewie.Chewie.radius_send', radius_send)
+    @patch('chewie.chewie.Chewie.eap_send', eap_send)
+    @patch('chewie.chewie.Chewie.eap_receive', eap_receive)
+    @patch('chewie.chewie.Chewie.open_socket', open_socket)
+    @patch('chewie.chewie.os.urandom', urandom_helper)
+    @patch('chewie.chewie.FullEAPStateMachine.nextId', nextId)
+    @patch('chewie.chewie.Chewie.get_next_radius_packet_id', get_next_radius_packet_id)
+    @patch('chewie.chewie.GreenPool.waitall', wait_all)
+    def wrapper_patch(self):
+        func(self)
+
+    return wrapper_patch
+
+
+def setup_generators(_supplicant_replies=None, _radius_replies=None):
+    """decorator to setup the packets for the mocked socket (queues) to send"""
+    def decorator_setup_gen(func):
+        def wrapper_setup_gen(self):
+            global SUPPLICANT_REPLY_GENERATOR  # pylint: disable=global-statement
+            global RADIUS_REPLY_GENERATOR  # pylint: disable=global-statement
+            global URANDOM_GENERATOR  # pylint: disable=global-statement
+
+            SUPPLICANT_REPLY_GENERATOR = supplicant_replies_gen(_supplicant_replies)
+            RADIUS_REPLY_GENERATOR = radius_replies_gen(_radius_replies)
+            URANDOM_GENERATOR = urandom()
+            func(self)
+        return wrapper_setup_gen
+    return decorator_setup_gen
+
+
+def supplicant_replies_gen(replies):
     """generator for packets supplicant sends"""
-    header = "0000000000010242ac17006f888e"
-    replies = [build_byte_string(header + "01000009027400090175736572"),
-               build_byte_string(header + "010000160275001604103abcadc86714b2d75d09dd7ff53edf6b")]
-    for r in replies:
-        yield r
+    for reply in replies:
+        yield reply
 
 
-def radius_replies():
+def radius_replies_gen(replies):
     """generator for packets radius sends"""
-    replies = [build_byte_string("0b040050e5e40d846576a2310755e906c4b2b5064f180175001604101a16a3baa37a0238f33384f6c11067425012ce61ba97026b7a05b194a930a922405218126aa866456add628e3a55a4737872cad6"),
-               build_byte_string("02050032fb4c4926caa21a02f74501a65c96f9c74f06037500045012c060ca6a19c47d0998c7b20fd4d771c1010675736572")]
-    for r in replies:
-        yield r
+    for reply in replies:
+        yield reply
 
 
 def urandom():
     """generator for urandom"""
     _list = [b'\x87\xf5[\xa71\xeeOA;}\\t\xde\xd7.=',
              b'\xf7\xe0\xaf\xc7Q!\xa2\xa9\xa3\x8d\xf7\xc6\x85\xa8k\x06']
-    for l in _list:
-        yield l
+    for random_bytes in _list:
+        yield random_bytes
 
 
-URANDOM_GENERATOR = urandom()
+URANDOM_GENERATOR = None  # urandom()
 
 
-def urandom_helper(size):
+def urandom_helper(size):  # pylint: disable=unused-argument
     """helper for urandom_generator"""
     return next(URANDOM_GENERATOR)
 
 
-SUPPLICANT_REPLY_GENERATOR = supplicant_replies()
-RADIUS_REPLY_GENERATOR = radius_replies()
+SUPPLICANT_REPLY_GENERATOR = None  # supplicant_replies()
+RADIUS_REPLY_GENERATOR = None  # radius_replies()
 
 
-def eap_receive(chewie):
+def eap_receive(chewie):  # pylint: disable=unused-argument
     """mocked chewie.eap_receive"""
     print('mocked eap_receive')
     got = FROM_SUPPLICANT.get()
     return got
 
 
-def eap_send(chewie, data):
+def eap_send(chewie, data):  # pylint: disable=unused-argument
     """mocked chewie.eap_send"""
     print('mocked eap_send')
     TO_SUPPLICANT.put(data)
     try:
-        n = next(SUPPLICANT_REPLY_GENERATOR)
+        next_reply = next(SUPPLICANT_REPLY_GENERATOR)
     except StopIteration:
         return
-    if n:
-        FROM_SUPPLICANT.put(n)
+    if next_reply:
+        FROM_SUPPLICANT.put(next_reply)
 
 
-def radius_receive(chewie):
+def radius_receive(chewie):  # pylint: disable=unused-argument
     """mocked chewie.radius_receive"""
     print('mocked radius_receive')
     got = FROM_RADIUS.get()
@@ -87,19 +115,19 @@ def radius_receive(chewie):
     return got
 
 
-def radius_send(chewie, data):
+def radius_send(chewie, data):  # pylint: disable=unused-argument
     """mocked chewie.radius_send"""
     print('mocked radius_send')
     TO_RADIUS.put(data)
     try:
-        n = next(RADIUS_REPLY_GENERATOR)
+        next_reply = next(RADIUS_REPLY_GENERATOR)
     except StopIteration:
         return
-    if n:
-        FROM_RADIUS.put(n)
+    if next_reply:
+        FROM_RADIUS.put(next_reply)
 
 
-def open_socket(chewie):
+def open_socket(chewie):  # pylint: disable=unused-argument
     """mocked chewie.open_socket"""
     print('mocked open_socket')
 
@@ -125,9 +153,9 @@ def get_next_radius_packet_id(chewie):
     return chewie.radius_id
 
 
-def wait_all(greenpool):
+def wait_all(greenpool):  # pylint: disable=unused-argument
     """mocked Chewie.pool.waitall()"""
-    eventlet.sleep(10)
+    eventlet.sleep(5)
 
 
 def auth_handler(client_mac, port_id_mac):  # pylint: disable=unused-argument
@@ -148,6 +176,29 @@ def logoff_handler(client_mac, port_id_mac):  # pylint: disable=unused-argument
 class ChewieTestCase(unittest.TestCase):
     """Main chewie.py test class"""
 
+    header = "0000000000010242ac17006f888e"
+    sup_replies_success = [build_byte_string(header + "01000009027400090175736572"),
+                           build_byte_string(
+                               header + "010000160275001604103abcadc86714b2d75d09dd7ff53edf6b")]
+
+    radius_replies_success = [build_byte_string(
+        "0b040050e5e40d846576a2310755e906c4b2b5064f180175001604101a16a3baa37a0238f33384f6c11067425012ce61ba97026b7a05b194a930a922405218126aa866456add628e3a55a4737872cad6"),
+                              build_byte_string(
+                                  "02050032fb4c4926caa21a02f74501a65c96f9c74f06037500045012c060ca6a19c47d0998c7b20fd4d771c1010675736572")]
+
+    sup_replies_logoff = [build_byte_string(header + "01000009027400090175736572"),
+                          build_byte_string(
+                              header + "010000160275001604103abcadc86714b2d75d09dd7ff53edf6b"),
+                          build_byte_string("0000000000010242ac17006f888e01020000")]
+
+    # packet id (0x84 is incorrect)
+    sup_replies_failure = [build_byte_string(header + "01000009028400090175736572"),
+                           build_byte_string(header + "01000009028400090175736572"),
+                           build_byte_string(header + "01000009028400090175736572"),
+                           build_byte_string(header + "01000009028400090175736572")]
+
+    radius_replies_failure = []
+
     def setUp(self):
         logger = logging.getLogger()
         logger.level = logging.DEBUG
@@ -160,6 +211,16 @@ class ChewieTestCase(unittest.TestCase):
                              auth_handler, failure_handler, logoff_handler,
                              '127.0.0.1', 1812, 'SECRET',
                              '44:44:44:44:44:44')
+
+        global FROM_SUPPLICANT  # pylint: disable=global-statement
+        global TO_SUPPLICANT  # pylint: disable=global-statement
+        global FROM_RADIUS  # pylint: disable=global-statement
+        global TO_RADIUS  # pylint: disable=global-statement
+
+        FROM_SUPPLICANT = Queue()
+        TO_SUPPLICANT = Queue()
+        FROM_RADIUS = Queue()
+        TO_RADIUS = Queue()
 
     def test_get_sm(self):
         """Tests Chewie.get_state_machine()"""
@@ -204,25 +265,65 @@ class ChewieTestCase(unittest.TestCase):
             self.assertEqual(self.chewie.get_next_radius_packet_id(),
                              _i)
 
+    @patch_things
+    @setup_generators(sup_replies_success, radius_replies_success)
     def test_success_dot1x(self):
         """Test success api"""
-        with patch('chewie.chewie.Chewie.radius_receive', radius_receive), \
-            patch('chewie.chewie.Chewie.radius_send', radius_send), \
-            patch('chewie.chewie.Chewie.eap_send', eap_send), \
-            patch('chewie.chewie.Chewie.eap_receive', eap_receive), \
-            patch('chewie.chewie.Chewie.open_socket', open_socket), \
-            patch('chewie.chewie.os.urandom', urandom_helper), \
-            patch('chewie.chewie.FullEAPStateMachine.nextId', nextId), \
-            patch('chewie.chewie.Chewie.get_next_radius_packet_id', get_next_radius_packet_id), \
-            patch('chewie.chewie.GreenPool.waitall', wait_all):
 
-            thread = Thread(target=self.chewie.run)
-            thread.start()
+        thread = Thread(target=self.chewie.run)
+        thread.start()
 
-            FROM_SUPPLICANT.put(build_byte_string("0000000000010242ac17006f888e01010000"))
-            time.sleep(1)
+        FROM_SUPPLICANT.put(build_byte_string("0000000000010242ac17006f888e01010000"))
+        time.sleep(1)
 
-            self.assertEqual(
-                self.chewie.get_state_machine('02:42:ac:17:00:6f',
-                                              '00:00:00:00:00:01').currentState,
-                FullEAPStateMachine.SUCCESS2)
+        self.assertEqual(
+            self.chewie.get_state_machine('02:42:ac:17:00:6f',
+                                          '00:00:00:00:00:01').currentState,
+            FullEAPStateMachine.SUCCESS2)
+
+    def test_port_status_changes(self):
+        """test port status api"""
+        # TODO what can actually be checked here?
+        # the state machine tests already check the statemachine
+        # could check that the preemptive identity request packet is sent. (once implemented)
+        # for now just check api works under python version.
+
+        self.chewie.port_down("00:00:00:00:00:01")
+
+        self.chewie.port_up("00:00:00:00:00:01")
+
+        self.chewie.port_down("00:00:00:00:00:01")
+
+
+    @patch_things
+    @setup_generators(sup_replies_logoff, radius_replies_success)
+    def test_logoff_dot1x(self):
+        """Test logoff"""
+        thread = Thread(target=self.chewie.run)
+        thread.start()
+
+        FROM_SUPPLICANT.put(build_byte_string("0000000000010242ac17006f888e01010000"))
+        time.sleep(1)
+
+        self.assertEqual(
+            self.chewie.get_state_machine('02:42:ac:17:00:6f',
+                                          '00:00:00:00:00:01').currentState,
+            FullEAPStateMachine.LOGOFF2)
+
+    @patch_things
+    @setup_generators(sup_replies_failure, radius_replies_failure)
+    def test_failure_dot1x(self):
+        """Test incorrect message id results in timeout_failure"""
+        thread = Thread(target=self.chewie.run)
+        thread.start()
+
+        self.chewie.get_state_machine('02:42:ac:17:00:6f',
+                                      '00:00:00:00:00:01').DEFAULT_TIMEOUT = 0.5
+
+        FROM_SUPPLICANT.put(build_byte_string("0000000000010242ac17006f888e01010000"))
+        time.sleep(5)
+
+        self.assertEqual(
+            self.chewie.get_state_machine('02:42:ac:17:00:6f',
+                                          '00:00:00:00:00:01').currentState,
+            FullEAPStateMachine.TIMEOUT_FAILURE)
