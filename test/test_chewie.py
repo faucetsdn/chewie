@@ -15,7 +15,7 @@ from netils import build_byte_string
 
 from chewie.chewie import Chewie
 from chewie.eap_state_machine import FullEAPStateMachine
-
+from chewie.mac_address import MacAddress
 
 FROM_SUPPLICANT = Queue()
 TO_SUPPLICANT = Queue()
@@ -25,11 +25,13 @@ TO_RADIUS = Queue()
 
 def patch_things(func):
     """decorator to mock patch socket operations and random number generators"""
+    @patch('chewie.chewie.Chewie.get_interface_info', do_nothing)
+    @patch('chewie.chewie.Chewie.join_multicast_group', do_nothing)
     @patch('chewie.chewie.Chewie.radius_receive', radius_receive)
     @patch('chewie.chewie.Chewie.radius_send', radius_send)
     @patch('chewie.chewie.Chewie.eap_send', eap_send)
     @patch('chewie.chewie.Chewie.eap_receive', eap_receive)
-    @patch('chewie.chewie.Chewie.open_socket', open_socket)
+    @patch('chewie.chewie.Chewie.open_socket', do_nothing)
     @patch('chewie.chewie.os.urandom', urandom_helper)
     @patch('chewie.chewie.FullEAPStateMachine.nextId', nextId)
     @patch('chewie.chewie.Chewie.get_next_radius_packet_id', get_next_radius_packet_id)
@@ -95,10 +97,11 @@ def eap_receive(chewie):  # pylint: disable=unused-argument
     return got
 
 
-def eap_send(chewie, data):  # pylint: disable=unused-argument
+def eap_send(chewie, data=None):  # pylint: disable=unused-argument
     """mocked chewie.eap_send"""
     print('mocked eap_send')
-    TO_SUPPLICANT.put(data)
+    if data:
+        TO_SUPPLICANT.put(data)
     try:
         next_reply = next(SUPPLICANT_REPLY_GENERATOR)
     except StopIteration:
@@ -127,9 +130,10 @@ def radius_send(chewie, data):  # pylint: disable=unused-argument
         FROM_RADIUS.put(next_reply)
 
 
-def open_socket(chewie):  # pylint: disable=unused-argument
-    """mocked chewie.open_socket"""
-    print('mocked open_socket')
+def do_nothing(chewie):  # pylint: disable=unused-argument
+    """Mock function that does nothing.
+     Typically used on socket opening/configuration operations"""
+    pass
 
 
 def nextId(eap_sm):  # pylint: disable=invalid-name
@@ -155,7 +159,7 @@ def get_next_radius_packet_id(chewie):
 
 def wait_all(greenpool):  # pylint: disable=unused-argument
     """mocked Chewie.pool.waitall()"""
-    eventlet.sleep(5)
+    eventlet.sleep(10)
 
 
 def auth_handler(client_mac, port_id_mac):  # pylint: disable=unused-argument
@@ -176,6 +180,8 @@ def logoff_handler(client_mac, port_id_mac):  # pylint: disable=unused-argument
 class ChewieTestCase(unittest.TestCase):
     """Main chewie.py test class"""
 
+    no_radius_replies = []
+
     header = "0000000000010242ac17006f888e"
     sup_replies_success = [build_byte_string(header + "01000009027400090175736572"),
                            build_byte_string(
@@ -192,12 +198,14 @@ class ChewieTestCase(unittest.TestCase):
                           build_byte_string("0000000000010242ac17006f888e01020000")]
 
     # packet id (0x84 is incorrect)
-    sup_replies_failure = [build_byte_string(header + "01000009028400090175736572"),
-                           build_byte_string(header + "01000009028400090175736572"),
-                           build_byte_string(header + "01000009028400090175736572"),
-                           build_byte_string(header + "01000009028400090175736572")]
+    sup_replies_failure_message_id = [build_byte_string(header + "01000009028400090175736572"),
+                                      build_byte_string(header + "01000009029400090175736572"),
+                                      build_byte_string(header + "01000009026400090175736572"),
+                                      build_byte_string(header + "01000009025400090175736572")]
 
-    radius_replies_failure = []
+    # the first response has correct code, second is wrong and will be dropped by radius
+    sup_replies_failure2_response_code = [build_byte_string(header + "01000009027400090175736572"),
+                                          build_byte_string(header + "01000009037400090175736572")]
 
     def setUp(self):
         logger = logging.getLogger()
@@ -294,7 +302,6 @@ class ChewieTestCase(unittest.TestCase):
 
         self.chewie.port_down("00:00:00:00:00:01")
 
-
     @patch_things
     @setup_generators(sup_replies_logoff, radius_replies_success)
     def test_logoff_dot1x(self):
@@ -302,6 +309,8 @@ class ChewieTestCase(unittest.TestCase):
         thread = Thread(target=self.chewie.run)
         thread.start()
 
+        self.chewie.get_state_machine(MacAddress.from_string('02:42:ac:17:00:6f'),
+                                      MacAddress.from_string('00:00:00:00:00:01'))
         FROM_SUPPLICANT.put(build_byte_string("0000000000010242ac17006f888e01010000"))
         time.sleep(1)
 
@@ -311,19 +320,44 @@ class ChewieTestCase(unittest.TestCase):
             FullEAPStateMachine.LOGOFF2)
 
     @patch_things
-    @setup_generators(sup_replies_failure, radius_replies_failure)
-    def test_failure_dot1x(self):
+    @setup_generators(sup_replies_failure_message_id, no_radius_replies)
+    def test_failure_message_id_dot1x(self):
         """Test incorrect message id results in timeout_failure"""
+        # TODO not convinced this is transitioning through the correct states.
+        # (should be discarding all packets)
+        # But end result is correct (both packets sent/received, and end state)
         thread = Thread(target=self.chewie.run)
         thread.start()
 
-        self.chewie.get_state_machine('02:42:ac:17:00:6f',
-                                      '00:00:00:00:00:01').DEFAULT_TIMEOUT = 0.5
+        self.chewie.get_state_machine(MacAddress.from_string('02:42:ac:17:00:6f'),
+                                      MacAddress.from_string(
+                                          '00:00:00:00:00:01')).DEFAULT_TIMEOUT = 0.5
 
         FROM_SUPPLICANT.put(build_byte_string("0000000000010242ac17006f888e01010000"))
-        time.sleep(5)
+        time.sleep(4)
 
         self.assertEqual(
             self.chewie.get_state_machine('02:42:ac:17:00:6f',
                                           '00:00:00:00:00:01').currentState,
             FullEAPStateMachine.TIMEOUT_FAILURE)
+
+
+    @patch_things
+    @setup_generators(sup_replies_failure2_response_code, no_radius_replies)
+    def test_failure2_resp_code_dot1x(self):
+        """Test incorrect eap.code results in timeout_failure2. RADIUS Server drops it.
+        It is up to the supplicant to send another request - this supplicant doesnt"""
+        thread = Thread(target=self.chewie.run)
+        thread.start()
+
+        self.chewie.get_state_machine(MacAddress.from_string('02:42:ac:17:00:6f'),
+                                      MacAddress.from_string(
+                                          '00:00:00:00:00:01')).DEFAULT_TIMEOUT = 0.5
+
+        FROM_SUPPLICANT.put(build_byte_string("0000000000010242ac17006f888e01010000"))
+        time.sleep(2)
+
+        self.assertEqual(
+            self.chewie.get_state_machine('02:42:ac:17:00:6f',
+                                          '00:00:00:00:00:01').currentState,
+            FullEAPStateMachine.TIMEOUT_FAILURE2)

@@ -702,7 +702,7 @@ class FullEAPStateMachine:
             (e.g. SuccessMessage, IdentityMessage,...)
         """
         self.lower_layer_reset()
-        self.logger.info("full state machine received event")
+        self.logger.info("full state machine received event: %s", event)
         # 'Lower Layer' shim
         if isinstance(event, EventMessageReceived):
             self.message_event_received(event)
