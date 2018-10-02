@@ -26,6 +26,17 @@ class EventTimerExpired(Event):
         self.sent_count = sent_count
 
 
+class EventSessionTimeout(Event):
+    """User's session should be terminated."""
+    def __init__(self, state_machine=None):
+        """
+        Args:
+            state_machine: state machine that triggered the event
+        """
+        self.type = self.TIMER_EXPIRED
+        self.state_machine = state_machine
+
+
 class EventMessageReceived(Event):
     """Message (EAP) Received. Radius Message event is a child"""
     def __init__(self, message, port_id):
@@ -58,7 +69,7 @@ class EventPortStatusChange(Event):
 class EventRadiusMessageReceived(EventMessageReceived):
     """Radius Message Received."""
 
-    def __init__(self, message, state):
+    def __init__(self, message, state, attributes=None):
         """
         Args:
             message:
@@ -66,6 +77,7 @@ class EventRadiusMessageReceived(EventMessageReceived):
         """
         super().__init__(message, None)
         self.state = state
+        self.attributes = attributes
 
 
 class EventShutdown(Event):

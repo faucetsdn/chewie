@@ -116,6 +116,14 @@ class VendorSpecific(Attribute):
 
 
 @register_attribute_type
+class SessionTimeout(Attribute):
+    """Vendor-Specific https://tools.ietf.org/html/rfc2865#section-5.27"""
+    TYPE = 27
+    DATA_TYPE = Integer
+    DESCRIPTION = "Session-Timeout"
+
+
+@register_attribute_type
 class CalledStationId(Attribute):
     """Called-Station-Id https://tools.ietf.org/html/rfc2865#section-5.30"""
     TYPE = 30

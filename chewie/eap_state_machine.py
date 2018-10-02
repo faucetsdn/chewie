@@ -3,9 +3,10 @@ import random
 
 from chewie.eap import Eap
 from chewie.event import EventMessageReceived, EventRadiusMessageReceived, EventTimerExpired, \
-    EventPortStatusChange
+    EventPortStatusChange, EventSessionTimeout
 from chewie.message_parser import SuccessMessage, FailureMessage, EapolStartMessage, \
     IdentityMessage, EapolLogoffMessage
+from chewie.radius_attributes import SessionTimeout
 from chewie.utils import get_logger, log_method
 
 
@@ -99,6 +100,9 @@ class FullEAPStateMachine:
     """
 
     # non RFC 4137 variables/CONSTANTs
+    DEFAULT_TIMEOUT = 5  # Number of Seconds
+    DEFAULT_SESSION_TIMEOUT = 3600  # Number of Seconds
+
     currentState = None
     eap_output_messages = None
     src_mac = None
@@ -106,8 +110,9 @@ class FullEAPStateMachine:
     port_id_mac = None
     radius_state_attribute = None  # the last state from radius server
     sent_count = 0
+    session_timeout_job = None
 
-    DEFAULT_TIMEOUT = 5  # Number of Seconds
+    session_timeout = DEFAULT_SESSION_TIMEOUT
 
     NO_STATE = "NO_STATE"
     DISABLED = "DISABLED"
@@ -519,7 +524,7 @@ class FullEAPStateMachine:
                 # RFC 4137 says do nothing from success(2), but we're adding a logoff state.
                 # hopefully it will work as intended.
                 # Otherwise allow transition to logoff from all states.
-                if self.eapLogoff:
+                if self.logoff:
                     self.logoff_state()
                     self.currentState = FullEAPStateMachine.LOGOFF
 
@@ -685,6 +690,8 @@ class FullEAPStateMachine:
         self.eapFail = False
         self.eapTimeout = False
 
+        self.logoff = False
+
         self.aaaEapResp = False
 
     def event(self, event):
@@ -706,6 +713,8 @@ class FullEAPStateMachine:
 
         elif isinstance(event, EventPortStatusChange):
             self.port_status_event_received(event)
+        elif isinstance(event, EventSessionTimeout):
+            self.session_timeout_event_received()
 
         self.handle_message_received()
         self.logger.info('end state: %s', self.currentState)
@@ -733,17 +742,38 @@ class FullEAPStateMachine:
             self.logger.error("aaaEapResp is true. but data is false. This should never happen")
 
         if self.eapSuccess:
-            self.logger.info('Yay authentication successful %s %s',
-                             self.src_mac, self.aaaIdentity.identity)
-            self.auth_handler(self.src_mac, str(self.port_id_mac))
+            self.handle_success()
 
         if self.eapFail:
             self.logger.info('oh authentication not successful %s', self.src_mac)
             self.failure_handler(self.src_mac, str(self.port_id_mac))
 
         if self.eapLogoff:
-            self.logger.info('client is logging off %s', self.src_mac)
-            self.logoff_handler(self.src_mac, str(self.port_id_mac))
+            self.handle_logoff()
+
+    def handle_logoff(self):
+        """Notify the logoff callback"""
+        self.logger.info('client is logging off %s', self.src_mac)
+        self.logoff_handler(self.src_mac, str(self.port_id_mac))
+        if self.session_timeout_job:
+            self.session_timeout_job.cancel()
+
+    def handle_success(self):
+        """Notify the success callback and sets a timer event to expire this session"""
+        self.logger.info('Yay authentication successful %s %s',
+                         self.src_mac, self.aaaIdentity.identity)
+        self.auth_handler(self.src_mac, str(self.port_id_mac))
+        # new authentication so cancel the old session timeout event
+        if self.session_timeout_job:
+            self.session_timeout_job.cancel()
+
+        self.session_timeout_job = self.timer_scheduler.call_later(self.session_timeout,
+                                                                   self.event,
+                                                                   EventSessionTimeout(self))
+
+    def session_timeout_event_received(self):
+        """process session timeout event"""
+        self.logoff = True
 
     def port_status_event_received(self, event):
         """Sets variables for the port status change (link up/down) being received.
@@ -782,40 +812,49 @@ class FullEAPStateMachine:
         self.logger.info('type: %s, message %s ', type(event.message), event.message)
         if event.port_id:
             self.port_id_mac = event.port_id
-        self.logoff = False
+
         if isinstance(event.message, EapolStartMessage):
             self.eapRestart = True
         elif isinstance(event.message, EapolLogoffMessage):
             self.logoff = True
-        if not isinstance(event, EventRadiusMessageReceived):
+
+        if isinstance(event, EventRadiusMessageReceived):
+            self.process_radius_message(event)
+        else:
             self.eapRespData = event.message  # pylint: disable=invalid-name
             self.eapResp = True
-        else:
-            self.eapRespData = None
-            self.eapResp = False
-        self.eapReq = False
-        self.eapNoReq = False
-        self.eapSuccess = False
-        self.eapFail = False
-        self.aaaEapNoReq = False
-        self.aaaSuccess = False
-        self.aaaFail = False
-        self.aaaEapKeyAvailable = False  # pylint: disable=invalid-name
-        self.aaaEapResp = False
-        self.eapLogoff = False
-        if isinstance(event, EventRadiusMessageReceived):
-            self.radius_state_attribute = event.state
-            self.aaaEapReq = True
-            self.aaaEapReqData = event.message  # pylint: disable=invalid-name
-            self.logger.info('sm ev.msg: %s', self.aaaEapReqData)
-            if isinstance(self.aaaEapReqData, SuccessMessage):
-                self.logger.info("aaaSuccess")
-                self.aaaSuccess = True
-            if isinstance(self.aaaEapReqData, FailureMessage):
-                self.logger.info("aaaFail")
-                self.aaaFail = True
-        else:
-            self.aaaEapReq = False
+
+    def process_radius_message(self, event):
+        """Process radius message (set and extract radius specific variables)"""
+        self.eapRespData = None
+        self.eapResp = False
+        self.logger.info('radius attributes %s', event.attributes)
+        self.radius_state_attribute = event.state
+        self.aaaEapReq = True
+        self.aaaEapReqData = event.message  # pylint: disable=invalid-name
+        self.logger.info('sm ev.msg: %s', self.aaaEapReqData)
+        if isinstance(self.aaaEapReqData, SuccessMessage):
+            self.logger.info("aaaSuccess")
+            self.aaaSuccess = True
+        if isinstance(self.aaaEapReqData, FailureMessage):
+            self.logger.info("aaaFail")
+            self.aaaFail = True
+        self.logger.info('radius event %s', event.__dict__)
+        self.set_vars_from_radius(event.attributes)
+
+    def set_vars_from_radius(self, attributes):
+        """
+        Set the statemachine variables from attributes received in the radius message.
+        If variable does not exist in the radius message, it is reset to the default
+        Args:
+            attributes (dict):  attributes to be set.
+        """
+        self.session_timeout = self.DEFAULT_SESSION_TIMEOUT
+
+        if attributes:
+            self.session_timeout = attributes.get(SessionTimeout.DESCRIPTION,
+                                                  self.DEFAULT_SESSION_TIMEOUT)
+        # TODO could also set filter-id/vlans/acls here.
 
     def set_timer(self):
         """Sets a timer to trigger a retransmit if no packet received.
