@@ -2,7 +2,7 @@
 # pylint: disable=too-few-public-methods
 
 from chewie.radius import RadiusAttributesList, RadiusAccessRequest, Radius
-from chewie.radius_attributes import CallingStationId, UserName, MessageAuthenticator, EAPMessage
+from chewie.radius_attributes import create_attribute
 from chewie.ethernet_packet import EthernetPacket
 from chewie.auth_8021x import Auth8021x
 from chewie.eap import Eap, EapIdentity, EapMd5Challenge, EapSuccess, EapFailure, EapLegacyNak, EapTTLS
@@ -191,18 +191,18 @@ class MessagePacker:
             extra_attributes = []
 
         attr_list = []
-        attr_list.append(UserName.create(username))
-        attr_list.append(CallingStationId.create(str(src_mac)))
+        attr_list.append(create_attribute('User-Name', username))
+        attr_list.append(create_attribute('Calling-Station-Id', str(src_mac)))
 
         attr_list.extend(extra_attributes)
 
-        attr_list.append(EAPMessage.create(eap_message))
+        attr_list.append(create_attribute('EAP-Message', eap_message))
 
         if state:
             attr_list.append(state)
 
-        attr_list.append(MessageAuthenticator.create(
-            bytes.fromhex("00000000000000000000000000000000")))
+        attr_list.append(create_attribute('Message-Authenticator',
+                                          bytes.fromhex("00000000000000000000000000000000")))
 
         attributes = RadiusAttributesList(attr_list)
         access_request = RadiusAccessRequest(radius_packet_id, request_authenticator, attributes)

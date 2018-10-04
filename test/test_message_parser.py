@@ -8,7 +8,7 @@ from chewie.message_parser import MessageParser, MessagePacker, IdentityMessage,
 from chewie.message_parser import EapolStartMessage, EapolLogoffMessage, SuccessMessage, FailureMessage
 from chewie.mac_address import MacAddress
 from chewie.eap import Eap
-from chewie.radius_attributes import State, CalledStationId, NASPortType
+from chewie.radius_attributes import create_attribute
 
 
 class MessageParserTestCase(unittest.TestCase):
@@ -211,11 +211,11 @@ class MessageParserTestCase(unittest.TestCase):
         username = "user"
         radius_packet_id = 10
         request_authenticator = bytes.fromhex("be5df1f3b3366c69b977e56a7da47cba")
-        state = State.create(bytes.fromhex("f51d90b0f76c85835ed4ac882e522748"))
+        state = create_attribute('State', bytes.fromhex("f51d90b0f76c85835ed4ac882e522748"))
         secret = "SECRET"
         extra_attributes = []
-        extra_attributes.append(CalledStationId.create('44-44-44-44-44-44:'))
-        extra_attributes.append(NASPortType.create(15))
+        extra_attributes.append(create_attribute('Called-Station-Id', '44-44-44-44-44-44:'))
+        extra_attributes.append(create_attribute('NAS-Port-Type', 15))
 
         eap_message = TtlsMessage(src_mac, 113, Eap.RESPONSE, 0, b'')
 
@@ -223,4 +223,4 @@ class MessageParserTestCase(unittest.TestCase):
                                                   request_authenticator, state, secret,
                                                   extra_attributes)
 
-        self.assertEqual(packed_message, packed_radius)
+        self.assertEqual(packed_message.hex(), packed_radius.hex())

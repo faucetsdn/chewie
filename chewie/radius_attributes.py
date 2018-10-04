@@ -1,184 +1,228 @@
 """Radius Attributes"""
-# TODO if attributes have requirements e.g. length must be above minimum, can enforce that here.
-# TODO could we auto generate this from the radius-types-2.csv available from iana.org?
 
-import struct
 
 from chewie.radius_datatypes import Concat, Enum, Integer, String, Text, Vsa
 
 
-ATTRIBUTE_TYPES = {}
+ATTRIBUTE_TYPES = {
+    1: Text('User-Name'),
+    2: String('User-Password'),
+    3: String('CHAP-Password'),
+    # 4: Ipv4addr('NAS-IP-Address'),
+    5: Integer('NAS-Port'),
+    6: Enum('Service-Type'),
+    7: Enum('Framed-Protocol'),
+    # 8: Ipv4addr('Framed-IP-Address'),
+    # 9: Ipv4addr('Framed-IP-Netmask'),
+    10: Enum('Framed-Routing'),
+    11: Text('Filter-Id'),
+    12: Integer('Framed-MTU'),
+    13: Enum('Framed-Compression'),
+    # 14: Ipv4addr('Login-IP-Host'),
+    15: Enum('Login-Service'),
+    16: Integer('Login-TCP-Port'),
+    18: Text('Reply-Message'),
+    19: Text('Callback-Number'),
+    20: Text('Callback-Id'),
+    22: Text('Framed-Route'),
+    # 23: Ipv4addr('Framed-IPX-Network'),
+    24: String('State'),
+    25: String('Class'),
+    26: Vsa('Vendor-Specific'),
+    27: Integer('Session-Timeout'),
+    28: Integer('Idle-Timeout'),
+    29: Enum('Termination-Action'),
+    30: Text('Called-Station-Id'),
+    31: Text('Calling-Station-Id'),
+    32: Text('NAS-Identifier'),
+    33: String('Proxy-State'),
+    34: Text('Login-LAT-Service'),
+    35: Text('Login-LAT-Node'),
+    36: String('Login-LAT-Group'),
+    37: Integer('Framed-AppleTalk-Link'),
+    38: Integer('Framed-AppleTalk-Network'),
+    39: Text('Framed-AppleTalk-Zone'),
+    40: Enum('Acct-Status-Type'),
+    41: Integer('Acct-Delay-Time'),
+    42: Integer('Acct-Input-Octets'),
+    43: Integer('Acct-Output-Octets'),
+    44: Text('Acct-Session-Id'),
+    45: Enum('Acct-Authentic'),
+    46: Integer('Acct-Session-Time'),
+    47: Integer('Acct-Input-Packets'),
+    48: Integer('Acct-Output-Packets'),
+    49: Enum('Acct-Terminate-Cause'),
+    50: Text('Acct-Multi-Session-Id'),
+    51: Integer('Acct-Link-Count'),
+    52: Integer('Acct-Input-Gigawords'),
+    53: Integer('Acct-Output-Gigawords'),
+    # 55: Time('Event-Timestamp'),
+    56: Integer('Egress-VLANID'),
+    57: Enum('Ingress-Filters'),
+    58: Text('Egress-VLAN-Name'),
+    59: String('User-Priority-Table'),
+    60: String('CHAP-Challenge'),
+    61: Enum('NAS-Port-Type'),
+    62: Integer('Port-Limit'),
+    63: Text('Login-LAT-Port'),
+    64: Enum('Tunnel-Type'),
+    65: Enum('Tunnel-Medium-Type'),
+    66: Text('Tunnel-Client-Endpoint'),
+    67: Text('Tunnel-Server-Endpoint'),
+    68: Text('Acct-Tunnel-Connection'),
+    69: String('Tunnel-Password'),
+    70: String('ARAP-Password'),
+    71: String('ARAP-Features'),
+    72: Enum('ARAP-Zone-Access'),
+    73: Integer('ARAP-Security'),
+    74: Text('ARAP-Security-Data'),
+    75: Integer('Password-Retry'),
+    76: Enum('Prompt'),
+    77: Text('Connect-Info'),
+    78: Text('Configuration-Token'),
+    79: Concat('EAP-Message'),
+    80: String('Message-Authenticator'),
+    81: Text('Tunnel-Private-Group-ID'),
+    82: Text('Tunnel-Assignment-ID'),
+    83: Integer('Tunnel-Preference'),
+    84: String('ARAP-Challenge-Response'),
+    85: Integer('Acct-Interim-Interval'),
+    86: Integer('Acct-Tunnel-Packets-Lost'),
+    87: Text('NAS-Port-Id'),
+    88: Text('Framed-Pool'),
+    89: String('CUI'),
+    90: Text('Tunnel-Client-Auth-ID'),
+    91: Text('Tunnel-Server-Auth-ID'),
+    92: Text('NAS-Filter-Rule'),
+    94: String('Originating-Line-Info'),
+    # 95: Ipv6addr('NAS-IPv6-Address'),
+    # 96: Ifid('Framed-Interface-Id'),
+    # 97: Ipv6prefix('Framed-IPv6-Prefix'),
+    # 98: Ipv6addr('Login-IPv6-Host'),
+    99: Text('Framed-IPv6-Route'),
+    100: Text('Framed-IPv6-Pool'),
+    101: Enum('Error-Cause Attribute'),
+    102: String('EAP-Key-Name'),
+    103: Text('Digest-Response'),
+    104: Text('Digest-Realm'),
+    105: Text('Digest-Nonce'),
+    106: Text('Digest-Response-Auth'),
+    107: Text('Digest-Nextnonce'),
+    108: Text('Digest-Method'),
+    109: Text('Digest-URI'),
+    110: Text('Digest-Qop'),
+    111: Text('Digest-Algorithm'),
+    112: Text('Digest-Entity-Body-Hash'),
+    113: Text('Digest-CNonce'),
+    114: Text('Digest-Nonce-Count'),
+    115: Text('Digest-Username'),
+    116: Text('Digest-Opaque'),
+    117: Text('Digest-Auth-Param'),
+    118: Text('Digest-AKA-Auts'),
+    119: Text('Digest-Domain'),
+    120: Text('Digest-Stale'),
+    121: Text('Digest-HA1'),
+    122: Text('SIP-AOR'),
+    # 123: Ipv6prefix('Delegated-IPv6-Prefix'),
+    124: String('MIP6-Feature-Vector'),
+    # 125: Ipv6prefix('MIP6-Home-Link-Prefix'),
+    126: Text('Operator-Name'),
+    127: String('Location-Information'),
+    128: String('Location-Data'),
+    129: String('Basic-Location-Policy-Rules'),
+    130: String('Extended-Location-Policy-Rules'),
+    131: Enum('Location-Capable'),
+    132: Enum('Requested-Location-Info'),
+    133: Enum('Framed-Management-Protocol'),
+    134: Enum('Management-Transport-Protection'),
+    135: Text('Management-Policy-Id'),
+    136: Integer('Management-Privilege-Level'),
+    137: Concat('PKM-SS-Cert'),
+    138: Concat('PKM-CA-Cert'),
+    139: String('PKM-Config-Settings'),
+    140: String('PKM-Cryptosuite-List'),
+    141: Text('PKM-SAID'),
+    142: String('PKM-SA-Descriptor'),
+    143: String('PKM-Auth-Key'),
+    144: Text('DS-Lite-Tunnel-Name'),
+    145: String('Mobile-Node-Identifier'),
+    146: Text('Service-Selection'),
+    # 147: Ipv6addr('PMIP6-Home-LMA-IPv6-Address'),
+    # 148: Ipv6addr('PMIP6-Visited-LMA-IPv6-Address'),
+    # 149: Ipv4addr('PMIP6-Home-LMA-IPv4-Address'),
+    # 150: Ipv4addr('PMIP6-Visited-LMA-IPv4-Address'),
+    # 151: Ipv6prefix('PMIP6-Home-HN-Prefix'),
+    # 152: Ipv6prefix('PMIP6-Visited-HN-Prefix'),
+    # 153: Ifid('PMIP6-Home-Interface-ID'),
+    # 154: Ifid('PMIP6-Visited-Interface-ID'),
+    # 155: Ipv4prefix('PMIP6-Home-IPv4-HoA'),
+    # 156: Ipv4prefix('PMIP6-Visited-IPv4-HoA'),
+    # 157: Ipv4addr('PMIP6-Home-DHCP4-Server-Address'),
+    # 158: Ipv4addr('PMIP6-Visited-DHCP4-Server-Address'),
+    # 159: Ipv6addr('PMIP6-Home-DHCP6-Server-Address'),
+    # 160: Ipv6addr('PMIP6-Visited-DHCP6-Server-Address'),
+    # 161: Ipv4addr('PMIP6-Home-IPv4-Gateway'),
+    # 162: Ipv4addr('PMIP6-Visited-IPv4-Gateway'),
+    163: Enum('EAP-Lower-Layer'),
+    164: Text('GSS-Acceptor-Service-Name'),
+    165: Text('GSS-Acceptor-Host-Name'),
+    166: Text('GSS-Acceptor-Service-Specifics'),
+    167: Text('GSS-Acceptor-Realm-Name'),
+    # 168: Ipv6addr('Framed-IPv6-Address'),
+    # 169: Ipv6addr('DNS-Server-IPv6-Address'),
+    # 170: Ipv6prefix('Route-IPv6-Information'),
+    171: Text('Delegated-IPv6-Prefix-Pool'),
+    172: Text('Stateful-IPv6-Address-Pool'),
+    # 173: Tlv('IPv6-6rd-Configuration'),
+    174: Text('Allowed-Called-Station-Id'),
+    175: String('EAP-Peer-Id'),
+    176: String('EAP-Server-Id'),
+    177: Integer('Mobility-Domain-Id'),
+    178: Integer('Preauth-Timeout'),
+    179: String('Network-Id-Name'),
+    180: Concat('EAPoL-Announcement'),
+    181: Text('WLAN-HESSID'),
+    182: Integer('WLAN-Venue-Info'),
+    183: String('WLAN-Venue-Language'),
+    184: Text('WLAN-Venue-Name'),
+    185: Integer('WLAN-Reason-Code'),
+    186: Integer('WLAN-Pairwise-Cipher'),
+    187: Integer('WLAN-Group-Cipher'),
+    188: Integer('WLAN-AKM-Suite'),
+    189: Integer('WLAN-Group-Mgmt-Cipher'),
+    190: Integer('WLAN-RF-Band'),
+}
 
 
-class Attribute():
-    """Parent class for the Attributes."""
+def get_type(description):
+    """Get the radius attribute type from description.
+    Args:
+        description (str): e.g. EAP-Message (case sensitive)
+    Returns:
+         int"""
+    return get_attribute(description)[0]
 
-    TYPE = None  # e.g. 1
-    DATA_TYPE = None  # e.g. Text
-    DESCRIPTION = None  # e.g. "User-Name"
 
-    HEADER_SIZE = 1 + 1
-
-    def __init__(self, data_type):
-        self.data_type = data_type
-
-    @classmethod
-    def create(cls, data):
-        """Factory method.
-        Args:
-            data: object of python type (int, str, bytes, ...)
+def get_attribute(description):
+    """Get the radius attribute type and datatype from description.
+    Args:
+        description (str): e.g. EAP-Message (case sensitive)
         Returns:
-            Attribute subclass.
-        """
-        return cls(cls.DATA_TYPE(raw_data=data))  # pylint: disable=not-callable
-
-    @classmethod
-    def parse(cls, packed_value):
-        """
-        Args:
-            packed_value (bytes): pre-packed value
-        Returns:
-            Attribute subclass.
-        """
-        return cls(cls.DATA_TYPE.parse(packed_value))
-
-    def pack(self):
-        """
-        Returns:
-            packed attribute (including header) bytes
-        """
-        tl = struct.pack("!BB", self.TYPE, self.full_length())
-        v = self.data_type.pack(self.TYPE)
-        return tl + v
-
-    def full_length(self):
-        """
-        Returns:
-            length (including header).
-        """
-        return self.data_type.full_length()
+             int, DataType"""
+    for _type, datatype in ATTRIBUTE_TYPES.items():
+        if datatype.description == description:
+            return _type, datatype
+    return -1, None
 
 
-def register_attribute_type(cls):
-    """Decoratot to register RADIUS attribute types"""
-    ATTRIBUTE_TYPES[cls.TYPE] = cls
-    return cls
-
-
-@register_attribute_type
-class UserName(Attribute):
-    """User-Name https://tools.ietf.org/html/rfc2865#section-5.1"""
-    TYPE = 1
-    DATA_TYPE = Text
-    DESCRIPTION = "User-Name"
-
-
-@register_attribute_type
-class ServiceType(Attribute):
-    """Service-Type https://tools.ietf.org/html/rfc2865#section-5.6"""
-    TYPE = 6
-    DATA_TYPE = Enum
-    DESCRIPTION = "Service-Type"
-
-
-@register_attribute_type
-class FramedMTU(Attribute):
-    """Framed-MTU https://tools.ietf.org/html/rfc2865#section-5.12"""
-    TYPE = 12
-    DATA_TYPE = Integer
-    DESCRIPTION = "Framed-MTU"
-
-
-@register_attribute_type
-class ReplyMessage(Attribute):
-    """Reply-Message https://tools.ietf.org/html/rfc2865#section-5.18"""
-    TYPE = 18
-    DATA_TYPE = Text
-    DESCRIPTION = "Reply-Message"
-
-
-@register_attribute_type
-class State(Attribute):
-    """State https://tools.ietf.org/html/rfc2865#section-5.24"""
-    TYPE = 24
-    DATA_TYPE = String
-    DESCRIPTION = "State"
-
-    # TODO length >= 3 https://tools.ietf.org/html/rfc2865#section-5.24
-
-
-@register_attribute_type
-class VendorSpecific(Attribute):
-    """Vendor-Specific https://tools.ietf.org/html/rfc2865#section-5.26"""
-    TYPE = 26
-    DATA_TYPE = Vsa
-    DESCRIPTION = "Vendor-Specific"
-
-
-@register_attribute_type
-class SessionTimeout(Attribute):
-    """Vendor-Specific https://tools.ietf.org/html/rfc2865#section-5.27"""
-    TYPE = 27
-    DATA_TYPE = Integer
-    DESCRIPTION = "Session-Timeout"
-
-
-@register_attribute_type
-class CalledStationId(Attribute):
-    """Called-Station-Id https://tools.ietf.org/html/rfc2865#section-5.30"""
-    TYPE = 30
-    DATA_TYPE = Text
-    DESCRIPTION = "Called-Station-Id"
-
-
-@register_attribute_type
-class CallingStationId(Attribute):
-    """Calling-Station-Id https://tools.ietf.org/html/rfc2865#section-5.31"""
-    TYPE = 31
-    DATA_TYPE = Text
-    DESCRIPTION = "Calling-Station-Id"
-
-
-@register_attribute_type
-class AcctSessionId(Attribute):
-    """Acct-Session-id (RADIUS Accounting) https://tools.ietf.org/html/rfc2866#section-5.5"""
-    TYPE = 44
-    DATA_TYPE = Text
-    DESCRIPTION = "Acct-Session-Id"
-
-
-@register_attribute_type
-class NASPortType(Attribute):
-    """NAS-Port-Type https://tools.ietf.org/html/rfc2865#section-5.41"""
-    TYPE = 61
-    DATA_TYPE = Enum
-    DESCRIPTION = "NAS-Port-Type"
-
-
-@register_attribute_type
-class ConnectInfo(Attribute):
-    """ConnectInfo (RADIUS Extensions) https://tools.ietf.org/html/rfc2869#section-5.11"""
-    TYPE = 77
-    DATA_TYPE = Text
-    DESCRIPTION = "Connect-Info"
-
-
-@register_attribute_type
-class EAPMessage(Attribute):
-    """EAP-Message (RADIUS Extensions) https://tools.ietf.org/html/rfc2869#section-5.13"""
-    TYPE = 79
-    DATA_TYPE = Concat
-    DESCRIPTION = "EAP-Message"
-
-    def pack(self):
-        """Concat types need to override AttributeType.pack().
-        as Concat.pack() may return multiple packed AVP (each with their own length)"""
-        return self.data_type.pack(self.TYPE)
-
-
-@register_attribute_type
-class MessageAuthenticator(Attribute):
-    """Message-Authenticator (RADIUS Extensions) https://tools.ietf.org/html/rfc2869#section-5.14"""
-    TYPE = 80
-    DATA_TYPE = String
-    DESCRIPTION = "Message-Authenticator"
+def create_attribute(description, value):
+    """
+    Create an radius attribute with the value.
+    Args:
+        description (str): e.g. EAP-Message (case sensitive)description:
+        value: raw value e.g. a TTLSMessage for description EAP-Message,
+    Returns:
+        created datatype object.
+    """
+    _type, datatype = get_attribute(description)
+    return datatype.create(raw_data=value, _type=_type)
