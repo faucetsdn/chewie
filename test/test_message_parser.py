@@ -223,4 +223,4 @@ class MessageParserTestCase(unittest.TestCase):
                                                   request_authenticator, state, secret,
                                                   extra_attributes)
 
-        self.assertEqual(packed_message.hex(), packed_radius.hex())
+        self.assertEqual(packed_message, packed_radius)
