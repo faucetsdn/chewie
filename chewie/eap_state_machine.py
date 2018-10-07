@@ -6,7 +6,6 @@ from chewie.event import EventMessageReceived, EventRadiusMessageReceived, Event
     EventPortStatusChange, EventSessionTimeout
 from chewie.message_parser import SuccessMessage, FailureMessage, EapolStartMessage, \
     IdentityMessage, EapolLogoffMessage
-from chewie.radius_attributes import SessionTimeout
 from chewie.utils import get_logger, log_method
 
 
@@ -854,7 +853,7 @@ class FullEAPStateMachine:
         self.session_timeout = self.DEFAULT_SESSION_TIMEOUT
 
         if attributes:
-            self.session_timeout = attributes.get(SessionTimeout.DESCRIPTION,
+            self.session_timeout = attributes.get('Session-Timeout',
                                                   self.DEFAULT_SESSION_TIMEOUT)
         # TODO could also set filter-id/vlans/acls here.
 

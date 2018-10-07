@@ -5,11 +5,13 @@ import hashlib
 import hmac
 import struct
 
-from chewie.radius_attributes import ATTRIBUTE_TYPES, Attribute, MessageAuthenticator
+from chewie.radius_attributes import ATTRIBUTE_TYPES, get_type
 from chewie.radius_datatypes import Concat
 
 
 RADIUS_HEADER_LENGTH = 1 + 1 + 2 + 16
+
+ATTRIBUTE_HEADER_SIZE = 1 + 1
 
 PACKET_TYPE_PARSERS = {}
 
@@ -28,7 +30,7 @@ class InvalidMessageAuthenticatorError(Exception):
 
 
 class Radius:
-    """Radius packet interface which will determin the correct RadiusPacket child class to use"""
+    """Radius packet interface which will determine the correct RadiusPacket child class to use"""
     ACCESS_REQUEST = 1
     ACCESS_ACCEPT = 2
     ACCESS_REJECT = 3
@@ -103,8 +105,8 @@ class RadiusPacket(Radius):
         if not self.packed:
             self.pack()
         try:
-            position = self.attributes.indexof(MessageAuthenticator.DESCRIPTION) + \
-                       RADIUS_HEADER_LENGTH + Attribute.HEADER_SIZE
+            position = self.attributes.indexof('Message-Authenticator') + \
+                       RADIUS_HEADER_LENGTH + ATTRIBUTE_HEADER_SIZE
         except ValueError as e:
             print(e.message)
             return self.packed
@@ -133,7 +135,7 @@ class RadiusPacket(Radius):
         radius_packet = copy.deepcopy(self)
         # get the Original Message Authenticator
 
-        message_authenticator = radius_packet.attributes.find(MessageAuthenticator.DESCRIPTION)
+        message_authenticator = radius_packet.attributes.find('Message-Authenticator')
         if not message_authenticator or not request_authenticator:
             # no validation required.
             return self
@@ -144,7 +146,9 @@ class RadiusPacket(Radius):
         radius_packet.authenticator = request_authenticator
         radius_packet.pack()
         calculated_response_authenticator = binascii.hexlify(hashlib.md5(radius_packet.packed +
-                                                        bytearray(secret, 'utf-8')).digest())
+                                                                         bytearray(secret,
+                                                                                   'utf-8')).
+                                                             digest())
         if calculated_response_authenticator != response_authenticator:
             raise InvalidResponseAuthenticatorError(
                 "Original ResponseAuthenticator: '%s', does not match calculated: '%s' %s" % (
@@ -152,9 +156,9 @@ class RadiusPacket(Radius):
                     calculated_response_authenticator,
                     binascii.hexlify(radius_packet.packed)))
 
-        original_ma = message_authenticator.data_type.bytes_data
+        original_ma = message_authenticator.bytes_data
         # Replace the Original Message Authenticator
-        message_authenticator.data_type.bytes_data = bytes.fromhex("00000000000000000000000000000000")
+        message_authenticator.bytes_data = bytes.fromhex("00000000000000000000000000000000")
         radius_packet.pack()
 
         # calculate new hash message authenticator
@@ -204,8 +208,9 @@ class RadiusAttributesList:
 
         return cls(attributes)
 
-    @classmethod
-    def merge_concat_attributes(cls, attributes, attributes_to_concat):
+    # TODO make these methods static
+    @staticmethod
+    def merge_concat_attributes(attributes, attributes_to_concat):
         """
         Removes concat attributes for attributes list, and inserts a single new master attribute
         for all concat attributes of the same type (e.g. EAPMessage, EAPMessage, = 1 EAPMessage)
@@ -217,24 +222,30 @@ class RadiusAttributesList:
         """
         # Join Attributes that's datatype is Concat into one attribute.
         concatenated_attributes = []
+        attr_to_remove = []
         for value, list_ in attributes_to_concat.items():
             concatenated_data = b""
-            for d, i in list_:
-                concatenated_data += d.data_type.bytes_data
-            concatenated_attributes.append(tuple((ATTRIBUTE_TYPES[value].parse(concatenated_data),
-                                                  i)))
-        # Remove old Attributes that were concatenated.
-        for ca, _ in concatenated_attributes:
-            attributes = [x for x in attributes if x.TYPE != ca.TYPE]
+            first_index = -1
+            for attr, index in list_:
+                if first_index == -1:
+                    first_index = index
+                concatenated_data += attr.bytes_data
+                attr_to_remove.append(attr.bytes_data)
 
+            concatenated_attributes.append(tuple((ATTRIBUTE_TYPES[value].parse(
+                concatenated_data, value),
+                                                  first_index)))
+        # Remove old Attributes that were concatenated.
+        for attr in attr_to_remove:
+            attributes = [x for x in attributes if x.bytes_data != attr]
         # need to put them back in the same position.
-        for ca, i in concatenated_attributes:
-            attributes.insert(i, ca)
+        for attr, index in concatenated_attributes:
+            attributes.insert(index, attr)
 
         return attributes
 
-    @classmethod
-    def extract_attributes(cls, attributes_data, attributes, attributes_to_concat):
+    @staticmethod
+    def extract_attributes(attributes_data, attributes, attributes_to_concat):
         """
         Extracts Radius Attributes from a packed payload.
         Keeps track of attribute ordering.
@@ -246,26 +257,26 @@ class RadiusAttributesList:
         total_length = len(attributes_data)
         pos = 0
         index = -1
-        last_attribute = -1
+        last_attribute = None
         while pos < total_length:
             type_, attr_length = struct.unpack("!BB",
-                                               attributes_data[pos:pos + Attribute.HEADER_SIZE])
-            data = attributes_data[pos + Attribute.HEADER_SIZE: pos + attr_length]
+                                               attributes_data[pos:pos + ATTRIBUTE_HEADER_SIZE])
+            data = attributes_data[pos + ATTRIBUTE_HEADER_SIZE: pos + attr_length]
             pos += attr_length
 
-            packed_value = data[:attr_length - Attribute.HEADER_SIZE]
+            packed_value = data[:attr_length - ATTRIBUTE_HEADER_SIZE]
 
-            attribute = ATTRIBUTE_TYPES[type_].parse(packed_value)
+            attribute = ATTRIBUTE_TYPES[type_].parse(packed_value, type_)
             # keep track of where the concated AVP should be in the attributes list.
             # required so the hashing gives correct hash.
-            if attribute.DATA_TYPE != Concat or last_attribute != attribute.TYPE:
+            if not isinstance(attribute, type(Concat)) or isinstance(attribute, type(last_attribute)):
                 index += 1
-            last_attribute = attribute.TYPE
+            last_attribute = attribute
 
-            if attribute.DATA_TYPE.DATA_TYPE_VALUE == Concat.DATA_TYPE_VALUE:
-                if attribute.TYPE not in attributes_to_concat:
-                    attributes_to_concat[attribute.TYPE] = []
-                attributes_to_concat[attribute.TYPE].append((attribute, index))
+            if attribute.DATA_TYPE_VALUE == Concat.DATA_TYPE_VALUE:
+                if type_ not in attributes_to_concat:
+                    attributes_to_concat[type_] = []
+                attributes_to_concat[type_].append((attribute, index))
 
             attributes.append(attribute)
 
@@ -275,8 +286,9 @@ class RadiusAttributesList:
             item (str): description of attribute to find
         Returns:
             attribute or None if not found"""
+        item_type = get_type(item)
         for attr in self.attributes:
-            if item == attr.DESCRIPTION:
+            if item_type == attr.TYPE:
                 return attr
         return None
 
@@ -290,8 +302,9 @@ class RadiusAttributesList:
             ValueErrpr: if cannot find item
         """
         i = 0
+        item_type = get_type(item)
         for attr in self.attributes:
-            if item == attr.DESCRIPTION:
+            if item_type == attr.TYPE:
                 break
             i += attr.full_length()
         else:
@@ -312,6 +325,6 @@ class RadiusAttributesList:
 
     def to_dict(self):
         ret = {}
-        for a in self.attributes:
-            ret[a.DESCRIPTION] = a.data_type.data()
+        for attr in self.attributes:
+            ret[attr.DESCRIPTION] = attr.data()
         return ret
