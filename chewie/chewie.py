@@ -73,6 +73,8 @@ class Chewie:
         self.interface_index = None
         self.interface_address = None
 
+        self.eventlets = []
+
     def run(self):
         """setup chewie and start socket eventlet threads"""
         self.logger.info("Starting")
@@ -85,7 +87,6 @@ class Chewie:
     def start_threads_and_wait(self):
         """Start the thread and wait until they complete (hopefully never)"""
         self.pool = GreenPool()
-        self.eventlets = []
 
         self.eventlets.append(self.pool.spawn(self.send_eap_messages))
         self.eventlets.append(self.pool.spawn(self.receive_eap_messages))
@@ -139,17 +140,17 @@ class Chewie:
         Args:
             port_id (str): id of port.
         """
-        if port_id not in self.state_machines:
-            self.state_machines[port_id] = {}
-
         self.set_port_status(port_id, True)
         # TODO send preemptive identity request.
 
     def set_port_status(self, port_id, status):
-        if port_id in self.state_machines:
-            for src_mac, sm in self.state_machines[port_id].items():
-                event = EventPortStatusChange(status)
-                sm.event(event)
+        port_id_str = str(port_id)
+        if port_id_str not in self.state_machines:
+            self.state_machines[port_id_str] = {}
+
+        for src_mac, sm in self.state_machines[port_id_str].items():
+            event = EventPortStatusChange(status)
+            sm.event(event)
 
     def send_eap_messages(self):
         """send eap messages to supplicant forever."""
@@ -317,10 +318,12 @@ class Chewie:
         Returns:
             FullEAPStateMachine
         """
-        port_sms = self.state_machines.get(str(port_id), None)
+        port_id_str = str(port_id)
+        src_mac_str = str(src_mac)
+        port_sms = self.state_machines.get(port_id_str, None)
         if port_sms is None:
-            self.state_machines[str(port_id)] = {}
-        sm = self.state_machines[str(port_id)].get(str(src_mac), None)
+            self.state_machines[port_id_str] = {}
+        sm = self.state_machines[port_id_str].get(src_mac_str, None)
         if not sm:
             sm = FullEAPStateMachine(self.eap_output_messages, self.radius_output_messages, src_mac,
                                      self.timer_scheduler, self.auth_success,
@@ -328,7 +331,7 @@ class Chewie:
             sm.eapRestart = True
             # TODO what if port is not actually enabled, but then how did they auth?
             sm.portEnabled = True
-            self.state_machines[str(port_id)][str(src_mac)] = sm
+            self.state_machines[port_id_str][src_mac_str] = sm
         return sm
 
     def get_next_radius_packet_id(self):
