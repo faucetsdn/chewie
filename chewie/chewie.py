@@ -9,7 +9,7 @@ from eventlet.green import socket
 from eventlet.queue import Queue
 
 from chewie.eap_state_machine import FullEAPStateMachine
-from chewie.radius_attributes import create_attribute
+from chewie.radius_attributes import EAPMessage, State, CalledStationId, NASPortType
 from chewie.message_parser import MessageParser, MessagePacker
 from chewie.mac_address import MacAddress
 from chewie.event import EventMessageReceived, EventRadiusMessageReceived, EventPortStatusChange
@@ -233,10 +233,10 @@ class Chewie:
                 radius = MessageParser.radius_parse(packed_message, self.radius_secret,
                                                     self.request_authenticator_callback)
                 self.logger.info("Received RADIUS message: %s", radius)
-                eap_msg = radius.attributes.find('EAP-Message')
+                eap_msg = radius.attributes.find(EAPMessage.DESCRIPTION)
                 sm = self.get_state_machine_from_radius_packet_id(radius.packet_id)
                 eap_msg = eap_msg.data_type.data()
-                state = radius.attributes.find('State')
+                state = radius.attributes.find(State.DESCRIPTION)
                 self.logger.info("radius EAP: %s", eap_msg)
                 event = EventRadiusMessageReceived(eap_msg, state, radius.attributes.to_dict())
                 sm.event(event)
@@ -270,8 +270,7 @@ class Chewie:
 
     def prepare_extra_radius_attributes(self):
         """Create RADIUS Attirbutes to be sent with every RADIUS request"""
-        attr_list = [create_attribute('Called-Station-Id', self.chewie_id),
-                     create_attribute('NAS-Port-Type', 15)]
+        attr_list = [CalledStationId.create(self.chewie_id), NASPortType.create(15)]
         return attr_list
 
     def get_interface_info(self):
