@@ -1,6 +1,4 @@
 """Radius Attributes"""
-# TODO if attributes have requirements e.g. length must be above minimum, can enforce that here.
-# TODO could we auto generate this from the radius-types-2.csv available from iana.org?
 
 
 from chewie.radius_datatypes import Concat, Enum, Integer, String, Text, Vsa, Ipv6prefix, \

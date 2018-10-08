@@ -383,7 +383,7 @@ class Ipv6prefix(DataType):
         cls.is_valid_length(packed_value)
         size = len(packed_value) - 2
         reserved, prefix_length, prefix = struct.unpack("!BB%ds" % size, packed_value)
-        prefix = int.from_bytes(prefix, byteorder='big')
+        prefix = int.from_bytes(prefix, byteorder='big')  # pytype: disable=attribute-error
         if reserved != 0:
             raise ValueError('Ipv6prefix reserved must be 0. Cannot parse')
         if prefix_length > 128:
@@ -431,7 +431,7 @@ class Ipv4prefix(DataType):
     def parse(cls, packed_value, _type):
         cls.is_valid_length(packed_value)
         reserved, prefix_length, prefix = struct.unpack("!BB4s", packed_value)
-        prefix = int.from_bytes(prefix, byteorder='big')
+        prefix = int.from_bytes(prefix, byteorder='big')  # pytype: disable=attribute-error
         if reserved != 0:
             raise ValueError('Ipv4prefix reserved must be 0. Cannot parse')
         if prefix_length > 32:
