@@ -1,4 +1,5 @@
 """Radius Attribute Datatypes"""
+import ipaddress
 import math
 import struct
 
@@ -63,11 +64,11 @@ class DataType:
                 or len(packed_value) > cls.MAX_DATA_LENGTH \
                 or length != len(packed_value):
             raise ValueError("RADIUS data type '%s' length must be: %d <= actual_length(%d) <= %d"
-                             ""
                              % (cls.__name__, cls.MIN_DATA_LENGTH, length, cls.MAX_DATA_LENGTH))
 
 
 class Integer(DataType):
+    """https://tools.ietf.org/html/rfc8044#section-3.1"""
     DATA_TYPE_VALUE = 1
     MAX_DATA_LENGTH = 4
     MIN_DATA_LENGTH = 4
@@ -78,7 +79,6 @@ class Integer(DataType):
                 bytes_data = raw_data.to_bytes(self.MAX_DATA_LENGTH, "big")
             except OverflowError:
                 raise ValueError("Integer must be >= 0  and <= 2^32-1, was %d" % raw_data)
-        # self.bytes_data = bytes_data
         return self.__class__(description=self.description, bytes_data=bytes_data, _type=_type)
 
     @classmethod
@@ -99,6 +99,7 @@ class Integer(DataType):
 
 
 class Enum(DataType):
+    """https://tools.ietf.org/html/rfc8044#section-3.2"""
     DATA_TYPE_VALUE = 2
     MAX_DATA_LENGTH = 4
     MIN_DATA_LENGTH = 4
@@ -109,7 +110,6 @@ class Enum(DataType):
                 bytes_data = raw_data.to_bytes(self.MAX_DATA_LENGTH, "big")
             except OverflowError:
                 raise ValueError("Integer must be >= 0  and <= 2^32-1, was %d" % raw_data)
-        # self.bytes_data = bytes_data
         return self.__class__(description=self.description, bytes_data=bytes_data, _type=_type)
 
     @classmethod
@@ -123,20 +123,48 @@ class Enum(DataType):
         return tl + v
 
     def data(self):
-        return int.from_bytes(self.bytes_data, 'big') # pytype: disable=attribute-error
+        return int.from_bytes(self.bytes_data, 'big')  # pytype: disable=attribute-error
+
+    def data_length(self):
+        return 4
+
+
+class Time(DataType):
+    """https://tools.ietf.org/html/rfc8044#section-3.3"""
+    DATA_TYPE_VALUE = 3
+    MAX_DATA_LENGTH = 4
+    MIN_DATA_LENGTH = 4
+
+    def create(self, bytes_data=None, raw_data=None, _type=None):
+        if raw_data:
+            bytes_data = struct.pack('!f', raw_data)
+        return self.__class__(description=self.description, bytes_data=bytes_data, _type=_type)
+
+    @classmethod
+    def parse(cls, packed_value, _type):
+        cls.is_valid_length(packed_value)
+        return cls(bytes_data=struct.unpack("!4s", packed_value)[0], _type=_type)
+
+    def pack(self):
+        tl = struct.pack("!BB", self.TYPE, self.full_length())
+        v = struct.pack("!4s", self.bytes_data)
+        return tl + v
+
+    def data(self):
+        return struct.unpack('!f', self.bytes_data)[0]
 
     def data_length(self):
         return 4
 
 
 class Text(DataType):
+    """https://tools.ietf.org/html/rfc8044#section-3.4"""
     DATA_TYPE_VALUE = 4
 
     def create(self, bytes_data=None, raw_data=None, _type=None):
         if raw_data is not None:
             bytes_data = raw_data.encode()
             self.is_valid_length(bytes_data)
-        # self.bytes_data = bytes_data
         return self.__class__(description=self.description, bytes_data=bytes_data, _type=_type)
 
     @classmethod
@@ -238,6 +266,188 @@ class Concat(DataType):
         return self.AVP_HEADER_LEN * \
                (math.ceil(len(self.bytes_data) / self.MAX_DATA_LENGTH + 1))\
                + len(self.bytes_data) - self.AVP_HEADER_LEN
+
+    def data_length(self):
+        return len(self.bytes_data)
+
+
+class Ifid(DataType):
+    """The "ifid" data type encodes an Interface-Id as an 8-octet IPv6
+   Interface Identifier in network byte order.
+    https://tools.ietf.org/html/rfc8044#section-3.7"""
+    DATA_TYPE_VALUE = 7
+    MAX_DATA_LENGTH = 8
+    MIN_DATA_LENGTH = 8
+
+    def create(self, bytes_data=None, raw_data=None, _type=None):
+        if raw_data:
+            raise ValueError("Ifid does not support creating with raw_data yet. use bytes_data")
+        return self.__class__(description=self.description, bytes_data=bytes_data, _type=_type)
+
+    @classmethod
+    def parse(cls, packed_value, _type):
+        cls.is_valid_length(packed_value)
+        return cls(bytes_data=struct.unpack("!8s", packed_value)[0], _type=_type)
+
+    def pack(self):
+        tl = struct.pack("!BB", self.TYPE, self.full_length())
+        v = struct.pack("!8s", self.bytes_data)
+        return tl + v
+
+    def data(self):
+        return int.from_bytes(self.bytes_data, 'big')  # pytype: disable=attribute-error
+
+    def data_length(self):
+        return 8
+
+
+class Ipv4addr(DataType):
+    """
+    https://tools.ietf.org/html/rfc8044#section-3.8"""
+    DATA_TYPE_VALUE = 8
+    MAX_DATA_LENGTH = 4
+    MIN_DATA_LENGTH = 4
+
+    def create(self, bytes_data=None, raw_data=None, _type=None):
+        if raw_data:
+            bytes_data = ipaddress.v4_int_to_packed(int(ipaddress.IPv4Address(raw_data)))
+        return self.__class__(description=self.description, bytes_data=bytes_data, _type=_type)
+
+    @classmethod
+    def parse(cls, packed_value, _type):
+        cls.is_valid_length(packed_value)
+        return cls(bytes_data=struct.unpack("!4s", packed_value)[0], _type=_type)
+
+    def pack(self):
+        tl = struct.pack("!BB", self.TYPE, self.full_length())
+        v = struct.pack("!4s", self.bytes_data)
+        return tl + v
+
+    def data(self):
+        return str(ipaddress.IPv4Address(self.bytes_data))  # pytype: disable=attribute-error
+
+    def data_length(self):
+        return 4
+
+
+class Ipv6addr(DataType):
+    """
+    https://tools.ietf.org/html/rfc8044#section-3.9"""
+    DATA_TYPE_VALUE = 9
+    MAX_DATA_LENGTH = 16
+    MIN_DATA_LENGTH = 16
+
+    def create(self, bytes_data=None, raw_data=None, _type=None):
+        if raw_data:
+            bytes_data = ipaddress.v6_int_to_packed(int(ipaddress.IPv6Address(raw_data)))
+        return self.__class__(description=self.description, bytes_data=bytes_data, _type=_type)
+
+    @classmethod
+    def parse(cls, packed_value, _type):
+        cls.is_valid_length(packed_value)
+        return cls(bytes_data=struct.unpack("!16s", packed_value)[0], _type=_type)
+
+    def pack(self):
+        tl = struct.pack("!BB", self.TYPE, self.full_length())
+        v = struct.pack("!16s", self.bytes_data)
+        return tl + v
+
+    def data(self):
+        return str(ipaddress.IPv6Address(self.bytes_data))  # pytype: disable=attribute-error
+
+    def data_length(self):
+        return 16
+
+
+class Ipv6prefix(DataType):
+    """
+    https://tools.ietf.org/html/rfc8044#section-3.10"""
+    DATA_TYPE_VALUE = 10
+    MAX_DATA_LENGTH = 18
+    MIN_DATA_LENGTH = 2
+
+    def create(self, bytes_data=None, raw_data=None, _type=None):
+        if raw_data:
+            raise NotImplementedError('IPv6prefix does not support create with raw_data yet.')
+        return self.__class__(description=self.description, bytes_data=bytes_data, _type=_type)
+
+    @classmethod
+    def parse(cls, packed_value, _type):
+        cls.is_valid_length(packed_value)
+        size = len(packed_value) - 2
+        reserved, prefix_length, prefix = struct.unpack("!BB%ds" % size, packed_value)
+        prefix = int.from_bytes(prefix, byteorder='big')
+        if reserved != 0:
+            raise ValueError('Ipv6prefix reserved must be 0. Cannot parse')
+        if prefix_length > 128:
+            raise ValueError('Ipv6prefix prefix_length must be at least 0 and no larger than 128. Cannot parse')
+
+        if prefix_length < size * 8:
+            # check zeroed
+            x = 0
+            for _ in range(size * 8 - prefix_length):
+                x = (x << 1) + 1
+
+            if x & prefix != 0:
+                raise ValueError('Ipv6 prefix has length < 128. and bits outside of prefix length not zero')
+        # TODO at some point it would be nice if we could extract the prefix from this datatype.
+        return cls(bytes_data=packed_value, _type=_type)
+
+    def pack(self):
+        tl = struct.pack("!BB", self.TYPE, self.full_length())
+        v = struct.pack("!%ds" % len(self.bytes_data), self.bytes_data)
+        return tl + v
+
+    def data(self):
+        return str(ipaddress.IPv6Address(self.bytes_data))  # pytype: disable=attribute-error
+
+    def data_length(self):
+        return len(self.bytes_data)
+
+
+class Ipv4prefix(DataType):
+    """
+    https://tools.ietf.org/html/rfc8044#section-3.10"""
+    DATA_TYPE_VALUE = 11
+    MAX_DATA_LENGTH = 6
+    MIN_DATA_LENGTH = 6
+
+    # TODO at some point it would be nice if we could extract the prefix from this datatype.
+    # TODO if address is all 0s then the prefix-length must be set to 32.
+
+    def create(self, bytes_data=None, raw_data=None, _type=None):
+        if raw_data:
+            raise NotImplementedError('IPv4prefix does not support create with raw_data yet.')
+        return self.__class__(description=self.description, bytes_data=bytes_data, _type=_type)
+
+    @classmethod
+    def parse(cls, packed_value, _type):
+        cls.is_valid_length(packed_value)
+        reserved, prefix_length, prefix = struct.unpack("!BB4s", packed_value)
+        prefix = int.from_bytes(prefix, byteorder='big')
+        if reserved != 0:
+            raise ValueError('Ipv4prefix reserved must be 0. Cannot parse')
+        if prefix_length > 32:
+            raise ValueError('Ipv4prefix prefix_length must be at least 0 and no larger than 32. Cannot parse')
+
+        if prefix_length < 32:
+            # check zeroed
+            x = 0
+            for _ in range(32 - prefix_length):
+                x = (x << 1) + 1
+
+            if x & prefix != 0:
+                raise ValueError('Ipv4 prefix has length < 128. and bits outside of prefix length not zero')
+
+        return cls(bytes_data=packed_value, _type=_type)
+
+    def pack(self):
+        tl = struct.pack("!BB", self.TYPE, self.full_length())
+        v = struct.pack("!%ds" % len(self.bytes_data), self.bytes_data)
+        return tl + v
+
+    def data(self):
+        return self.bytes_data
 
     def data_length(self):
         return len(self.bytes_data)

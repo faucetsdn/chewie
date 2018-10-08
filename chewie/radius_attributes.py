@@ -1,31 +1,31 @@
 """Radius Attributes"""
 
 
-from chewie.radius_datatypes import Concat, Enum, Integer, String, Text, Vsa
-
+from chewie.radius_datatypes import Concat, Enum, Integer, String, Text, Vsa, Ipv6prefix, \
+    Ipv4prefix, Ipv4addr, Ipv6addr, Ifid, Time
 
 ATTRIBUTE_TYPES = {
     1: Text('User-Name'),
     2: String('User-Password'),
     3: String('CHAP-Password'),
-    # 4: Ipv4addr('NAS-IP-Address'),
+    4: Ipv4addr('NAS-IP-Address'),
     5: Integer('NAS-Port'),
     6: Enum('Service-Type'),
     7: Enum('Framed-Protocol'),
-    # 8: Ipv4addr('Framed-IP-Address'),
-    # 9: Ipv4addr('Framed-IP-Netmask'),
+    8: Ipv4addr('Framed-IP-Address'),
+    9: Ipv4addr('Framed-IP-Netmask'),
     10: Enum('Framed-Routing'),
     11: Text('Filter-Id'),
     12: Integer('Framed-MTU'),
     13: Enum('Framed-Compression'),
-    # 14: Ipv4addr('Login-IP-Host'),
+    14: Ipv4addr('Login-IP-Host'),
     15: Enum('Login-Service'),
     16: Integer('Login-TCP-Port'),
     18: Text('Reply-Message'),
     19: Text('Callback-Number'),
     20: Text('Callback-Id'),
     22: Text('Framed-Route'),
-    # 23: Ipv4addr('Framed-IPX-Network'),
+    23: Ipv4addr('Framed-IPX-Network'),
     24: String('State'),
     25: String('Class'),
     26: Vsa('Vendor-Specific'),
@@ -56,7 +56,7 @@ ATTRIBUTE_TYPES = {
     51: Integer('Acct-Link-Count'),
     52: Integer('Acct-Input-Gigawords'),
     53: Integer('Acct-Output-Gigawords'),
-    # 55: Time('Event-Timestamp'),
+    55: Time('Event-Timestamp'),
     56: Integer('Egress-VLANID'),
     57: Enum('Ingress-Filters'),
     58: Text('Egress-VLAN-Name'),
@@ -95,10 +95,10 @@ ATTRIBUTE_TYPES = {
     91: Text('Tunnel-Server-Auth-ID'),
     92: Text('NAS-Filter-Rule'),
     94: String('Originating-Line-Info'),
-    # 95: Ipv6addr('NAS-IPv6-Address'),
-    # 96: Ifid('Framed-Interface-Id'),
-    # 97: Ipv6prefix('Framed-IPv6-Prefix'),
-    # 98: Ipv6addr('Login-IPv6-Host'),
+    95: Ipv6addr('NAS-IPv6-Address'),
+    96: Ifid('Framed-Interface-Id'),
+    97: Ipv6prefix('Framed-IPv6-Prefix'),
+    98: Ipv6addr('Login-IPv6-Host'),
     99: Text('Framed-IPv6-Route'),
     100: Text('Framed-IPv6-Pool'),
     101: Enum('Error-Cause Attribute'),
@@ -123,9 +123,9 @@ ATTRIBUTE_TYPES = {
     120: Text('Digest-Stale'),
     121: Text('Digest-HA1'),
     122: Text('SIP-AOR'),
-    # 123: Ipv6prefix('Delegated-IPv6-Prefix'),
+    123: Ipv6prefix('Delegated-IPv6-Prefix'),
     124: String('MIP6-Feature-Vector'),
-    # 125: Ipv6prefix('MIP6-Home-Link-Prefix'),
+    125: Ipv6prefix('MIP6-Home-Link-Prefix'),
     126: Text('Operator-Name'),
     127: String('Location-Information'),
     128: String('Location-Data'),
@@ -147,30 +147,30 @@ ATTRIBUTE_TYPES = {
     144: Text('DS-Lite-Tunnel-Name'),
     145: String('Mobile-Node-Identifier'),
     146: Text('Service-Selection'),
-    # 147: Ipv6addr('PMIP6-Home-LMA-IPv6-Address'),
-    # 148: Ipv6addr('PMIP6-Visited-LMA-IPv6-Address'),
-    # 149: Ipv4addr('PMIP6-Home-LMA-IPv4-Address'),
-    # 150: Ipv4addr('PMIP6-Visited-LMA-IPv4-Address'),
-    # 151: Ipv6prefix('PMIP6-Home-HN-Prefix'),
-    # 152: Ipv6prefix('PMIP6-Visited-HN-Prefix'),
-    # 153: Ifid('PMIP6-Home-Interface-ID'),
-    # 154: Ifid('PMIP6-Visited-Interface-ID'),
-    # 155: Ipv4prefix('PMIP6-Home-IPv4-HoA'),
-    # 156: Ipv4prefix('PMIP6-Visited-IPv4-HoA'),
-    # 157: Ipv4addr('PMIP6-Home-DHCP4-Server-Address'),
-    # 158: Ipv4addr('PMIP6-Visited-DHCP4-Server-Address'),
-    # 159: Ipv6addr('PMIP6-Home-DHCP6-Server-Address'),
-    # 160: Ipv6addr('PMIP6-Visited-DHCP6-Server-Address'),
-    # 161: Ipv4addr('PMIP6-Home-IPv4-Gateway'),
-    # 162: Ipv4addr('PMIP6-Visited-IPv4-Gateway'),
+    147: Ipv6addr('PMIP6-Home-LMA-IPv6-Address'),
+    148: Ipv6addr('PMIP6-Visited-LMA-IPv6-Address'),
+    149: Ipv4addr('PMIP6-Home-LMA-IPv4-Address'),
+    150: Ipv4addr('PMIP6-Visited-LMA-IPv4-Address'),
+    151: Ipv6prefix('PMIP6-Home-HN-Prefix'),
+    152: Ipv6prefix('PMIP6-Visited-HN-Prefix'),
+    153: Ifid('PMIP6-Home-Interface-ID'),
+    154: Ifid('PMIP6-Visited-Interface-ID'),
+    155: Ipv4prefix('PMIP6-Home-IPv4-HoA'),
+    156: Ipv4prefix('PMIP6-Visited-IPv4-HoA'),
+    157: Ipv4addr('PMIP6-Home-DHCP4-Server-Address'),
+    158: Ipv4addr('PMIP6-Visited-DHCP4-Server-Address'),
+    159: Ipv6addr('PMIP6-Home-DHCP6-Server-Address'),
+    160: Ipv6addr('PMIP6-Visited-DHCP6-Server-Address'),
+    161: Ipv4addr('PMIP6-Home-IPv4-Gateway'),
+    162: Ipv4addr('PMIP6-Visited-IPv4-Gateway'),
     163: Enum('EAP-Lower-Layer'),
     164: Text('GSS-Acceptor-Service-Name'),
     165: Text('GSS-Acceptor-Host-Name'),
     166: Text('GSS-Acceptor-Service-Specifics'),
     167: Text('GSS-Acceptor-Realm-Name'),
-    # 168: Ipv6addr('Framed-IPv6-Address'),
-    # 169: Ipv6addr('DNS-Server-IPv6-Address'),
-    # 170: Ipv6prefix('Route-IPv6-Information'),
+    168: Ipv6addr('Framed-IPv6-Address'),
+    169: Ipv6addr('DNS-Server-IPv6-Address'),
+    170: Ipv6prefix('Route-IPv6-Information'),
     171: Text('Delegated-IPv6-Prefix-Pool'),
     172: Text('Stateful-IPv6-Address-Pool'),
     # 173: Tlv('IPv6-6rd-Configuration'),
@@ -215,14 +215,15 @@ def get_attribute(description):
     return -1, None
 
 
-def create_attribute(description, value):
+def create_attribute(description, raw_data=None, bytes_data=None):
     """
     Create an radius attribute with the value.
     Args:
         description (str): e.g. EAP-Message (case sensitive)description:
-        value: raw value e.g. a TTLSMessage for description EAP-Message,
+        raw_data: raw value e.g. a TTLSMessage for description EAP-Message,
+        bytes_data (bytes like object):
     Returns:
         created datatype object.
     """
     _type, datatype = get_attribute(description)
-    return datatype.create(raw_data=value, _type=_type)
+    return datatype.create(raw_data=raw_data, bytes_data=bytes_data, _type=_type)

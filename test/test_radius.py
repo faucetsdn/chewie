@@ -3,15 +3,19 @@
 # pylint: disable=missing-docstring
 
 import binascii
+import ipaddress
+import sys
+import time
 import unittest
 
-from netils import build_byte_string
+from netils import build_byte_string, struct
 
 from chewie.message_parser import  SuccessMessage
 from chewie.radius import Radius, RadiusAccessAccept, RadiusAttributesList, \
     InvalidResponseAuthenticatorError, RadiusAccessChallenge, RadiusAccessRequest
 from chewie.radius_attributes import create_attribute
-from chewie.radius_datatypes import Vsa, String, Enum, Text, Integer
+from chewie.radius_datatypes import Vsa, String, Enum, Text, Integer, Ipv6prefix, Ipv4addr, \
+    Ipv6addr, Ipv4prefix, Time
 
 
 class RadiusTestCase(unittest.TestCase):
@@ -318,3 +322,149 @@ class RadiusTestCase(unittest.TestCase):
         self.assertEqual(len(attributes_to_concat), 1)
         # check that the concated EAPMessage is marked position 0
         self.assertEqual(list(attributes_to_concat.values())[0][0][1], 0)
+
+    def test_ipv6prefix_datatype(self):
+
+        parsed = Ipv6prefix.parse(build_byte_string("0080ffffffffffffffffffffffffffffffff"), 97)
+
+        self.assertEqual(parsed.pack()[2:],
+                         build_byte_string("0080ffffffffffffffffffffffffffffffff"))
+
+        parsed = Ipv6prefix.parse(build_byte_string("0070ffffffffffffffffffffffffffff0000"), 97)
+
+        self.assertEqual(parsed.pack()[2:],
+                         build_byte_string("0070ffffffffffffffffffffffffffff0000"))
+
+        parsed = Ipv6prefix.parse(build_byte_string("007cfffffffffffffffffffffffffffffff0"), 97)
+        self.assertEqual(parsed.pack()[2:],
+                         build_byte_string("007cfffffffffffffffffffffffffffffff0"))
+
+        self.assertRaises(ValueError, Ipv6prefix.parse,
+                          build_byte_string("007cffffffffffffffffffffffffffffffff"), 97)
+        self.assertRaises(ValueError, Ipv6prefix.parse,
+                          build_byte_string("007cfffffffffffffffffffffffffffffff6"), 97)
+
+        parsed = Ipv6prefix.parse(build_byte_string("0048ffffffffffffffffff"), 97)
+        self.assertEqual(parsed.pack()[2:],
+                         build_byte_string("0048ffffffffffffffffff"))
+
+        parsed = Ipv6prefix.parse(build_byte_string("0045fffffffffffffffff8"), 97)
+        self.assertEqual(parsed.pack()[2:],
+                         build_byte_string("0045fffffffffffffffff8"))
+
+        # bits outside prefix length are 1
+        self.assertRaises(ValueError, Ipv6prefix.parse,
+                          build_byte_string("0040fffffffffffffffff8"), 97)
+
+        # reserved is not 0
+        self.assertRaises(ValueError, Ipv6prefix.parse,
+                          build_byte_string("507cfffffffffffffffffffffffffffffff0"), 97)
+
+        # prefix length > 128
+        self.assertRaises(ValueError, Ipv6prefix.parse,
+                          build_byte_string("00fcfffffffffffffffffffffffffffffff0"), 97)
+
+        create_attribute("Framed-IPv6-Prefix",
+                         bytes_data=build_byte_string("0045fffffffffffffffff8"))
+        create_attribute("Framed-IPv6-Prefix",
+                         bytes_data=build_byte_string("007cfffffffffffffffffffffffffffffff0"))
+        create_attribute("Framed-IPv6-Prefix",
+                         bytes_data=build_byte_string("0070ffffffffffffffffffffffffffff0000"))
+
+    def test_ipv4prefix_datatype(self):
+        parsed = Ipv4prefix.parse(build_byte_string("0020ffffffff"), 155)
+        self.assertEqual(parsed.pack()[2:],
+                         build_byte_string("0020ffffffff"))
+
+        parsed = Ipv4prefix.parse(build_byte_string("0018ffffff00"), 155)
+        self.assertEqual(parsed.pack()[2:],
+                         build_byte_string("0018ffffff00"))
+
+        # prefix length is too long
+        self.assertRaises(ValueError, Ipv4prefix.parse, build_byte_string("0021ffffff00"), 155)
+
+        # bits outside length are 1
+        self.assertRaises(ValueError, Ipv4prefix.parse, build_byte_string("0005ffffff00"), 155)
+
+        # Reserverd is not 0
+        self.assertRaises(ValueError, Ipv4prefix.parse, build_byte_string("0518ffffff00"), 155)
+
+        ipv4_prefix = create_attribute("PMIP6-Home-IPv4-HoA",
+                                       bytes_data=build_byte_string("0020ffffffff"))
+        self.assertEqual(ipv4_prefix.data(), build_byte_string("0020ffffffff"))
+
+    def test_ipv4addr_datatype(self):
+        parsed = Ipv4addr.parse(ipaddress.v4_int_to_packed(
+            int(ipaddress.IPv4Address("192.168.1.50"))),
+                                4)
+
+        self.assertEqual(parsed.pack()[2:],
+                         ipaddress.v4_int_to_packed(
+                             int(ipaddress.IPv4Address("192.168.1.50")))
+                         )
+
+        parsed = Ipv4addr.parse(ipaddress.v4_int_to_packed(
+            int(ipaddress.IPv4Address("255.255.255.255"))),
+                                4)
+
+        self.assertEqual(parsed.pack()[2:],
+                         ipaddress.v4_int_to_packed(
+                             int(ipaddress.IPv4Address("255.255.255.255")))
+                         )
+
+        ipv4 = create_attribute("NAS-IP-Address", raw_data="255.255.225.0")
+        self.assertEqual(ipv4.data(), "255.255.225.0")
+
+        ipv4 = create_attribute("NAS-IP-Address", raw_data="1.0.1.254")
+        self.assertEqual(ipv4.data(), "1.0.1.254")
+
+        self.assertRaises(ipaddress.AddressValueError, create_attribute, "NAS-IP-Address",
+                          raw_data="260.260.260.1")
+        self.assertRaises(ipaddress.AddressValueError, create_attribute, "NAS-IP-Address",
+                          raw_data="260.260.260.1")
+
+    def test_ipv6addr_datatype(self):
+
+        parsed = Ipv6addr.parse(ipaddress.v6_int_to_packed(
+            int(ipaddress.IPv6Address("1234:5678:90ab:cdef:fedc:ba09:8765:4321"))),
+                                95)
+
+        self.assertEqual(parsed.pack()[2:],
+                         ipaddress.v6_int_to_packed(
+                             int(ipaddress.IPv6Address("1234:5678:90ab:cdef:fedc:ba09:8765:4321")))
+                         )
+
+        parsed = Ipv6addr.parse(ipaddress.v6_int_to_packed(
+            int(ipaddress.IPv6Address("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"))),
+                                95)
+
+        self.assertEqual(parsed.pack()[2:],
+                         ipaddress.v6_int_to_packed(
+                             int(ipaddress.IPv6Address("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff")))
+                         )
+
+        ipv6 = create_attribute("NAS-IPv6-Address",
+                                raw_data="ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff")
+        self.assertEqual(ipv6.data(), "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff")
+
+        ipv6 = create_attribute("NAS-IPv6-Address",
+                                raw_data="FE80:0::AB8")
+        self.assertEqual(ipv6.data(), "fe80::ab8")
+
+        self.assertRaises(ipaddress.AddressValueError, create_attribute, "NAS-IPv6-Address",
+                          raw_data="ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff::fail")
+        self.assertRaises(ipaddress.AddressValueError, create_attribute, "NAS-IPv6-Address",
+                          raw_data="this:is:not::ipv6")
+
+    def test_time_datatype(self):
+        current_time = time.time()
+        t = create_attribute("Event-Timestamp", current_time)
+        # time.time() returns a float which in python is actually a double.
+        #  but the Time type only uses single precision.
+        # So here we convert the double precision to single.
+        current_time_single_precision = struct.unpack("!f", struct.pack("!f", current_time))[0]
+
+        self.assertEqual(t.data(), current_time_single_precision)
+
+        parsed = Time.parse(t.bytes_data, 55)
+        self.assertEqual(parsed.pack()[2:], struct.pack('!f', current_time))
