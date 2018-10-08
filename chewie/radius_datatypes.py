@@ -22,22 +22,22 @@ class DataType:
     MIN_DATA_LENGTH = 1
 
     bytes_data = None  # bytes version of raw_data
+    DESCRIPTION = None
 
-    description = None
+    TYPE =  None
 
     def __init__(self, description=None, _type=None, bytes_data=None):
-        self.description = description
+        self.DESCRIPTION = description
         self.bytes_data = bytes_data
-
         self.TYPE = _type
 
     def parse(self, packed_value, _type):
         """"""
-        pass
+        return
 
     def pack(self):
         """"""
-        pass
+        return
 
     def data(self):
         """Subclass should override this as needed.
@@ -86,7 +86,7 @@ class Integer(DataType):
                 bytes_data = raw_data.to_bytes(self.MAX_DATA_LENGTH, "big")
             except OverflowError:
                 raise ValueError("Integer must be >= 0  and <= 2^32-1, was %d" % raw_data)
-        return self.__class__(description=self.description, bytes_data=bytes_data, _type=self.TYPE)
+        return self.__class__(description=self.DESCRIPTION, bytes_data=bytes_data, _type=self.TYPE)
 
     @classmethod
     def parse(cls, packed_value, _type):
@@ -117,7 +117,7 @@ class Enum(DataType):
                 bytes_data = raw_data.to_bytes(self.MAX_DATA_LENGTH, "big")
             except OverflowError:
                 raise ValueError("Integer must be >= 0  and <= 2^32-1, was %d" % raw_data)
-        return self.__class__(description=self.description, bytes_data=bytes_data, _type=self.TYPE)
+        return self.__class__(description=self.DESCRIPTION, bytes_data=bytes_data, _type=self.TYPE)
 
     @classmethod
     def parse(cls, packed_value, _type):
@@ -145,7 +145,7 @@ class Time(DataType):
     def create(self, bytes_data=None, raw_data=None):
         if raw_data:
             bytes_data = struct.pack('!f', raw_data)
-        return self.__class__(description=self.description, bytes_data=bytes_data, _type=self.TYPE)
+        return self.__class__(description=self.DESCRIPTION, bytes_data=bytes_data, _type=self.TYPE)
 
     @classmethod
     def parse(cls, packed_value, _type):
@@ -172,7 +172,7 @@ class Text(DataType):
         if raw_data is not None:
             bytes_data = raw_data.encode()
             self.is_valid_length(bytes_data)
-        return self.__class__(description=self.description, bytes_data=bytes_data, _type=self.TYPE)
+        return self.__class__(description=self.DESCRIPTION, bytes_data=bytes_data, _type=self.TYPE)
 
     @classmethod
     def parse(cls, packed_value, _type):
@@ -203,7 +203,7 @@ class String(DataType):
             else:
                 bytes_data = raw_data.encode()
             self.is_valid_length(bytes_data)
-        return self.__class__(description=self.description, bytes_data=bytes_data, _type=self.TYPE)
+        return self.__class__(description=self.DESCRIPTION, bytes_data=bytes_data, _type=self.TYPE)
 
     @classmethod
     def parse(cls, packed_value, _type):
@@ -233,7 +233,7 @@ class Concat(DataType):
                 bytes_data = bytes.fromhex(raw_data)
             # self.is_valid_length(data)
         # self.bytes_data = bytes_data
-        return self.__class__(description=self.description, bytes_data=bytes_data, _type=self.TYPE)
+        return self.__class__(description=self.DESCRIPTION, bytes_data=bytes_data, _type=self.TYPE)
 
     @classmethod
     def parse(cls, packed_value, _type):
@@ -289,7 +289,7 @@ class Ifid(DataType):
     def create(self, bytes_data=None, raw_data=None):
         if raw_data:
             raise ValueError("Ifid does not support creating with raw_data yet. use bytes_data")
-        return self.__class__(description=self.description, bytes_data=bytes_data, _type=self.TYPE)
+        return self.__class__(description=self.DESCRIPTION, bytes_data=bytes_data, _type=self.TYPE)
 
     @classmethod
     def parse(cls, packed_value, _type):
@@ -318,7 +318,7 @@ class Ipv4addr(DataType):
     def create(self, bytes_data=None, raw_data=None):
         if raw_data:
             bytes_data = ipaddress.v4_int_to_packed(int(ipaddress.IPv4Address(raw_data)))
-        return self.__class__(description=self.description, bytes_data=bytes_data, _type=self.TYPE)
+        return self.__class__(description=self.DESCRIPTION, bytes_data=bytes_data, _type=self.TYPE)
 
     @classmethod
     def parse(cls, packed_value, _type):
@@ -347,7 +347,7 @@ class Ipv6addr(DataType):
     def create(self, bytes_data=None, raw_data=None):
         if raw_data:
             bytes_data = ipaddress.v6_int_to_packed(int(ipaddress.IPv6Address(raw_data)))
-        return self.__class__(description=self.description, bytes_data=bytes_data, _type=self.TYPE)
+        return self.__class__(description=self.DESCRIPTION, bytes_data=bytes_data, _type=self.TYPE)
 
     @classmethod
     def parse(cls, packed_value, _type):
@@ -376,7 +376,7 @@ class Ipv6prefix(DataType):
     def create(self, bytes_data=None, raw_data=None):
         if raw_data:
             raise NotImplementedError('IPv6prefix does not support create with raw_data yet.')
-        return self.__class__(description=self.description, bytes_data=bytes_data, _type=self.TYPE)
+        return self.__class__(description=self.DESCRIPTION, bytes_data=bytes_data, _type=self.TYPE)
 
     @classmethod
     def parse(cls, packed_value, _type):
@@ -425,7 +425,7 @@ class Ipv4prefix(DataType):
     def create(self, bytes_data=None, raw_data=None):
         if raw_data:
             raise NotImplementedError('IPv4prefix does not support create with raw_data yet.')
-        return self.__class__(description=self.description, bytes_data=bytes_data, _type=self.TYPE)
+        return self.__class__(description=self.DESCRIPTION, bytes_data=bytes_data, _type=self.TYPE)
 
     @classmethod
     def parse(cls, packed_value, _type):
@@ -470,7 +470,7 @@ class Vsa(DataType):
         if raw_data:
             bytes_data = raw_data
             self.is_valid_length(bytes_data)
-        return self.__class__(description=self.description, bytes_data=bytes_data, _type=self.TYPE)
+        return self.__class__(description=self.DESCRIPTION, bytes_data=bytes_data, _type=self.TYPE)
 
     @classmethod
     def parse(cls, packed_value, _type):

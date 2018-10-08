@@ -208,7 +208,6 @@ class RadiusAttributesList:
 
         return cls(attributes)
 
-    # TODO make these methods static
     @staticmethod
     def merge_concat_attributes(attributes, attributes_to_concat):
         """

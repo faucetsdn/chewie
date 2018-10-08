@@ -4,7 +4,6 @@
 
 import binascii
 import ipaddress
-import sys
 import time
 import unittest
 

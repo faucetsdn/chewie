@@ -2,10 +2,10 @@
 # pylint: disable=too-few-public-methods
 
 from chewie.radius import RadiusAttributesList, RadiusAccessRequest, Radius
-from chewie.radius_attributes import create_attribute
 from chewie.ethernet_packet import EthernetPacket
 from chewie.auth_8021x import Auth8021x
 from chewie.eap import Eap, EapIdentity, EapMd5Challenge, EapSuccess, EapFailure, EapLegacyNak, EapTTLS
+from chewie.radius_attributes import create_attribute
 
 
 class EapMessage:
@@ -142,7 +142,7 @@ class MessageParser:
         if ethernet_packet.ethertype != 0x888e:
             raise ValueError("Ethernet packet with bad ethertype received: %s" % ethernet_packet)
 
-        return MessageParser.one_x_parse(ethernet_packet.data, ethernet_packet.src_mac), \
+        return MessageParser.one_x_parse(ethernet_packet.data, ethernet_packet.src_mac),\
                ethernet_packet.dst_mac
 
     @staticmethod

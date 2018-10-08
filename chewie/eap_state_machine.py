@@ -701,7 +701,7 @@ class FullEAPStateMachine:
             (e.g. SuccessMessage, IdentityMessage,...)
         """
         self.lower_layer_reset()
-        self.logger.info("full state machine received event")
+        self.logger.info("full state machine received event: %s", event)
         # 'Lower Layer' shim
         if isinstance(event, EventMessageReceived):
             self.message_event_received(event)
@@ -721,6 +721,7 @@ class FullEAPStateMachine:
         if self.eapReq:
             if (hasattr(self.eapReqData, 'code') and self.eapReqData.code == Eap.REQUEST) \
                     or isinstance(self.eapReqData, (SuccessMessage, FailureMessage)):
+                self.logger.info('outputting eap, %s %s %s', self.eapReqData, self.src_mac, self.port_id_mac)
                 self.eap_output_messages.put((self.eapReqData, self.src_mac, self.port_id_mac))
                 self.sent_count += 1
                 self.set_timer()
@@ -730,6 +731,7 @@ class FullEAPStateMachine:
 
         if self.aaaEapResp and self.aaaEapRespData:
             if self.aaaEapRespData.code == Eap.RESPONSE:
+                self.logger.info('outputing radius')
                 self.radius_output_messages.put((self.aaaEapRespData, self.src_mac,
                                                  self.aaaIdentity.identity,
                                                  self.radius_state_attribute,
