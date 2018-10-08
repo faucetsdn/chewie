@@ -5,7 +5,7 @@ import hashlib
 import hmac
 import struct
 
-from chewie.radius_attributes import ATTRIBUTE_TYPES, get_type
+from chewie.radius_attributes import get_type, get_attribute_by_type
 from chewie.radius_datatypes import Concat
 
 
@@ -232,7 +232,7 @@ class RadiusAttributesList:
                 concatenated_data += attr.bytes_data
                 attr_to_remove.append(attr.bytes_data)
 
-            concatenated_attributes.append(tuple((ATTRIBUTE_TYPES[value].parse(
+            concatenated_attributes.append(tuple((get_attribute_by_type(value).parse(
                 concatenated_data, value),
                                                   first_index)))
         # Remove old Attributes that were concatenated.
@@ -266,7 +266,7 @@ class RadiusAttributesList:
 
             packed_value = data[:attr_length - ATTRIBUTE_HEADER_SIZE]
 
-            attribute = ATTRIBUTE_TYPES[type_].parse(packed_value, type_)
+            attribute = get_attribute_by_type(type_).parse(packed_value, type_)
             # keep track of where the concated AVP should be in the attributes list.
             # required so the hashing gives correct hash.
             if not isinstance(attribute, type(Concat)) or isinstance(attribute, type(last_attribute)):
