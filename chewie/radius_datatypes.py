@@ -24,7 +24,7 @@ class DataType:
     bytes_data = None  # bytes version of raw_data
     DESCRIPTION = None
 
-    TYPE =  None
+    TYPE = None
 
     def __init__(self, description=None, _type=None, bytes_data=None):
         self.DESCRIPTION = description
@@ -94,8 +94,8 @@ class Integer(DataType):
         return cls(bytes_data=struct.unpack("!4s", packed_value)[0], _type=_type)
 
     def pack(self):
-        tl = struct.pack("!BB", self.TYPE, self.full_length())
-        v = struct.pack("!4s", self.bytes_data)
+        tl = struct.pack("!BB", self.TYPE, self.full_length())  # pylint: disable=invalid-name
+        v = struct.pack("!4s", self.bytes_data)  # pylint: disable=invalid-name
         return tl + v
 
     def data(self):
@@ -125,8 +125,8 @@ class Enum(DataType):
         return cls(bytes_data=struct.unpack("!4s", packed_value)[0], _type=_type)
 
     def pack(self):
-        tl = struct.pack("!BB", self.TYPE, self.full_length())
-        v = struct.pack("!4s", self.bytes_data)
+        tl = struct.pack("!BB", self.TYPE, self.full_length())  # pylint: disable=invalid-name
+        v = struct.pack("!4s", self.bytes_data)  # pylint: disable=invalid-name
         return tl + v
 
     def data(self):
@@ -153,8 +153,8 @@ class Time(DataType):
         return cls(bytes_data=struct.unpack("!4s", packed_value)[0], _type=_type)
 
     def pack(self):
-        tl = struct.pack("!BB", self.TYPE, self.full_length())
-        v = struct.pack("!4s", self.bytes_data)
+        tl = struct.pack("!BB", self.TYPE, self.full_length())  # pylint: disable=invalid-name
+        v = struct.pack("!4s", self.bytes_data)  # pylint: disable=invalid-name
         return tl + v
 
     def data(self):
@@ -193,6 +193,7 @@ class Text(DataType):
 
 
 class String(DataType):
+    """https://tools.ietf.org/html/rfc8044#section-3.5"""
     # how is this different from Text?? - text is utf8
     DATA_TYPE_VALUE = 5
 
@@ -212,8 +213,8 @@ class String(DataType):
                                             packed_value)[0], _type=_type)
 
     def pack(self):
-        tl = struct.pack("!BB", self.TYPE, self.full_length())
-        v = struct.pack("!%ds" % len(self.bytes_data), self.bytes_data)
+        tl = struct.pack("!BB", self.TYPE, self.full_length())  # pylint: disable=invalid-name
+        v = struct.pack("!%ds" % len(self.bytes_data), self.bytes_data)  # pylint: disable=invalid-name
         return tl + v
 
     def data_length(self):
@@ -297,8 +298,8 @@ class Ifid(DataType):
         return cls(bytes_data=struct.unpack("!8s", packed_value)[0], _type=_type)
 
     def pack(self):
-        tl = struct.pack("!BB", self.TYPE, self.full_length())
-        v = struct.pack("!8s", self.bytes_data)
+        tl = struct.pack("!BB", self.TYPE, self.full_length())  # pylint: disable=invalid-name
+        v = struct.pack("!8s", self.bytes_data)  # pylint: disable=invalid-name
         return tl + v
 
     def data(self):
@@ -326,8 +327,8 @@ class Ipv4addr(DataType):
         return cls(bytes_data=struct.unpack("!4s", packed_value)[0], _type=_type)
 
     def pack(self):
-        tl = struct.pack("!BB", self.TYPE, self.full_length())
-        v = struct.pack("!4s", self.bytes_data)
+        tl = struct.pack("!BB", self.TYPE, self.full_length())  # pylint: disable=invalid-name
+        v = struct.pack("!4s", self.bytes_data)  # pylint: disable=invalid-name
         return tl + v
 
     def data(self):
@@ -355,8 +356,8 @@ class Ipv6addr(DataType):
         return cls(bytes_data=struct.unpack("!16s", packed_value)[0], _type=_type)
 
     def pack(self):
-        tl = struct.pack("!BB", self.TYPE, self.full_length())
-        v = struct.pack("!16s", self.bytes_data)
+        tl = struct.pack("!BB", self.TYPE, self.full_length())  # pylint: disable=invalid-name
+        v = struct.pack("!16s", self.bytes_data)  # pylint: disable=invalid-name
         return tl + v
 
     def data(self):
@@ -387,7 +388,8 @@ class Ipv6prefix(DataType):
         if reserved != 0:
             raise ValueError('Ipv6prefix reserved must be 0. Cannot parse')
         if prefix_length > 128:
-            raise ValueError('Ipv6prefix prefix_length must be at least 0 and no larger than 128. Cannot parse')
+            raise ValueError(
+                'Ipv6prefix prefix_length must be at least 0 and no larger than 128. Cannot parse')
 
         if prefix_length < size * 8:
             # check zeroed
@@ -396,13 +398,14 @@ class Ipv6prefix(DataType):
                 x = (x << 1) + 1
 
             if x & prefix != 0:
-                raise ValueError('Ipv6 prefix has length < 128. and bits outside of prefix length not zero')
+                raise ValueError(
+                    'Ipv6 prefix has length < 128. and bits outside of prefix length not zero')
         # TODO at some point it would be nice if we could extract the prefix from this datatype.
         return cls(bytes_data=packed_value, _type=_type)
 
     def pack(self):
-        tl = struct.pack("!BB", self.TYPE, self.full_length())
-        v = struct.pack("!%ds" % len(self.bytes_data), self.bytes_data)
+        tl = struct.pack("!BB", self.TYPE, self.full_length())  # pylint: disable=invalid-name
+        v = struct.pack("!%ds" % len(self.bytes_data), self.bytes_data)  # pylint: disable=invalid-name
         return tl + v
 
     def data(self):
@@ -435,22 +438,24 @@ class Ipv4prefix(DataType):
         if reserved != 0:
             raise ValueError('Ipv4prefix reserved must be 0. Cannot parse')
         if prefix_length > 32:
-            raise ValueError('Ipv4prefix prefix_length must be at least 0 and no larger than 32. Cannot parse')
+            raise ValueError(
+                'Ipv4prefix prefix_length must be at least 0 and no larger than 32. Cannot parse')
 
         if prefix_length < 32:
             # check zeroed
-            x = 0
+            bitmask = 0
             for _ in range(32 - prefix_length):
-                x = (x << 1) + 1
+                bitmask = (bitmask << 1) + 1
 
-            if x & prefix != 0:
-                raise ValueError('Ipv4 prefix has length < 128. and bits outside of prefix length not zero')
+            if bitmask & prefix != 0:
+                raise ValueError(
+                    'Ipv4 prefix has length < 128. and bits outside of prefix length not zero')
 
         return cls(bytes_data=packed_value, _type=_type)
 
     def pack(self):
-        tl = struct.pack("!BB", self.TYPE, self.full_length())
-        v = struct.pack("!%ds" % len(self.bytes_data), self.bytes_data)
+        tl = struct.pack("!BB", self.TYPE, self.full_length())  # pylint: disable=invalid-name
+        v = struct.pack("!%ds" % len(self.bytes_data), self.bytes_data)  # pylint: disable=invalid-name
         return tl + v
 
     def data(self):
@@ -461,6 +466,7 @@ class Ipv4prefix(DataType):
 
 
 class Vsa(DataType):
+    """https://tools.ietf.org/html/rfc8044#section-3.14"""
 
     DATA_TYPE_VALUE = 14
     VENDOR_ID_LEN = 4
@@ -481,8 +487,8 @@ class Vsa(DataType):
                                             packed_value)[0], _type=_type)
 
     def pack(self):
-        tl = struct.pack("!BB", self.TYPE, self.full_length())
-        v = struct.pack("!%ds" % (self.data_length()), self.bytes_data)
+        tl = struct.pack("!BB", self.TYPE, self.full_length())  # pylint: disable=invalid-name
+        v = struct.pack("!%ds" % (self.data_length()), self.bytes_data)  # pylint: disable=invalid-name
         return tl + v
 
     def data_length(self):
