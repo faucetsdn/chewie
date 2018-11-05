@@ -5,7 +5,8 @@ from chewie.radius import RadiusAttributesList, RadiusAccessRequest, Radius
 from chewie.radius_attributes import CallingStationId, UserName, MessageAuthenticator, EAPMessage
 from chewie.ethernet_packet import EthernetPacket
 from chewie.auth_8021x import Auth8021x
-from chewie.eap import Eap, EapIdentity, EapMd5Challenge, EapSuccess, EapFailure, EapLegacyNak, EapTTLS
+from chewie.eap import Eap, EapIdentity, EapMd5Challenge, EapSuccess, EapFailure, EapLegacyNak, \
+    EapTTLS, EapTLS, PARSERS_TYPES
 
 
 class EapMessage:
@@ -65,7 +66,8 @@ class Md5ChallengeMessage(EapMessage):
         return cls(src_mac, eap.packet_id, eap.code, eap.challenge, eap.extra_data)
 
 
-class TtlsMessage(EapMessage):
+class TlsMessageBase(EapMessage):
+    """TLS and TTLS will extend this class, but TTLS cannot be same type as TLS"""
     def __init__(self, src_mac, message_id, code, flags, extra_data):
         super().__init__(src_mac, message_id)
         self.code = code
@@ -75,6 +77,14 @@ class TtlsMessage(EapMessage):
     @classmethod
     def build(cls, src_mac, eap):
         return cls(src_mac, eap.packet_id, eap.code, eap.flags, eap.extra_data)
+
+
+class TlsMessage(TlsMessageBase):
+    pass
+
+
+class TtlsMessage(TlsMessageBase):
+    pass
 
 
 class EapolStartMessage(EapMessage):
@@ -99,6 +109,7 @@ EAP_MESSAGES = {
     Eap.IDENTITY: IdentityMessage,
     Eap.MD5_CHALLENGE: Md5ChallengeMessage,
     Eap.LEGACY_NAK: LegacyNakMessage,
+    Eap.TLS: TlsMessage,
     Eap.TTLS: TtlsMessage,
 }
 
@@ -126,7 +137,7 @@ class MessageParser:
     def eap_parse(data, src_mac):
         """Parses the actual EAP payload"""
         eap = Eap.parse(data)
-        if isinstance(eap, (EapIdentity, EapMd5Challenge, EapLegacyNak, EapTTLS)):
+        if isinstance(eap, tuple(PARSERS_TYPES.values())):
             return EAP_MESSAGES[eap.PACKET_TYPE].build(src_mac, eap)
         elif isinstance(eap, EapSuccess):
             return SuccessMessage.build(src_mac, eap)
@@ -232,6 +243,11 @@ class MessagePacker:
         elif isinstance(message, Md5ChallengeMessage):
             eap = EapMd5Challenge(message.code, message.message_id,
                                   message.challenge, message.extra_data)
+            version = 1
+            packet_type = 0
+            data = eap.pack()
+        elif isinstance(message, TlsMessage):
+            eap = EapTLS(message.code, message.message_id, message.flags, message.extra_data)
             version = 1
             packet_type = 0
             data = eap.pack()
