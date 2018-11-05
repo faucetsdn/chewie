@@ -6,14 +6,15 @@ services:
             context: .
             dockerfile: Dockerfile.wpasupplicant
         image: 'chewie/wpasupplicant:latest'
-        command: bash -c "wpa_supplicant -dd -c/tmp/wpasupplicant.conf -ieth0 -Dwired;"
+        command: bash -c "wpa_supplicant -dd -c/tmp/wpasupplicant/wired-tls.conf -ieth0 -Dwired;"
         networks:
             wpasupplicant-net:
                 ipv4_address: 172.23.0.111
         cap_add:
             - ALL
         volumes:
-            - ./wpasupplicant.conf:/tmp/wpasupplicant.conf
+            - ./etc/wpasupplicant/:/tmp/wpasupplicant/
+            - ./etc/wpasupplicant/cert/:/tmp/cert/
 
     test:
         build:
@@ -42,6 +43,7 @@ services:
         volumes:
             - "./etc/freeradius/clients.conf:/etc/freeradius/clients.conf:ro"
             - "./etc/freeradius/users:/etc/freeradius/users:ro"
+            - "./etc/freeradius/certs:/etc/freeradius/certs"
 
 networks:
     wpasupplicant-net:
