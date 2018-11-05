@@ -195,7 +195,7 @@ class MessageParserTestCase(unittest.TestCase):
         packed_message = MessagePacker.ethernet_pack(message,
                                                      MacAddress.from_string("44:44:44:44:44:44"),
                                                      MacAddress.from_string("00:00:00:11:11:01"))
-        self.assertEqual(expected_packed_message, packed_message, (len(expected_packed_message), expected_packed_message.hex(), len(packed_message), packed_message.hex()))
+        self.assertEqual(expected_packed_message, packed_message)
 
     def test_legacy_nak_message_parses(self):
         packed_message = build_byte_string("0180c2000003000000111101888e"

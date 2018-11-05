@@ -1,3 +1,5 @@
+"""Module for parsing & packing EAP"""
+
 import struct
 
 EAP_HEADER_LENGTH = 1 + 1 + 2
@@ -158,6 +160,7 @@ class EapLegacyNak(Eap):
 
 
 class EapTLSBase(Eap):
+    """EAPTLS & EAPTTLS have the same packet format."""
 
     def __init__(self, code, packet_id, flags, extra_data):
         self.code = code
