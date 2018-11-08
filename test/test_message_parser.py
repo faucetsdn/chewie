@@ -221,6 +221,6 @@ class MessageParserTestCase(unittest.TestCase):
 
         packed_radius = MessagePacker.radius_pack(eap_message, src_mac, username, radius_packet_id,
                                                   request_authenticator, state, secret,
-                                                  extra_attributes)
+                                                  extra_attributes=extra_attributes)
 
         self.assertEqual(packed_message, packed_radius)

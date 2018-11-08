@@ -171,7 +171,7 @@ class MessagePacker:
 
     @staticmethod
     def radius_pack(eap_message, src_mac, username, radius_packet_id,
-                    request_authenticator, state, secret, extra_attributes=None):
+                    request_authenticator, state, secret, nas_port=None, extra_attributes=None):
         """
         Packs up a RADIUS message to send to a RADIUS Server.
         Args:
@@ -193,6 +193,9 @@ class MessagePacker:
         attr_list = []
         attr_list.append(create_attribute('User-Name', username))
         attr_list.append(create_attribute('Calling-Station-Id', str(src_mac)))
+
+        if nas_port:
+            attr_list.append(create_attribute('NAS-Port', nas_port))
 
         attr_list.extend(extra_attributes)
 

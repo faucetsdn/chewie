@@ -21,6 +21,12 @@ def unpack_byte_string(byte_string):
     return "".join("%02x" % x for x in byte_string)
 
 
+def port_id_to_int(port_id):
+    """"Convert a port_id str '00:00:00:00:aa:01 to integer'"""
+    dp, port = str(port_id).split(':')[4:]
+    return int.from_bytes(struct.pack('!HH', int(dp, 16), int(port, 16)), 'big')  # pytype: disable=attribute-error
+
+
 class Chewie:
     """Facilitates EAP supplicant and RADIUS server communication"""
     SIOCGIFHWADDR = 0x8927
@@ -212,6 +218,7 @@ class Chewie:
                 data = MessagePacker.radius_pack(eap_message, src_mac, username,
                                                  radius_packet_id, request_authenticator, state,
                                                  self.radius_secret,
+                                                 port_id_to_int(port_id),
                                                  self.extra_radius_request_attributes)
                 self.radius_send(data)
                 self.logger.info("sent radius message.")
@@ -271,7 +278,8 @@ class Chewie:
     def prepare_extra_radius_attributes(self):
         """Create RADIUS Attirbutes to be sent with every RADIUS request"""
         attr_list = [create_attribute('Called-Station-Id', self.chewie_id),
-                     create_attribute('NAS-Port-Type', 15)]
+                     create_attribute('NAS-Port-Type', 15),
+                     create_attribute('NAS-Identifier', self.chewie_id)]
         return attr_list
 
     def get_interface_info(self):
