@@ -3,8 +3,9 @@
 
 import unittest
 from netils import build_byte_string
-from chewie.message_parser import MessageParser, MessagePacker, IdentityMessage, Md5ChallengeMessage, TtlsMessage, \
-    LegacyNakMessage
+from chewie.message_parser import MessageParser, MessagePacker, IdentityMessage, \
+    Md5ChallengeMessage, TtlsMessage, \
+    LegacyNakMessage, TlsMessage
 from chewie.message_parser import EapolStartMessage, EapolLogoffMessage, SuccessMessage, FailureMessage
 from chewie.mac_address import MacAddress
 from chewie.eap import Eap
@@ -171,6 +172,26 @@ class MessageParserTestCase(unittest.TestCase):
         message = TtlsMessage(src_mac=MacAddress.from_string("44:44:44:44:44:44"),
                               message_id=105, code=Eap.REQUEST,
                               flags=0x20, extra_data=b'')
+        packed_message = MessagePacker.ethernet_pack(message,
+                                                     MacAddress.from_string("44:44:44:44:44:44"),
+                                                     MacAddress.from_string("00:00:00:11:11:01"))
+        self.assertEqual(expected_packed_message, packed_message)
+
+    def test_tls_message_parses(self):
+        packed_message = build_byte_string("000000111101444444444444888e"
+                                           "010000b2026900b20d0016030100a7010000a303038c8007fa4ffe8f11fbe62debce4a1385e70be51efe77b105d205d2dc9ae815a5000038c02cc030009fcca9cca8ccaac02bc02f009ec024c028006bc023c0270067c00ac0140039c009c0130033009d009c003d003c0035002f00ff01000042000b000403000102000a000a0008001d0017001900180016000000170000000d0020001e060106020603050105020503040104020403030103020303020102020203")
+        message = MessageParser.ethernet_parse(packed_message)[0]
+        self.assertEqual(MacAddress.from_string("44:44:44:44:44:44"), message.src_mac)
+        self.assertEqual(105, message.message_id)
+        self.assertEqual(0, message.flags)
+        self.assertIsInstance(message, TlsMessage)
+
+    def test_tls_message_packs(self):
+        expected_packed_message = build_byte_string("000000111101444444444444888e"
+                                                    "010000b2026900b20d0016030100a7010000a303038c8007fa4ffe8f11fbe62debce4a1385e70be51efe77b105d205d2dc9ae815a5000038c02cc030009fcca9cca8ccaac02bc02f009ec024c028006bc023c0270067c00ac0140039c009c0130033009d009c003d003c0035002f00ff01000042000b000403000102000a000a0008001d0017001900180016000000170000000d0020001e060106020603050105020503040104020403030103020303020102020203")
+        message = TlsMessage(src_mac=MacAddress.from_string("44:44:44:44:44:44"),
+                              message_id=105, code=Eap.RESPONSE,
+                              flags=0x00, extra_data=build_byte_string('16030100a7010000a303038c8007fa4ffe8f11fbe62debce4a1385e70be51efe77b105d205d2dc9ae815a5000038c02cc030009fcca9cca8ccaac02bc02f009ec024c028006bc023c0270067c00ac0140039c009c0130033009d009c003d003c0035002f00ff01000042000b000403000102000a000a0008001d0017001900180016000000170000000d0020001e060106020603050105020503040104020403030103020303020102020203'))
         packed_message = MessagePacker.ethernet_pack(message,
                                                      MacAddress.from_string("44:44:44:44:44:44"),
                                                      MacAddress.from_string("00:00:00:11:11:01"))

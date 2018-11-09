@@ -1,9 +1,12 @@
+"""Module for parsing & packing EAP"""
+
 import struct
 
 EAP_HEADER_LENGTH = 1 + 1 + 2
 EAP_TYPE_LENGTH = 1
 
 PARSERS = {}
+PARSERS_TYPES = {}
 
 
 class Eap:
@@ -15,6 +18,7 @@ class Eap:
     IDENTITY = 1
     LEGACY_NAK = 3
     MD5_CHALLENGE = 4
+    TLS = 13
     TTLS = 21
 
     code = None
@@ -45,6 +49,7 @@ class Eap:
 
 def register_parser(cls):
     PARSERS[cls.PACKET_TYPE] = cls.parse
+    PARSERS_TYPES[cls.PACKET_TYPE] = cls
     return cls
 
 
@@ -154,9 +159,8 @@ class EapLegacyNak(Eap):
             (self.__class__.__name__, self.packet_id, self.desired_auth_types)
 
 
-@register_parser
-class EapTTLS(Eap):
-    PACKET_TYPE = 21
+class EapTLSBase(Eap):
+    """EAPTLS & EAPTTLS have the same packet format."""
 
     def __init__(self, code, packet_id, flags, extra_data):
         self.code = code
@@ -184,8 +188,18 @@ class EapTTLS(Eap):
             packed = struct.pack("!B%ds" % len(self.extra_data), self.flags, self.extra_data)
         else:
             packed = struct.pack("!B", self.flags)
-        return super(EapTTLS, self).pack(packed)
+        return super().pack(packed)
 
     def __repr__(self):
         return "%s(packet_id=%s, flags=%s, extra_data=%s)" % \
             (self.__class__.__name__, self.packet_id, self.flags, self.extra_data)
+
+
+@register_parser
+class EapTLS(EapTLSBase):
+    PACKET_TYPE = 13
+
+
+@register_parser
+class EapTTLS(EapTLSBase):
+    PACKET_TYPE = 21
