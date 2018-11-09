@@ -25,7 +25,7 @@ TO_RADIUS = Queue()
 
 def patch_things(func):
     """decorator to mock patch socket operations and random number generators"""
-    @patch('chewie.chewie.Chewie.get_interface_info', do_nothing)
+    @patch('chewie.chewie.Chewie.get_interface_index', do_nothing)
     @patch('chewie.chewie.Chewie.join_multicast_group', do_nothing)
     @patch('chewie.chewie.Chewie.radius_receive', radius_receive)
     @patch('chewie.chewie.Chewie.radius_send', radius_send)

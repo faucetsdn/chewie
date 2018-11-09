@@ -71,7 +71,6 @@ class Chewie:
         self.eventlets = None
         self.radius_socket = None
         self.interface_index = None
-        self.interface_address = None
 
         self.eventlets = []
 
@@ -80,7 +79,7 @@ class Chewie:
         self.logger.info("Starting")
         self.open_socket()
         self.open_radius_socket()
-        self.get_interface_info()
+        self.get_interface_index()
         self.join_multicast_group()
         self.start_threads_and_wait()
 
@@ -272,19 +271,6 @@ class Chewie:
         """Create RADIUS Attirbutes to be sent with every RADIUS request"""
         attr_list = [CalledStationId.create(self.chewie_id), NASPortType.create(15)]
         return attr_list
-
-    def get_interface_info(self):
-        """Get information about the EAP socket"""
-        self.get_interface_address()
-        self.get_interface_index()
-
-    def get_interface_address(self):
-        """Get MAC address of the EAP socket."""
-        # http://man7.org/linux/man-pages/man7/netdevice.7.html
-        ifreq = struct.pack('16sH6s', self.interface_name.encode("utf-8"), 0, b"")
-        response = ioctl(self.socket, self.SIOCGIFHWADDR, ifreq)
-        _interface_name, _address_family, interface_address = struct.unpack('16sH6s', response)
-        self.interface_address = MacAddress(interface_address)
 
     def get_interface_index(self):
         """Get the interface index of the EAP Socket"""
