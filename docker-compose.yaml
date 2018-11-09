@@ -32,6 +32,22 @@ services:
         volumes:
             - ./:/chewie-src/
 
+    hostapd:
+        build:
+            context: .
+            dockerfile: Dockerfile.hostapd
+        image: 'chewie/chewie:latest'
+        command: bash -c "ls /sys/class/net/ ; hostapd -i eth1 /tmp/hostapd.conf"
+        networks:
+            wpasupplicant-net:
+                ipv4_address: 172.23.0.112
+            radius-net:
+                ipv4_address: 172.24.0.112
+        cap_add:
+        - ALL
+        volumes:
+        - ./etc/hostapd/hostapd.conf:/tmp/hostapd.conf
+
     freeradius:
         build:
             context: .
