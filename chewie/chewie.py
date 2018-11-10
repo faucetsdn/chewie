@@ -56,7 +56,7 @@ class Chewie:
             self.chewie_id = chewie_id
         self.extra_radius_request_attributes = self.prepare_extra_radius_attributes()
 
-        self.state_machines = {}  # mac: sm
+        self.state_machines = {}  # mac: state_machine
         self.packet_id_to_mac = {}  # radius_packet_id: mac
         self.packet_id_to_request_authenticator = {}
 
@@ -147,9 +147,9 @@ class Chewie:
         if port_id_str not in self.state_machines:
             self.state_machines[port_id_str] = {}
 
-        for src_mac, sm in self.state_machines[port_id_str].items():
+        for src_mac, state_machine in self.state_machines[port_id_str].items():
             event = EventPortStatusChange(status)
-            sm.event(event)
+            state_machine.event(event)
 
     def send_eap_messages(self):
         """send eap messages to supplicant forever."""
@@ -180,9 +180,9 @@ class Chewie:
                 message, dst_mac = MessageParser.ethernet_parse(packed_message)
                 self.logger.info("eap EAP(): %s", message)
                 self.logger.info("Received message: %s" % message.__dict__)
-                sm = self.get_state_machine(message.src_mac, dst_mac)
+                state_machine = self.get_state_machine(message.src_mac, dst_mac)
                 event = EventMessageReceived(message, dst_mac)
-                sm.event(event)
+                state_machine.event(event)
             except Exception as e:
                 self.logger.exception(e)
 
@@ -232,13 +232,13 @@ class Chewie:
                 radius = MessageParser.radius_parse(packed_message, self.radius_secret,
                                                     self.request_authenticator_callback)
                 self.logger.info("Received RADIUS message: %s", radius)
-                eap_msg = radius.attributes.find(EAPMessage.DESCRIPTION)
-                sm = self.get_state_machine_from_radius_packet_id(radius.packet_id)
-                eap_msg = eap_msg.data_type.data()
+                eap_msg_attribute = radius.attributes.find(EAPMessage.DESCRIPTION)
+                state_machine = self.get_state_machine_from_radius_packet_id(radius.packet_id)
+                eap_msg = eap_msg_attribute.data_type.data()
                 state = radius.attributes.find(State.DESCRIPTION)
                 self.logger.info("radius EAP: %s", eap_msg)
                 event = EventRadiusMessageReceived(eap_msg, state, radius.attributes.to_dict())
-                sm.event(event)
+                state_machine.event(event)
             except Exception as e:
                 self.logger.exception(e)
 
@@ -306,19 +306,19 @@ class Chewie:
         """
         port_id_str = str(port_id)
         src_mac_str = str(src_mac)
-        port_sms = self.state_machines.get(port_id_str, None)
-        if port_sms is None:
+        port_state_machines = self.state_machines.get(port_id_str, None)
+        if port_state_machines is None:
             self.state_machines[port_id_str] = {}
-        sm = self.state_machines[port_id_str].get(src_mac_str, None)
-        if not sm:
-            sm = FullEAPStateMachine(self.eap_output_messages, self.radius_output_messages, src_mac,
+        state_machine = self.state_machines[port_id_str].get(src_mac_str, None)
+        if not state_machine:
+            state_machine = FullEAPStateMachine(self.eap_output_messages, self.radius_output_messages, src_mac,
                                      self.timer_scheduler, self.auth_success,
                                      self.auth_failure, self.auth_logoff, self.logger.name)
-            sm.eapRestart = True
+            state_machine.eapRestart = True
             # TODO what if port is not actually enabled, but then how did they auth?
-            sm.portEnabled = True
-            self.state_machines[port_id_str][src_mac_str] = sm
-        return sm
+            state_machine.portEnabled = True
+            self.state_machines[port_id_str][src_mac_str] = state_machine
+        return state_machine
 
     def get_next_radius_packet_id(self):
         """Calulate the next RADIUS Packet ID
