@@ -16,22 +16,18 @@ from netils import build_byte_string
 from chewie.chewie import Chewie
 from chewie.eap_state_machine import FullEAPStateMachine
 from chewie.mac_address import MacAddress
+from chewie.eap_socket import EapSocket
 
 FROM_SUPPLICANT = Queue()
 TO_SUPPLICANT = Queue()
 FROM_RADIUS = Queue()
 TO_RADIUS = Queue()
 
-
 def patch_things(func):
     """decorator to mock patch socket operations and random number generators"""
-    @patch('chewie.chewie.Chewie.get_interface_index', do_nothing)
-    @patch('chewie.chewie.Chewie.join_multicast_group', do_nothing)
     @patch('chewie.chewie.Chewie.radius_receive', radius_receive)
     @patch('chewie.chewie.Chewie.radius_send', radius_send)
-    @patch('chewie.chewie.Chewie.eap_send', eap_send)
-    @patch('chewie.chewie.Chewie.eap_receive', eap_receive)
-    @patch('chewie.chewie.Chewie.open_socket', do_nothing)
+    @patch('chewie.chewie.EapSocket', FakeEapSocket)
     @patch('chewie.chewie.os.urandom', urandom_helper)
     @patch('chewie.chewie.FullEAPStateMachine.nextId', nextId)
     @patch('chewie.chewie.Chewie.get_next_radius_packet_id', get_next_radius_packet_id)
@@ -90,24 +86,37 @@ SUPPLICANT_REPLY_GENERATOR = None  # supplicant_replies()
 RADIUS_REPLY_GENERATOR = None  # radius_replies()
 
 
-def eap_receive(chewie):  # pylint: disable=unused-argument
-    """mocked chewie.eap_receive"""
-    print('mocked eap_receive')
-    got = FROM_SUPPLICANT.get()
-    return got
+
+class FakeEapSocket:
+    def __init__(self, _interface_name):
+        # TODO inject queues in constructor instead of using globals
+        pass
+
+    def setup(self):
+        pass
+
+    def receive(self):  # pylint: disable=unused-argument
+        global FROM_SUPPLICANT
+
+        print('mocked eap_receive')
+        got = FROM_SUPPLICANT.get()
+        return got
 
 
-def eap_send(chewie, data=None):  # pylint: disable=unused-argument
-    """mocked chewie.eap_send"""
-    print('mocked eap_send')
-    if data:
-        TO_SUPPLICANT.put(data)
-    try:
-        next_reply = next(SUPPLICANT_REPLY_GENERATOR)
-    except StopIteration:
-        return
-    if next_reply:
-        FROM_SUPPLICANT.put(next_reply)
+    def send(self, data=None):  # pylint: disable=unused-argument
+        global TO_SUPPLICANT
+        global FROM_SUPPLICANT
+        global SUPPLICANT_REPLY_GENERATOR
+
+        print('mocked eap_send')
+        if data:
+            TO_SUPPLICANT.put(data)
+        try:
+            next_reply = next(SUPPLICANT_REPLY_GENERATOR)
+        except StopIteration:
+            return
+        if next_reply:
+            FROM_SUPPLICANT.put(next_reply)
 
 
 def radius_receive(chewie):  # pylint: disable=unused-argument
