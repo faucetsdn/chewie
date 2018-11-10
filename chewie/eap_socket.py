@@ -1,10 +1,13 @@
+"""Handle the EAP socket
+"""
 from fcntl import ioctl
+import struct
 
 from eventlet.green import socket
 from chewie.mac_address import MacAddress
-import struct
 
 class EapSocket:
+    """Handle the EAP socket"""
     SIOCGIFINDEX = 0x8933
     PACKET_MR_PROMISC = 1
     SOL_PACKET = 263
@@ -13,9 +16,11 @@ class EapSocket:
 
     def __init__(self, interface_name):
         self.socket = None
+        self.interface_index = None
         self.interface_name = interface_name
 
     def setup(self):
+        """Set up the socket"""
         self.open()
         self.get_interface_index()
         self.set_interface_promiscuous()
@@ -43,7 +48,6 @@ class EapSocket:
 
     def set_interface_promiscuous(self):
         """Sets the EAP interface to be able to receive EAP messages"""
-        # TODO this works but should blank out the end bytes
         request = struct.pack("IHH8s", self.interface_index, self.PACKET_MR_PROMISC,
-                           len(self.EAP_ADDRESS.address), self.EAP_ADDRESS.address)
+                              len(self.EAP_ADDRESS.address), self.EAP_ADDRESS.address)
         self.socket.setsockopt(self.SOL_PACKET, self.PACKET_ADD_MEMBERSHIP, request)

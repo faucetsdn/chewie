@@ -146,7 +146,7 @@ class Chewie:
         self.eap_socket.setup()
 
     def setup_radius_socket(self):
-        self.radius_socket = RadiusSocket(self.radius_listen_ip, 
+        self.radius_socket = RadiusSocket(self.radius_listen_ip,
                                           self.radius_listen_port,
                                           self.radius_server_ip,
                                           self.radius_server_port)
@@ -271,8 +271,8 @@ class Chewie:
         state_machine = self.state_machines[port_id_str].get(src_mac_str, None)
         if not state_machine:
             state_machine = FullEAPStateMachine(self.eap_output_messages, self.radius_output_messages, src_mac,
-                                     self.timer_scheduler, self.auth_success,
-                                     self.auth_failure, self.auth_logoff, self.logger.name)
+                                                self.timer_scheduler, self.auth_success,
+                                                self.auth_failure, self.auth_logoff, self.logger.name)
             state_machine.eapRestart = True
             # TODO what if port is not actually enabled, but then how did they auth?
             state_machine.portEnabled = True

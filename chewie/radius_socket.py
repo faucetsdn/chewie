@@ -1,10 +1,9 @@
-from fcntl import ioctl
-
+"""Handle the RADIUS socket
+"""
 from eventlet.green import socket
-from chewie.mac_address import MacAddress
-import struct
 
 class RadiusSocket:
+    """Handle the RADIUS socket"""
     def __init__(self, listen_ip, listen_port, server_ip, server_port):
         self.socket = None
         self.listen_ip = listen_ip
