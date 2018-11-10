@@ -232,9 +232,9 @@ class Chewie:
                 radius = MessageParser.radius_parse(packed_message, self.radius_secret,
                                                     self.request_authenticator_callback)
                 self.logger.info("Received RADIUS message: %s", radius)
-                eap_msg = radius.attributes.find(EAPMessage.DESCRIPTION)
+                eap_msg_attribute = radius.attributes.find(EAPMessage.DESCRIPTION)
                 state_machine = self.get_state_machine_from_radius_packet_id(radius.packet_id)
-                eap_msg = eap_msg.data_type.data()
+                eap_msg = eap_msg_attribute.data_type.data()
                 state = radius.attributes.find(State.DESCRIPTION)
                 self.logger.info("radius EAP: %s", eap_msg)
                 event = EventRadiusMessageReceived(eap_msg, state, radius.attributes.to_dict())
