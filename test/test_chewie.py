@@ -16,7 +16,6 @@ from netils import build_byte_string
 from chewie.chewie import Chewie
 from chewie.eap_state_machine import FullEAPStateMachine
 from chewie.mac_address import MacAddress
-from chewie.eap_socket import EapSocket
 
 FROM_SUPPLICANT = Queue()
 TO_SUPPLICANT = Queue()
@@ -25,9 +24,8 @@ TO_RADIUS = Queue()
 
 def patch_things(func):
     """decorator to mock patch socket operations and random number generators"""
-    @patch('chewie.chewie.Chewie.radius_receive', radius_receive)
-    @patch('chewie.chewie.Chewie.radius_send', radius_send)
     @patch('chewie.chewie.EapSocket', FakeEapSocket)
+    @patch('chewie.chewie.RadiusSocket', FakeRadiusSocket)
     @patch('chewie.chewie.os.urandom', urandom_helper)
     @patch('chewie.chewie.FullEAPStateMachine.nextId', nextId)
     @patch('chewie.chewie.Chewie.get_next_radius_packet_id', get_next_radius_packet_id)
@@ -85,8 +83,6 @@ def urandom_helper(size):  # pylint: disable=unused-argument
 SUPPLICANT_REPLY_GENERATOR = None  # supplicant_replies()
 RADIUS_REPLY_GENERATOR = None  # radius_replies()
 
-
-
 class FakeEapSocket:
     def __init__(self, _interface_name):
         # TODO inject queues in constructor instead of using globals
@@ -118,25 +114,36 @@ class FakeEapSocket:
         if next_reply:
             FROM_SUPPLICANT.put(next_reply)
 
+class FakeRadiusSocket:
+    def __init__(self, _listen_ip, _listen_port, _server_ip, _server_port):
+        # TODO inject queues in constructor instead of using globals
+        pass
 
-def radius_receive(chewie):  # pylint: disable=unused-argument
-    """mocked chewie.radius_receive"""
-    print('mocked radius_receive')
-    got = FROM_RADIUS.get()
-    print('got RADIUS', got)
-    return got
+    def setup(self):
+        pass
+
+    def receive(self):  # pylint: disable=unused-argument
+        global FROM_RADIUS
+
+        print('mocked radius_receive')
+        got = FROM_RADIUS.get()
+        print('got RADIUS', got)
+        return got
 
 
-def radius_send(chewie, data):  # pylint: disable=unused-argument
-    """mocked chewie.radius_send"""
-    print('mocked radius_send')
-    TO_RADIUS.put(data)
-    try:
-        next_reply = next(RADIUS_REPLY_GENERATOR)
-    except StopIteration:
-        return
-    if next_reply:
-        FROM_RADIUS.put(next_reply)
+    def send(self, data):  # pylint: disable=unused-argument
+        global TO_RADIUS
+        global FROM_RADIUS
+        global RADIUS_REPLY_GENERATOR
+
+        print('mocked radius_send')
+        TO_RADIUS.put(data)
+        try:
+            next_reply = next(RADIUS_REPLY_GENERATOR)
+        except StopIteration:
+            return
+        if next_reply:
+            FROM_RADIUS.put(next_reply)
 
 
 def do_nothing(chewie):  # pylint: disable=unused-argument

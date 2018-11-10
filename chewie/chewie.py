@@ -7,13 +7,13 @@ from eventlet.green import socket
 from eventlet.queue import Queue
 
 from chewie.eap_socket import EapSocket
+from chewie.radius_socket import RadiusSocket
 from chewie.eap_state_machine import FullEAPStateMachine
 from chewie.radius_attributes import EAPMessage, State, CalledStationId, NASPortType
 from chewie.message_parser import MessageParser, MessagePacker
 from chewie.mac_address import MacAddress
 from chewie.event import EventMessageReceived, EventRadiusMessageReceived, EventPortStatusChange
 from chewie.utils import get_logger
-
 
 def unpack_byte_string(byte_string):
     """unpacks a byte string"""
@@ -69,8 +69,8 @@ class Chewie:
     def run(self):
         """setup chewie and start socket eventlet threads"""
         self.logger.info("Starting")
-        self.get_eap_socket()
-        self.open_radius_socket()
+        self.setup_eap_socket()
+        self.setup_radius_socket()
         self.start_threads_and_wait()
 
     def start_threads_and_wait(self):
@@ -141,9 +141,18 @@ class Chewie:
             event = EventPortStatusChange(status)
             state_machine.event(event)
 
-    def get_eap_socket(self):
+    def setup_eap_socket(self):
         self.eap_socket = EapSocket(self.interface_name)
         self.eap_socket.setup()
+
+    def setup_radius_socket(self):
+        self.radius_socket = RadiusSocket(self.radius_listen_ip, 
+                                          self.radius_listen_port,
+                                          self.radius_server_ip,
+                                          self.radius_server_port)
+        self.radius_socket.setup()
+        self.logger.info("Radius Listening on %s:%d" % (self.radius_listen_ip,
+                                                        self.radius_listen_port))
 
     def send_eap_messages(self):
         """send eap messages to supplicant forever."""
@@ -197,15 +206,10 @@ class Chewie:
                                                  radius_packet_id, request_authenticator, state,
                                                  self.radius_secret,
                                                  self.extra_radius_request_attributes)
-                self.radius_send(data)
+                self.radius_socket.send(data)
                 self.logger.info("sent radius message.")
             except Exception as e:
                 self.logger.exception(e)
-
-    def radius_send(self, data):
-        """Sends on the radius socket
-            data (bytes): what to send"""
-        self.radius_socket.sendto(data, (self.radius_server_ip, self.radius_server_port))
 
     def receive_radius_messages(self):
         """receive RADIUS messages from RADIUS server forever."""
@@ -213,7 +217,7 @@ class Chewie:
             try:
                 sleep(0)
                 self.logger.info("waiting for radius.")
-                packed_message = self.radius_receive()
+                packed_message = self.radius_socket.receive()
                 radius = MessageParser.radius_parse(packed_message, self.radius_secret,
                                                     self.request_authenticator_callback)
                 self.logger.info("Received RADIUS message: %s", radius)
@@ -227,10 +231,6 @@ class Chewie:
             except Exception as e:
                 self.logger.exception(e)
 
-    def radius_receive(self):
-        """Receives from the radius socket"""
-        return self.radius_socket.recv(4096)
-
     def request_authenticator_callback(self, packet_id):
         """Callback to get the RADIUS request Authenticator
         Args:
@@ -239,13 +239,6 @@ class Chewie:
             the request authenticator sent with the packet_id
             """
         return self.packet_id_to_request_authenticator[packet_id]
-
-    def open_radius_socket(self):
-        """Setup RADIUS Socket"""
-        self.radius_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # pylint: disable=no-member
-        self.logger.info("Radius Listening on %s:%d" % (self.radius_listen_ip,
-                                                        self.radius_listen_port))
-        self.radius_socket.bind((self.radius_listen_ip, self.radius_listen_port))
 
     def prepare_extra_radius_attributes(self):
         """Create RADIUS Attirbutes to be sent with every RADIUS request"""
