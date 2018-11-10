@@ -136,11 +136,11 @@ def do_nothing(chewie):  # pylint: disable=unused-argument
     pass
 
 
-def nextId(eap_sm):  # pylint: disable=invalid-name
+def nextId(eap_state_machine):  # pylint: disable=invalid-name
     """mocked FullEAPStateMachine.nextId"""
-    if eap_sm.currentId is None:
+    if eap_state_machine.currentId is None:
         return 116
-    _id = eap_sm.currentId + 1
+    _id = eap_state_machine.currentId + 1
     if _id > 255:
         return random.randint(0, 200)
     return _id
@@ -230,21 +230,21 @@ class ChewieTestCase(unittest.TestCase):
         FROM_RADIUS = Queue()
         TO_RADIUS = Queue()
 
-    def test_get_sm(self):
+    def test_get_state_machine(self):
         """Tests Chewie.get_state_machine()"""
         self.assertEqual(len(self.chewie.state_machines), 0)
-        # creates the sm if it doesn't exist
-        sm = self.chewie.get_state_machine('12:34:56:78:9a:bc',  # pylint: disable=invalid-name
+        # creates the state_machine if it doesn't exist
+        state_machine = self.chewie.get_state_machine('12:34:56:78:9a:bc',  # pylint: disable=invalid-name
                                            '00:00:00:00:00:01')
 
         self.assertEqual(len(self.chewie.state_machines), 1)
 
-        self.assertIs(sm, self.chewie.get_state_machine('12:34:56:78:9a:bc',
+        self.assertIs(state_machine, self.chewie.get_state_machine('12:34:56:78:9a:bc',
                                                         '00:00:00:00:00:01'))
 
-        self.assertIsNot(sm, self.chewie.get_state_machine('12:34:56:78:9a:bc',
+        self.assertIsNot(state_machine, self.chewie.get_state_machine('12:34:56:78:9a:bc',
                                                            '00:00:00:00:00:02'))
-        self.assertIsNot(sm, self.chewie.get_state_machine('ab:cd:ef:12:34:56',
+        self.assertIsNot(state_machine, self.chewie.get_state_machine('ab:cd:ef:12:34:56',
                                                            '00:00:00:00:00:01'))
 
         # 2 ports
@@ -254,15 +254,15 @@ class ChewieTestCase(unittest.TestCase):
         # port 2 has 1 mac
         self.assertEqual(len(self.chewie.state_machines['00:00:00:00:00:02']), 1)
 
-    def test_get_sm_by_packet_id(self):
-        """Tests Chewie.get_sm_by_packet_id()"""
+    def test_get_state_machine_by_packet_id(self):
+        """Tests Chewie.get_state_machine_by_packet_id()"""
         self.chewie.packet_id_to_mac[56] = {'src_mac': '12:34:56:78:9a:bc',
                                             'port_id': '00:00:00:00:00:01'}
-        sm = self.chewie.get_state_machine('12:34:56:78:9a:bc',  # pylint: disable=invalid-name
+        state_machine = self.chewie.get_state_machine('12:34:56:78:9a:bc',  # pylint: disable=invalid-name
                                            '00:00:00:00:00:01')
 
         self.assertIs(self.chewie.get_state_machine_from_radius_packet_id(56),
-                      sm)
+                      state_machine)
         with self.assertRaises(KeyError):
             self.chewie.get_state_machine_from_radius_packet_id(20)
 
