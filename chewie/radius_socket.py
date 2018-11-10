@@ -6,6 +6,7 @@ import struct
 
 class RadiusSocket:
     def __init__(self, listen_ip, listen_port, server_ip, server_port):
+        self.socket = None
         self.listen_ip = listen_ip
         self.listen_port = listen_port
         self.server_ip = server_ip

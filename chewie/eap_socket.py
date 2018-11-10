@@ -12,6 +12,7 @@ class EapSocket:
     EAP_ADDRESS = MacAddress.from_string("01:80:c2:00:00:03")
 
     def __init__(self, interface_name):
+        self.socket = None
         self.interface_name = interface_name
 
     def setup(self):
