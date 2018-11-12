@@ -1,6 +1,8 @@
 """Entry point for 802.1X speaker.
 """
 import os
+import struct
+
 from chewie import timer_scheduler
 from eventlet import sleep, GreenPool
 from eventlet.green import socket
@@ -9,7 +11,7 @@ from eventlet.queue import Queue
 from chewie.eap_socket import EapSocket
 from chewie.radius_socket import RadiusSocket
 from chewie.eap_state_machine import FullEAPStateMachine
-from chewie.radius_attributes import EAPMessage, State, CalledStationId, NASPortType
+from chewie.radius_attributes import EAPMessage, State, CalledStationId, NASIdentifier, NASPortType
 from chewie.message_parser import MessageParser, MessagePacker
 from chewie.mac_address import MacAddress
 from chewie.event import EventMessageReceived, EventRadiusMessageReceived, EventPortStatusChange
@@ -18,6 +20,12 @@ from chewie.utils import get_logger
 def unpack_byte_string(byte_string):
     """unpacks a byte string"""
     return "".join("%02x" % x for x in byte_string)
+
+
+def port_id_to_int(port_id):
+    """"Convert a port_id str '00:00:00:00:aa:01 to integer'"""
+    dp, port = str(port_id).split(':')[4:]
+    return int.from_bytes(struct.pack('!HH', int(dp, 16), int(port, 16)), 'big')  # pytype: disable=attribute-error
 
 
 class Chewie:
@@ -210,6 +218,7 @@ class Chewie:
                 data = MessagePacker.radius_pack(eap_message, src_mac, username,
                                                  radius_packet_id, request_authenticator, state,
                                                  self.radius_secret,
+                                                 port_id_to_int(port_id),
                                                  self.extra_radius_request_attributes)
                 self.radius_socket.send(data)
                 self.logger.info("sent radius message.")
@@ -247,7 +256,9 @@ class Chewie:
 
     def prepare_extra_radius_attributes(self):
         """Create RADIUS Attirbutes to be sent with every RADIUS request"""
-        attr_list = [CalledStationId.create(self.chewie_id), NASPortType.create(15)]
+        attr_list = [CalledStationId.create(self.chewie_id),
+                     NASPortType.create(15),
+                     NASIdentifier.create(self.chewie_id)]
         return attr_list
 
     def get_state_machine_from_radius_packet_id(self, packet_id):

@@ -74,6 +74,14 @@ class UserName(Attribute):
 
 
 @register_attribute_type
+class NASPort(Attribute):
+    """Service-Type https://tools.ietf.org/html/rfc2865#section-5.5"""
+    TYPE = 5
+    DATA_TYPE = Integer
+    DESCRIPTION = "NAS-Port"
+
+
+@register_attribute_type
 class ServiceType(Attribute):
     """Service-Type https://tools.ietf.org/html/rfc2865#section-5.6"""
     TYPE = 6
@@ -137,6 +145,14 @@ class CallingStationId(Attribute):
     TYPE = 31
     DATA_TYPE = Text
     DESCRIPTION = "Calling-Station-Id"
+
+
+@register_attribute_type
+class NASIdentifier(Attribute):
+    """Calling-Station-Id https://tools.ietf.org/html/rfc2865#section-5.32"""
+    TYPE = 32
+    DATA_TYPE = Text
+    DESCRIPTION = "NAS-Identifier"
 
 
 @register_attribute_type
