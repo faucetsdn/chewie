@@ -47,14 +47,16 @@ class Eap:
         return header + packed_body
 
 
-
 def register_parser(packet_types=None):
     def wrapped(cls):
         if not packet_types:
             PARSERS[cls.PACKET_TYPE] = cls.parse
+            PARSERS_TYPES[cls.PACKET_TYPE] = cls
+
         else:
             for packet_type in packet_types:
                 PARSERS[packet_type] = cls.parse
+                PARSERS_TYPES[packet_type] = cls
         return cls
     return wrapped
 
@@ -112,7 +114,8 @@ class EapFailure(Eap):
         return "%s(packet_id=%s)" % \
             (self.__class__.__name__, self.packet_id)
 
-@register_parser(packet_types=[Eap.LEGACY_NAK, Eap.MD5_CHALLENGE, Eap.TTLS])
+
+@register_parser(packet_types=[Eap.LEGACY_NAK, Eap.MD5_CHALLENGE, Eap.TLS, Eap.TTLS])
 class EapGeneric(Eap):
     """Handles the EAP method e.g. TLS, TTLS, MD5, ..."""
     PACKET_TYPE = -1
