@@ -33,7 +33,7 @@ class Eap:
                                          packed_message[EAP_HEADER_LENGTH :
                                                         EAP_HEADER_LENGTH + EAP_TYPE_LENGTH])
             data = packed_message[EAP_HEADER_LENGTH+EAP_TYPE_LENGTH:length]
-            return PARSERS.get(packet_type, EapGeneric.parse)(code, packet_id, packet_type, data)
+            return PARSERS[packet_type](code, packet_id, packet_type, data)
         elif code == Eap.SUCCESS:
             return EapSuccess(packet_id)
         elif code == Eap.FAILURE:
@@ -47,13 +47,19 @@ class Eap:
         return header + packed_body
 
 
-def register_parser(cls):
-    PARSERS[cls.PACKET_TYPE] = cls.parse
-    PARSERS_TYPES[cls.PACKET_TYPE] = cls
-    return cls
+
+def register_parser(packet_types=None):
+    def wrapped(cls):
+        if not packet_types:
+            PARSERS[cls.PACKET_TYPE] = cls.parse
+        else:
+            for packet_type in packet_types:
+                PARSERS[packet_type] = cls.parse
+        return cls
+    return wrapped
 
 
-@register_parser
+@register_parser()
 class EapIdentity(Eap):
     PACKET_TYPE = 1
 
@@ -106,7 +112,7 @@ class EapFailure(Eap):
         return "%s(packet_id=%s)" % \
             (self.__class__.__name__, self.packet_id)
 
-
+@register_parser(packet_types=[Eap.LEGACY_NAK, Eap.MD5_CHALLENGE, Eap.TTLS])
 class EapGeneric(Eap):
     """Handles the EAP method e.g. TLS, TTLS, MD5, ..."""
     PACKET_TYPE = -1
