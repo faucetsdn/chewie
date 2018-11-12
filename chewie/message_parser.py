@@ -39,7 +39,7 @@ class IdentityMessage(EapMessage):
 
     @classmethod
     def build(cls, src_mac, eap):
-        return cls(src_mac, eap.packet_id, eap.code, eap.identity)
+        return cls(src_mac, eap.packet_id, eap.code, eap.identity)  # pytype: disable=attribute-error
 
 
 class EapolStartMessage(EapMessage):
@@ -70,7 +70,7 @@ class GenericMessage(EapMessage):
 
     @classmethod
     def build(cls, src_mac, eap):
-        return cls(src_mac, eap.packet_id, eap.code, eap.PACKET_TYPE, eap.extra_data)
+        return cls(src_mac, eap.packet_id, eap.code, eap.PACKET_TYPE, eap.extra_data)  # pytype: disable=attribute-error
 
 
 EAP_MESSAGES = {
