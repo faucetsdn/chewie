@@ -19,6 +19,7 @@ from chewie.message_parser import EapolStartMessage, IdentityMessage, Md5Challen
 from chewie.eap_state_machine import FullEAPStateMachine
 from chewie.event import EventMessageReceived, EventRadiusMessageReceived, EventPortStatusChange
 from chewie.utils import get_logger
+from helpers import FakeTimerScheduler
 
 
 def check_counters(_func=None, *,
@@ -45,43 +46,6 @@ def check_counters(_func=None, *,
         return decorator_check_counters
     else:
         return decorator_check_counters(_func)
-
-class FakeTimerJob:
-    def __init__(self, function, args, timeout):
-        self.function = function
-        self.args = args
-        self.timeout = timeout
-        self.is_cancelled = False
-
-    def cancel(self):
-        self.is_cancelled = True
-
-    def cancelled(self):
-        return self.is_cancelled
-
-    def run(self):
-        if not self.is_cancelled:
-            self.function(*self.args)
-
-class FakeTimerScheduler:
-    def __init__(self):
-        self.jobs = []
-
-    def call_later(self, timeout, func, *args):
-        if not args:
-            args = []
-
-        job = FakeTimerJob(func, args, timeout)
-
-        self.jobs.append(job)
-
-        return job
-
-    def run_jobs(self):
-        while self.jobs:
-            self.jobs.sort(key=lambda x: x.timeout)
-            job = self.jobs.pop(0)
-            job.run()
 
 class FullStateMachineStartTestCase(unittest.TestCase):
     # TODO tests could be more thorough, and test that

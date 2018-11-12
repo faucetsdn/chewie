@@ -16,6 +16,7 @@ from netils import build_byte_string
 from chewie.chewie import Chewie
 from chewie.eap_state_machine import FullEAPStateMachine
 from chewie.mac_address import MacAddress
+from helpers import FakeTimerScheduler
 
 FROM_SUPPLICANT = Queue()
 TO_SUPPLICANT = Queue()
@@ -235,6 +236,8 @@ class ChewieTestCase(unittest.TestCase):
                              auth_handler, failure_handler, logoff_handler,
                              '127.0.0.1', 1812, 'SECRET',
                              '44:44:44:44:44:44')
+        self.fake_scheduler = FakeTimerScheduler()
+        self.chewie.timer_scheduler = self.fake_scheduler
 
         global FROM_SUPPLICANT  # pylint: disable=global-statement
         global TO_SUPPLICANT  # pylint: disable=global-statement
@@ -298,7 +301,8 @@ class ChewieTestCase(unittest.TestCase):
         thread.start()
 
         FROM_SUPPLICANT.put(build_byte_string("0000000000010242ac17006f888e01010000"))
-        time.sleep(1)
+        while FROM_SUPPLICANT.qsize():
+            time.sleep(0.1)
 
         self.assertEqual(
             self.chewie.get_state_machine('02:42:ac:17:00:6f',
@@ -328,7 +332,8 @@ class ChewieTestCase(unittest.TestCase):
         self.chewie.get_state_machine(MacAddress.from_string('02:42:ac:17:00:6f'),
                                       MacAddress.from_string('00:00:00:00:00:01'))
         FROM_SUPPLICANT.put(build_byte_string("0000000000010242ac17006f888e01010000"))
-        time.sleep(1)
+        while FROM_SUPPLICANT.qsize():
+            time.sleep(0.1)
 
         self.assertEqual(
             self.chewie.get_state_machine('02:42:ac:17:00:6f',
@@ -350,7 +355,10 @@ class ChewieTestCase(unittest.TestCase):
                                           '00:00:00:00:00:01')).DEFAULT_TIMEOUT = 0.5
 
         FROM_SUPPLICANT.put(build_byte_string("0000000000010242ac17006f888e01010000"))
-        time.sleep(4)
+
+        while not self.fake_scheduler.jobs:
+            time.sleep(0.1)
+        self.fake_scheduler.run_jobs()
 
         self.assertEqual(
             self.chewie.get_state_machine('02:42:ac:17:00:6f',
@@ -371,7 +379,10 @@ class ChewieTestCase(unittest.TestCase):
                                           '00:00:00:00:00:01')).DEFAULT_TIMEOUT = 0.5
 
         FROM_SUPPLICANT.put(build_byte_string("0000000000010242ac17006f888e01010000"))
-        time.sleep(2)
+
+        while not self.fake_scheduler.jobs:
+            time.sleep(0.1)
+        self.fake_scheduler.run_jobs()
 
         self.assertEqual(
             self.chewie.get_state_machine('02:42:ac:17:00:6f',
