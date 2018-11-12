@@ -5,8 +5,7 @@ from chewie.radius import RadiusAttributesList, RadiusAccessRequest, Radius
 from chewie.radius_attributes import CallingStationId, UserName, MessageAuthenticator, EAPMessage
 from chewie.ethernet_packet import EthernetPacket
 from chewie.auth_8021x import Auth8021x
-from chewie.eap import Eap, EapIdentity, EapMd5Challenge, EapSuccess, EapFailure, EapLegacyNak, \
-    EapTTLS, EapTLS, PARSERS_TYPES
+from chewie.eap import Eap, EapIdentity, EapSuccess, EapFailure, EapGeneric, PARSERS_TYPES
 
 
 class EapMessage:
@@ -43,50 +42,6 @@ class IdentityMessage(EapMessage):
         return cls(src_mac, eap.packet_id, eap.code, eap.identity)
 
 
-class LegacyNakMessage(EapMessage):
-    def __init__(self, src_mac, message_id, code, desired_auth_types):
-        super().__init__(src_mac, message_id)
-        self.code = code
-        self.desired_auth_types = desired_auth_types
-
-    @classmethod
-    def build(cls, src_mac, eap):
-        return cls(src_mac, eap.packet_id, eap.code, eap.desired_auth_types)
-
-
-class Md5ChallengeMessage(EapMessage):
-    def __init__(self, src_mac, message_id, code, challenge, extra_data):
-        super().__init__(src_mac, message_id)
-        self.code = code
-        self.challenge = challenge
-        self.extra_data = extra_data
-
-    @classmethod
-    def build(cls, src_mac, eap):
-        return cls(src_mac, eap.packet_id, eap.code, eap.challenge, eap.extra_data)
-
-
-class TlsMessageBase(EapMessage):
-    """TLS and TTLS will extend this class, but TTLS cannot be same type as TLS"""
-    def __init__(self, src_mac, message_id, code, flags, extra_data):
-        super().__init__(src_mac, message_id)
-        self.code = code
-        self.flags = flags
-        self.extra_data = extra_data
-
-    @classmethod
-    def build(cls, src_mac, eap):
-        return cls(src_mac, eap.packet_id, eap.code, eap.flags, eap.extra_data)
-
-
-class TlsMessage(TlsMessageBase):
-    pass
-
-
-class TtlsMessage(TlsMessageBase):
-    pass
-
-
 class EapolStartMessage(EapMessage):
     def __init__(self, src_mac):
         super().__init__(src_mac, None)
@@ -105,12 +60,25 @@ class EapolLogoffMessage(EapMessage):
         return cls(src_mac)
 
 
+class GenericMessage(EapMessage):
+    """Handles the EAP method e.g. TLS, TTLS, MD5, ..."""
+    def __init__(self, src_mac, message_id, code, packet_type, extra_data):
+        super().__init__(src_mac, message_id)
+        self.code = code
+        self.packet_type = packet_type
+        self.extra_data = extra_data
+
+    @classmethod
+    def build(cls, src_mac, eap):
+        return cls(src_mac, eap.packet_id, eap.code, eap.PACKET_TYPE, eap.extra_data)
+
+
 EAP_MESSAGES = {
     Eap.IDENTITY: IdentityMessage,
-    Eap.MD5_CHALLENGE: Md5ChallengeMessage,
-    Eap.LEGACY_NAK: LegacyNakMessage,
-    Eap.TLS: TlsMessage,
-    Eap.TTLS: TtlsMessage,
+    Eap.MD5_CHALLENGE: GenericMessage,
+    Eap.LEGACY_NAK: GenericMessage,
+    Eap.TLS: GenericMessage,
+    Eap.TTLS: GenericMessage,
 }
 
 
@@ -235,27 +203,6 @@ class MessagePacker:
             version = 1
             packet_type = 0
             data = eap.pack()
-        elif isinstance(message, LegacyNakMessage):
-            eap = EapLegacyNak(message.code, message.message_id, message.desired_auth_types)
-            version = 1
-            packet_type = 0
-            data = eap.pack()
-        elif isinstance(message, Md5ChallengeMessage):
-            eap = EapMd5Challenge(message.code, message.message_id,
-                                  message.challenge, message.extra_data)
-            version = 1
-            packet_type = 0
-            data = eap.pack()
-        elif isinstance(message, TlsMessage):
-            eap = EapTLS(message.code, message.message_id, message.flags, message.extra_data)
-            version = 1
-            packet_type = 0
-            data = eap.pack()
-        elif isinstance(message, TtlsMessage):
-            eap = EapTTLS(message.code, message.message_id, message.flags, message.extra_data)
-            version = 1
-            packet_type = 0
-            data = eap.pack()
         elif isinstance(message, SuccessMessage):
             eap = EapSuccess(message.message_id)
             version = 1
@@ -274,6 +221,12 @@ class MessagePacker:
             version = 1
             packet_type = 2
             data = b""
+        elif isinstance(message, GenericMessage):
+            eap = EapGeneric(message.code, message.message_id,
+                             message.packet_type, message.extra_data)
+            version = 1
+            packet_type = 0
+            data = eap.pack()
         else:
             raise ValueError("Cannot pack message: %s" % message)
         return version, packet_type, data
