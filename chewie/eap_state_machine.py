@@ -278,6 +278,7 @@ class FullEAPStateMachine:
             #  so the 200 provides a large buffer.
             return random.randint(0, 200)
         _id = self.currentId + 1
+        # not tested
         if _id > 255:
             return random.randint(0, 200)
         return _id
@@ -498,14 +499,17 @@ class FullEAPStateMachine:
                 decision = self.select_action_state()
                 self.currentState = FullEAPStateMachine.SELECT_ACTION
 
+            # not tested
             if self.currentState == FullEAPStateMachine.DISABLED and self.portEnabled:
                 self.initialize_state()
                 self.currentState = FullEAPStateMachine.INITIALIZE
 
             if self.currentState == FullEAPStateMachine.SELECT_ACTION:
+                # not tested
                 if decision == Decision.SUCCESS:
                     self.success_state()
                     self.currentState = FullEAPStateMachine.SUCCESS
+                # not tested
                 elif decision == Decision.FAILURE:
                     self.failure_state()
                     self.currentState = FullEAPStateMachine.FAILURE
@@ -524,6 +528,7 @@ class FullEAPStateMachine:
                 # RFC 4137 says do nothing from success(2), but we're adding a logoff state.
                 # hopefully it will work as intended.
                 # Otherwise allow transition to logoff from all states.
+                # not tested
                 if self.logoff:
                     self.logoff_state()
                     self.currentState = FullEAPStateMachine.LOGOFF
@@ -564,6 +569,7 @@ class FullEAPStateMachine:
                                   rxResp, respId, respMethod)
                 self.logger.debug("RECIEVED- currentId: %d, currentMethod: %s, methodState: %s",
                                   self.currentId, self.currentMethod, self.methodState)
+                # not tested
                 if rxResp and respId == self.currentId \
                         and (respMethod in (MethodState.NAK, MethodState.EXPANDED_NAK)) \
                         and self.methodState == MethodState.PROPOSED:
@@ -580,11 +586,13 @@ class FullEAPStateMachine:
                 self.idle_state()
                 self.currentState = FullEAPStateMachine.IDLE
 
+            # not tested
             if self.currentState == FullEAPStateMachine.NAK:
                 decision = self.select_action_state
                 self.currentState = FullEAPStateMachine.SELECT_ACTION
 
             if self.currentState == FullEAPStateMachine.INTEGRITY_CHECK:
+                # not tested
                 if ignore:
                     self.discard_state()
                     self.currentState = FullEAPStateMachine.DISCARD
@@ -596,6 +604,7 @@ class FullEAPStateMachine:
                 if self.methodState == MethodState.END:
                     decision = self.select_action_state()
                     self.currentState = FullEAPStateMachine.SELECT_ACTION
+                # not tested
                 else:
                     self.method_request_state()
                     self.currentState = FullEAPStateMachine.METHOD_REQUEST
@@ -604,6 +613,7 @@ class FullEAPStateMachine:
                 if self.currentId is not None:
                     self.aaa_request_state(respMethod)
                     self.currentState = FullEAPStateMachine.AAA_REQUEST
+                # not tested
                 else:
                     self.aaa_idle_state()
                     self.currentState = FullEAPStateMachine.AAA_IDLE
@@ -621,6 +631,7 @@ class FullEAPStateMachine:
                 elif self.aaaEapReq:
                     self.aaa_response_state()
                     self.currentState = FullEAPStateMachine.AAA_RESPONSE
+                # not tested
                 elif self.aaaEapNoReq:
                     self.discard2_state()
                     self.currentState = FullEAPStateMachine.DISCARD2
@@ -726,6 +737,7 @@ class FullEAPStateMachine:
                 self.eap_output_messages.put((self.eapReqData, self.src_mac, self.port_id_mac))
                 self.sent_count += 1
                 self.set_timer()
+            # not tested
             else:
                 self.logger.error('cant find code --- %s', self.eapReqData)
             self.eapReq = False
@@ -740,6 +752,7 @@ class FullEAPStateMachine:
                 self.sent_count += 1
                 self.set_timer()
             self.aaaEapResp = False
+        # not tested
         elif self.aaaEapResp:
             self.logger.error("aaaEapResp is true. but data is false. This should never happen")
 

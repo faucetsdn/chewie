@@ -103,6 +103,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
                                       self.timer_scheduler,
                                       self.auth_handler, self.failure_handler, self.logoff_handler,
                                       'Chewie')
+        # find ways to inject these - overriding consts isn't ideal
         self.MAX_RETRANSMITS = 3
         self.sm.MAX_RETRANS = self.MAX_RETRANSMITS
         self.sm.DEFAULT_TIMEOUT = 0.1
