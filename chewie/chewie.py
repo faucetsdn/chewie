@@ -73,6 +73,11 @@ class Chewie:
         self.setup_radius_socket()
         self.start_threads_and_wait()
 
+    def shutdown(self):
+        """kill eventlets and quit"""
+        for eventlet in self.eventlets:
+            eventlet.kill()
+
     def start_threads_and_wait(self):
         """Start the thread and wait until they complete (hopefully never)"""
         self.pool = GreenPool()

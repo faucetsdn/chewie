@@ -4,7 +4,6 @@ import logging
 import random
 import sys
 import tempfile
-from threading import Thread
 import time
 import unittest
 from unittest.mock import patch
@@ -30,7 +29,6 @@ def patch_things(func):
     @patch('chewie.chewie.os.urandom', urandom_helper)
     @patch('chewie.chewie.FullEAPStateMachine.nextId', nextId)
     @patch('chewie.chewie.Chewie.get_next_radius_packet_id', get_next_radius_packet_id)
-    @patch('chewie.chewie.GreenPool.waitall', wait_all)
     def wrapper_patch(self):
         func(self)
 
@@ -174,11 +172,6 @@ def get_next_radius_packet_id(chewie):
     return chewie.radius_id
 
 
-def wait_all(greenpool):  # pylint: disable=unused-argument
-    """mocked Chewie.pool.waitall()"""
-    eventlet.sleep(10)
-
-
 def auth_handler(client_mac, port_id_mac):  # pylint: disable=unused-argument
     """dummy handler for successful authentications"""
     print('Successful auth from MAC %s on port: %s' % (str(client_mac), str(port_id_mac)))
@@ -249,22 +242,25 @@ class ChewieTestCase(unittest.TestCase):
         FROM_RADIUS = Queue()
         TO_RADIUS = Queue()
 
+    def tearDown(self):
+        self.chewie.shutdown()
+
     def test_get_state_machine(self):
         """Tests Chewie.get_state_machine()"""
         self.assertEqual(len(self.chewie.state_machines), 0)
         # creates the state_machine if it doesn't exist
         state_machine = self.chewie.get_state_machine('12:34:56:78:9a:bc',  # pylint: disable=invalid-name
-                                           '00:00:00:00:00:01')
+                                                      '00:00:00:00:00:01')
 
         self.assertEqual(len(self.chewie.state_machines), 1)
 
         self.assertIs(state_machine, self.chewie.get_state_machine('12:34:56:78:9a:bc',
-                                                        '00:00:00:00:00:01'))
+                                                                   '00:00:00:00:00:01'))
 
         self.assertIsNot(state_machine, self.chewie.get_state_machine('12:34:56:78:9a:bc',
-                                                           '00:00:00:00:00:02'))
+                                                                      '00:00:00:00:00:02'))
         self.assertIsNot(state_machine, self.chewie.get_state_machine('ab:cd:ef:12:34:56',
-                                                           '00:00:00:00:00:01'))
+                                                                      '00:00:00:00:00:01'))
 
         # 2 ports
         self.assertEqual(len(self.chewie.state_machines), 2)
@@ -296,13 +292,12 @@ class ChewieTestCase(unittest.TestCase):
     @setup_generators(sup_replies_success, radius_replies_success)
     def test_success_dot1x(self):
         """Test success api"""
-
-        thread = Thread(target=self.chewie.run)
-        thread.start()
-
         FROM_SUPPLICANT.put(build_byte_string("0000000000010242ac17006f888e01010000"))
-        while FROM_SUPPLICANT.qsize():
-            time.sleep(0.1)
+        
+        pool = eventlet.GreenPool()
+        chewie_thread = pool.spawn(self.chewie.run)
+
+        eventlet.sleep(0.1)
 
         self.assertEqual(
             self.chewie.get_state_machine('02:42:ac:17:00:6f',
@@ -326,14 +321,14 @@ class ChewieTestCase(unittest.TestCase):
     @setup_generators(sup_replies_logoff, radius_replies_success)
     def test_logoff_dot1x(self):
         """Test logoff"""
-        thread = Thread(target=self.chewie.run)
-        thread.start()
-
         self.chewie.get_state_machine(MacAddress.from_string('02:42:ac:17:00:6f'),
                                       MacAddress.from_string('00:00:00:00:00:01'))
         FROM_SUPPLICANT.put(build_byte_string("0000000000010242ac17006f888e01010000"))
-        while FROM_SUPPLICANT.qsize():
-            time.sleep(0.1)
+
+        pool = eventlet.GreenPool()
+        chewie_thread = pool.spawn(self.chewie.run)
+
+        eventlet.sleep(0.1)
 
         self.assertEqual(
             self.chewie.get_state_machine('02:42:ac:17:00:6f',
@@ -346,18 +341,18 @@ class ChewieTestCase(unittest.TestCase):
         """Test incorrect message id results in timeout_failure"""
         # TODO not convinced this is transitioning through the correct states.
         # (should be discarding all packets)
-        # But end result is correct (both packets sent/received, and end state)
-        thread = Thread(target=self.chewie.run)
-        thread.start()
-
+        # But end result is correct (both packets sent/received, and end state)self.chewie.get_state_machine(MacAddress.from_string('02:42:ac:17:00:6f'),
         self.chewie.get_state_machine(MacAddress.from_string('02:42:ac:17:00:6f'),
                                       MacAddress.from_string(
                                           '00:00:00:00:00:01')).DEFAULT_TIMEOUT = 0.5
 
         FROM_SUPPLICANT.put(build_byte_string("0000000000010242ac17006f888e01010000"))
 
+        pool = eventlet.GreenPool()
+        chewie_thread = pool.spawn(self.chewie.run)
+
         while not self.fake_scheduler.jobs:
-            time.sleep(0.1)
+            eventlet.sleep(0.1)
         self.fake_scheduler.run_jobs()
 
         self.assertEqual(
@@ -371,17 +366,17 @@ class ChewieTestCase(unittest.TestCase):
     def test_failure2_resp_code_dot1x(self):
         """Test incorrect eap.code results in timeout_failure2. RADIUS Server drops it.
         It is up to the supplicant to send another request - this supplicant doesnt"""
-        thread = Thread(target=self.chewie.run)
-        thread.start()
-
         self.chewie.get_state_machine(MacAddress.from_string('02:42:ac:17:00:6f'),
                                       MacAddress.from_string(
                                           '00:00:00:00:00:01')).DEFAULT_TIMEOUT = 0.5
 
         FROM_SUPPLICANT.put(build_byte_string("0000000000010242ac17006f888e01010000"))
 
+        pool = eventlet.GreenPool()
+        chewie_thread = pool.spawn(self.chewie.run)
+
         while not self.fake_scheduler.jobs:
-            time.sleep(0.1)
+            eventlet.sleep(0.1)
         self.fake_scheduler.run_jobs()
 
         self.assertEqual(
