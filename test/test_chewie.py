@@ -10,7 +10,6 @@ from unittest.mock import patch
 
 import eventlet
 from eventlet.queue import Queue
-from netils import build_byte_string
 
 from chewie.chewie import Chewie
 from chewie.eap_state_machine import FullEAPStateMachine
@@ -193,29 +192,29 @@ class ChewieTestCase(unittest.TestCase):
     no_radius_replies = []
 
     header = "0000000000010242ac17006f888e"
-    sup_replies_success = [build_byte_string(header + "01000009027400090175736572"),
-                           build_byte_string(
+    sup_replies_success = [bytes.fromhex(header + "01000009027400090175736572"),
+                           bytes.fromhex(
                                header + "010000160275001604103abcadc86714b2d75d09dd7ff53edf6b")]
 
-    radius_replies_success = [build_byte_string(
+    radius_replies_success = [bytes.fromhex(
         "0b040050e5e40d846576a2310755e906c4b2b5064f180175001604101a16a3baa37a0238f33384f6c11067425012ce61ba97026b7a05b194a930a922405218126aa866456add628e3a55a4737872cad6"),
-                              build_byte_string(
+                              bytes.fromhex(
                                   "02050032fb4c4926caa21a02f74501a65c96f9c74f06037500045012c060ca6a19c47d0998c7b20fd4d771c1010675736572")]
 
-    sup_replies_logoff = [build_byte_string(header + "01000009027400090175736572"),
-                          build_byte_string(
+    sup_replies_logoff = [bytes.fromhex(header + "01000009027400090175736572"),
+                          bytes.fromhex(
                               header + "010000160275001604103abcadc86714b2d75d09dd7ff53edf6b"),
-                          build_byte_string("0000000000010242ac17006f888e01020000")]
+                          bytes.fromhex("0000000000010242ac17006f888e01020000")]
 
     # packet id (0x84 is incorrect)
-    sup_replies_failure_message_id = [build_byte_string(header + "01000009028400090175736572"),
-                                      build_byte_string(header + "01000009029400090175736572"),
-                                      build_byte_string(header + "01000009026400090175736572"),
-                                      build_byte_string(header + "01000009025400090175736572")]
+    sup_replies_failure_message_id = [bytes.fromhex(header + "01000009028400090175736572"),
+                                      bytes.fromhex(header + "01000009029400090175736572"),
+                                      bytes.fromhex(header + "01000009026400090175736572"),
+                                      bytes.fromhex(header + "01000009025400090175736572")]
 
     # the first response has correct code, second is wrong and will be dropped by radius
-    sup_replies_failure2_response_code = [build_byte_string(header + "01000009027400090175736572"),
-                                          build_byte_string(header + "01000009037400090175736572")]
+    sup_replies_failure2_response_code = [bytes.fromhex(header + "01000009027400090175736572"),
+                                          bytes.fromhex(header + "01000009037400090175736572")]
 
     def setUp(self):
         logger = logging.getLogger()
@@ -292,7 +291,7 @@ class ChewieTestCase(unittest.TestCase):
     @setup_generators(sup_replies_success, radius_replies_success)
     def test_success_dot1x(self):
         """Test success api"""
-        FROM_SUPPLICANT.put(build_byte_string("0000000000010242ac17006f888e01010000"))
+        FROM_SUPPLICANT.put(bytes.fromhex("0000000000010242ac17006f888e01010000"))
         
         pool = eventlet.GreenPool()
         chewie_thread = pool.spawn(self.chewie.run)
@@ -323,7 +322,7 @@ class ChewieTestCase(unittest.TestCase):
         """Test logoff"""
         self.chewie.get_state_machine(MacAddress.from_string('02:42:ac:17:00:6f'),
                                       MacAddress.from_string('00:00:00:00:00:01'))
-        FROM_SUPPLICANT.put(build_byte_string("0000000000010242ac17006f888e01010000"))
+        FROM_SUPPLICANT.put(bytes.fromhex("0000000000010242ac17006f888e01010000"))
 
         pool = eventlet.GreenPool()
         chewie_thread = pool.spawn(self.chewie.run)
@@ -346,7 +345,7 @@ class ChewieTestCase(unittest.TestCase):
                                       MacAddress.from_string(
                                           '00:00:00:00:00:01')).DEFAULT_TIMEOUT = 0.5
 
-        FROM_SUPPLICANT.put(build_byte_string("0000000000010242ac17006f888e01010000"))
+        FROM_SUPPLICANT.put(bytes.fromhex("0000000000010242ac17006f888e01010000"))
 
         pool = eventlet.GreenPool()
         chewie_thread = pool.spawn(self.chewie.run)
@@ -370,7 +369,7 @@ class ChewieTestCase(unittest.TestCase):
                                       MacAddress.from_string(
                                           '00:00:00:00:00:01')).DEFAULT_TIMEOUT = 0.5
 
-        FROM_SUPPLICANT.put(build_byte_string("0000000000010242ac17006f888e01010000"))
+        FROM_SUPPLICANT.put(bytes.fromhex("0000000000010242ac17006f888e01010000"))
 
         pool = eventlet.GreenPool()
         chewie_thread = pool.spawn(self.chewie.run)

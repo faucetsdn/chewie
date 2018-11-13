@@ -27,7 +27,6 @@ setup(
     packages=['chewie'],
     python_requires='>=3',
     install_requires=[
-        'eventlet',
-        'netils==0.0.1'
+        'eventlet'
     ]
 )
