@@ -216,7 +216,7 @@ class MessageParserTestCase(unittest.TestCase):
                                                      MacAddress.from_string("01:80:c2:00:00:03"))
         self.assertEqual(expected_packed_message, packed_message)
 
-    def test_radius_packs(self):
+    def test_radius_with_extra_attributes_packs(self):
 
         packed_message = bytes.fromhex("010a0073"
                                        "be5df1f3b3366c69b977e56a7da47cba"
@@ -243,4 +243,38 @@ class MessageParserTestCase(unittest.TestCase):
                                                   request_authenticator, state, secret,
                                                   extra_attributes=extra_attributes)
 
+        self.assertEqual(packed_message, packed_radius)
+
+    def test_radius_packs_with_nas_port(self):
+
+        packed_message = bytes.fromhex("01bf00610123456789abcdeffedcba9876543210010a62656e62757274741f1361613a62623a63633a64643a65653a66660506000002a14f18021500160410824788d693e2adac6ce15641418228cf50121139bd192c46fe6d2a937d9573311b70")  # pylint: disable=line-too-long
+
+        src_mac = MacAddress.from_string("aa:bb:cc:dd:ee:ff")
+        username = "benburtt"
+        radius_packet_id = 191
+        request_authenticator = bytes.fromhex("0123456789abcdeffedcba9876543210")
+        state = None
+        secret = "SUPERSECRET"
+        challenge = bytes.fromhex("824788d693e2adac6ce15641418228cf")
+        eap_message = Md5ChallengeMessage(src_mac, 21, Eap.RESPONSE, challenge, b'')
+        packed_radius = MessagePacker.radius_pack(eap_message, src_mac, username, radius_packet_id,
+                                                  request_authenticator, state, secret,
+                                                  nas_port=0x02a1)
+        self.assertEqual(packed_message, packed_radius)
+
+    def test_radius_packs_basic(self):
+        """without extra_attributes or nas-port"""
+
+        packed_message = bytes.fromhex("01bf005b0123456789abcdeffedcba9876543210010a62656e62757274741f1361613a62623a63633a64643a65653a66664f18021500160410824788d693e2adac6ce15641418228cf5012caadc1c7a3be07fe63fdf83a59ed18c2")  # pylint: disable=line-too-long
+
+        src_mac = MacAddress.from_string("aa:bb:cc:dd:ee:ff")
+        username = "benburtt"
+        radius_packet_id = 191
+        request_authenticator = bytes.fromhex("0123456789abcdeffedcba9876543210")
+        state = None
+        secret = "SUPERSECRET"
+        challenge = bytes.fromhex("824788d693e2adac6ce15641418228cf")
+        eap_message = Md5ChallengeMessage(src_mac, 21, Eap.RESPONSE, challenge, b'')
+        packed_radius = MessagePacker.radius_pack(eap_message, src_mac, username, radius_packet_id,
+                                                  request_authenticator, state, secret)
         self.assertEqual(packed_message, packed_radius)
