@@ -2,7 +2,8 @@
 # pylint: disable=too-few-public-methods
 
 from chewie.radius import RadiusAttributesList, RadiusAccessRequest, Radius
-from chewie.radius_attributes import CallingStationId, UserName, MessageAuthenticator, EAPMessage
+from chewie.radius_attributes import CallingStationId, UserName, MessageAuthenticator, EAPMessage, \
+    NASPort
 from chewie.ethernet_packet import EthernetPacket
 from chewie.auth_8021x import Auth8021x
 from chewie.eap import Eap, EapIdentity, EapMd5Challenge, EapSuccess, EapFailure, EapLegacyNak, \
@@ -182,7 +183,7 @@ class MessagePacker:
 
     @staticmethod
     def radius_pack(eap_message, src_mac, username, radius_packet_id,
-                    request_authenticator, state, secret, extra_attributes=None):
+                    request_authenticator, state, secret, nas_port=None, extra_attributes=None):
         """
         Packs up a RADIUS message to send to a RADIUS Server.
         Args:
@@ -204,6 +205,9 @@ class MessagePacker:
         attr_list = []
         attr_list.append(UserName.create(username))
         attr_list.append(CallingStationId.create(str(src_mac)))
+
+        if nas_port:
+            attr_list.append(NASPort.create( nas_port))
 
         attr_list.extend(extra_attributes)
 
