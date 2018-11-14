@@ -203,6 +203,9 @@ class Concat(DataType):
                                            (i + 1) * self.MAX_DATA_LENGTH])
                 packed += t
             i += 1
+            if mod == 253:
+                return packed
+
         packed += struct.pack("!BB%ds" % mod, attribute_type, mod + self.AVP_HEADER_LEN,
                               self.bytes_data[i * self.MAX_DATA_LENGTH:])
         return packed
