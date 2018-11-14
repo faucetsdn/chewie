@@ -8,6 +8,7 @@ from unittest.mock import patch, Mock
 from eventlet.queue import Queue
 
 from chewie.chewie import Chewie
+from chewie.event import EventMessageReceived
 
 class FakeSocket:
     """Helper for socket wrappers"""
@@ -36,15 +37,17 @@ class ChewieWithMocksTestCase(unittest.TestCase):
                              '127.0.0.1', 1812, 'SECRET',
                              '44:44:44:44:44:44')
 
+    @patch("chewie.chewie.FullEAPStateMachine")
     @patch("chewie.chewie.Chewie.running", Mock(side_effect=[True, False]))
     @patch("chewie.chewie.MessageParser.ethernet_parse",
            Mock(return_value=[FakeMessage('fake src mac'), 'fake dst mac'])
           )
     @patch("chewie.chewie.sleep", Mock())
-    def test_eap_packet_goes_to_new_state_machine(self):
+    def test_eap_packet_goes_to_new_state_machine(self, state_machine):
         """test EAP packet creates a new state machine and is sent on"""
         self.chewie.eap_socket = FakeSocket()
         self.chewie.eap_socket.receive_queue.put("input eap message")
         self.chewie.receive_eap_messages()
-        self.assertEqual(list(self.chewie.state_machines.keys()), ['fake dst mac'])
-        self.assertEqual(list(self.chewie.state_machines['fake dst mac'].keys()), ['fake src mac'])
+        state_machine().event.assert_called_with(
+            EventMessageReceived(FakeMessage('fake src mac'), 'fake dst mac')
+            )

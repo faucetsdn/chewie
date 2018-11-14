@@ -50,6 +50,14 @@ class EventMessageReceived(Event):
         self.message = message
         self.port_id = port_id
 
+    def __eq__(self, other):
+        return self.type == other.type and \
+            self.message == other.message and \
+            self.port_id == other.port_id
+
+    def __repr__(self):
+        return "%s(\"%s\", \"%s\")" % (self.__class__.__name__, self.message, self.port_id)
+
 
 class EventPortStatusChange(Event):
     """Port status has changed (up/down)"""
