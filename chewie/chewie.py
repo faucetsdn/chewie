@@ -170,80 +170,68 @@ class Chewie:
     def send_eap_messages(self):
         """send eap messages to supplicant forever."""
         while True:
-            try:
-                sleep(0)
-                message, src_mac, port_mac = self.eap_output_messages.get()
-                self.logger.info("Sending message %s from %s to %s" %
-                                 (message, str(port_mac), str(src_mac)))
-                self.eap_socket.send(MessagePacker.ethernet_pack(message, port_mac, src_mac))
-            except Exception as e:
-                self.logger.exception(e)
+            sleep(0)
+            message, src_mac, port_mac = self.eap_output_messages.get()
+            self.logger.info("Sending message %s from %s to %s" %
+                             (message, str(port_mac), str(src_mac)))
+            self.eap_socket.send(MessagePacker.ethernet_pack(message, port_mac, src_mac))
 
     def receive_eap_messages(self):
         """receive eap messages from supplicant forever."""
         while True:
-            try:
-                sleep(0)
-                self.logger.info("waiting for eap.")
-                packed_message = self.eap_socket.receive()
-                self.logger.info("Received packed_message: %s", str(packed_message))
+            sleep(0)
+            self.logger.info("waiting for eap.")
+            packed_message = self.eap_socket.receive()
+            self.logger.info("Received packed_message: %s", str(packed_message))
 
-                message, dst_mac = MessageParser.ethernet_parse(packed_message)
-                self.logger.info("eap EAP(): %s", message)
-                self.logger.info("Received message: %s" % message.__dict__)
-                state_machine = self.get_state_machine(message.src_mac, dst_mac)
-                event = EventMessageReceived(message, dst_mac)
-                state_machine.event(event)
-            except Exception as e:
-                self.logger.exception(e)
+            message, dst_mac = MessageParser.ethernet_parse(packed_message)
+            self.logger.info("eap EAP(): %s", message)
+            self.logger.info("Received message: %s" % message.__dict__)
+            state_machine = self.get_state_machine(message.src_mac, dst_mac)
+            event = EventMessageReceived(message, dst_mac)
+            state_machine.event(event)
 
     def send_radius_messages(self):
         """send RADIUS messages to RADIUS Server forever."""
         while True:
-            try:
-                sleep(0)
-                eap_message, src_mac, username, state, port_id = self.radius_output_messages.get()
-                self.logger.info("got eap to send to radius.. mac: %s %s, username: %s",
-                                 type(src_mac), src_mac, username)
-                state_dict = None
-                if state:
-                    state_dict = state.__dict__
-                self.logger.info("Sending to RADIUS eap message %s with state %s",
-                                 eap_message.__dict__, state_dict)
-                radius_packet_id = self.get_next_radius_packet_id()
-                self.packet_id_to_mac[radius_packet_id] = {'src_mac': src_mac, 'port_id': port_id}
-                # message is eap. needs to be wrapped into a radius packet.
-                request_authenticator = os.urandom(16)
-                self.packet_id_to_request_authenticator[radius_packet_id] = request_authenticator
-                data = MessagePacker.radius_pack(eap_message, src_mac, username,
-                                                 radius_packet_id, request_authenticator, state,
-                                                 self.radius_secret,
-                                                 port_id_to_int(port_id),
-                                                 self.extra_radius_request_attributes)
-                self.radius_socket.send(data)
-                self.logger.info("sent radius message.")
-            except Exception as e:
-                self.logger.exception(e)
+            sleep(0)
+            eap_message, src_mac, username, state, port_id = self.radius_output_messages.get()
+            self.logger.info("got eap to send to radius.. mac: %s %s, username: %s",
+                             type(src_mac), src_mac, username)
+            state_dict = None
+            if state:
+                state_dict = state.__dict__
+            self.logger.info("Sending to RADIUS eap message %s with state %s",
+                             eap_message.__dict__, state_dict)
+            radius_packet_id = self.get_next_radius_packet_id()
+            self.packet_id_to_mac[radius_packet_id] = {'src_mac': src_mac, 'port_id': port_id}
+            # message is eap. needs to be wrapped into a radius packet.
+            request_authenticator = os.urandom(16)
+            self.packet_id_to_request_authenticator[radius_packet_id] = request_authenticator
+            data = MessagePacker.radius_pack(eap_message, src_mac, username,
+                                             radius_packet_id, request_authenticator, state,
+                                             self.radius_secret,
+                                             port_id_to_int(port_id),
+                                             self.extra_radius_request_attributes)
+            self.radius_socket.send(data)
+            self.logger.info("sent radius message.")
 
     def receive_radius_messages(self):
         """receive RADIUS messages from RADIUS server forever."""
         while True:
-            try:
-                sleep(0)
-                self.logger.info("waiting for radius.")
-                packed_message = self.radius_socket.receive()
-                radius = MessageParser.radius_parse(packed_message, self.radius_secret,
-                                                    self.request_authenticator_callback)
-                self.logger.info("Received RADIUS message: %s", radius)
-                eap_msg_attribute = radius.attributes.find(EAPMessage.DESCRIPTION)
-                state_machine = self.get_state_machine_from_radius_packet_id(radius.packet_id)
-                eap_msg = eap_msg_attribute.data_type.data()
-                state = radius.attributes.find(State.DESCRIPTION)
-                self.logger.info("radius EAP: %s", eap_msg)
-                event = EventRadiusMessageReceived(eap_msg, state, radius.attributes.to_dict())
-                state_machine.event(event)
-            except Exception as e:
-                self.logger.exception(e)
+            sleep(0)
+            self.logger.info("waiting for radius.")
+            packed_message = self.radius_socket.receive()
+            radius = MessageParser.radius_parse(packed_message, self.radius_secret,
+                                                self.request_authenticator_callback)
+            self.logger.info("Received RADIUS message: %s", radius)
+            eap_msg_attribute = radius.attributes.find(EAPMessage.DESCRIPTION)
+            state_machine = self.get_state_machine_from_radius_packet_id(radius.packet_id)
+            eap_msg = eap_msg_attribute.data_type.data()
+            state = radius.attributes.find(State.DESCRIPTION)
+            self.logger.info("radius EAP: %s", eap_msg)
+            event = EventRadiusMessageReceived(eap_msg, state, radius.attributes.to_dict())
+            state_machine.event(event)
 
     def request_authenticator_callback(self, packet_id):
         """Callback to get the RADIUS request Authenticator
