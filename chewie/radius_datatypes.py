@@ -201,8 +201,8 @@ class Concat(DataType):
                 chunk = data[i:i + length]
                 chunk_length = len(chunk)
                 packed = struct.pack("!BB%ds" % chunk_length, attribute_type,
-                                  chunk_length + self.AVP_HEADER_LEN,
-                                  chunk)
+                                     chunk_length + self.AVP_HEADER_LEN,
+                                     chunk)
                 return_chunks.append(packed)
             return return_chunks
 
