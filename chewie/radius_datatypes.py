@@ -190,21 +190,23 @@ class Concat(DataType):
 
     def pack(self, attribute_type):
 
-        def chunks(l):
-            max_length = self.MAX_DATA_LENGTH
-            list_length = len(l)
+        def chunks(data):
+            length = self.MAX_DATA_LENGTH
+            list_length = len(data)
+            return_chunks = []
             for i in range(0, list_length, self.MAX_DATA_LENGTH):
-                if i + self.MAX_DATA_LENGTH >= list_length:
-                    max_length = list_length % self.MAX_DATA_LENGTH
+                if i + self.MAX_DATA_LENGTH > list_length:
+                    length = list_length % self.MAX_DATA_LENGTH
 
-                yield l[i:i + max_length]
-
-        packed = bytes()
-        for chunk in chunks(self.bytes_data):
-            chunk_length = len(chunk)
-            packed += struct.pack("!BB%ds" % chunk_length, attribute_type,
+                chunk = data[i:i + length]
+                chunk_length = len(chunk)
+                packed = struct.pack("!BB%ds" % chunk_length, attribute_type,
                                   chunk_length + self.AVP_HEADER_LEN,
                                   chunk)
+                return_chunks.append(packed)
+            return return_chunks
+
+        packed = b"".join(chunks(self.bytes_data))
         return packed
 
     def data(self):
