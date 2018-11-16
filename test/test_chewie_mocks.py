@@ -59,15 +59,39 @@ class ChewieWithMocksTestCase(unittest.TestCase):
 
     @patch("chewie.chewie.Chewie.running", Mock(side_effect=[True, False]))
     @patch("chewie.chewie.MessageParser.radius_parse")
-    @patch("chewie.chewie.FullEAPStateMachine")
+    @patch("chewie.chewie.Chewie.get_state_machine_from_radius_packet_id")
     @patch("chewie.chewie.sleep", Mock())
     def test_radius_packet_in_goes_to_state_machine(self, state_machine, radius_parse): #pylint: disable=invalid-name
         """test radius packet goes to a state machine"""
         # note that the state machine has to exist already - if not then we blow up
+        fake_radius = namedtuple('Radius', ('packet_id',))('fake packet id')
         self.chewie.radius_socket = Mock(**{'receive.return_value': 'message from socket'})
-        #self.chewie.radius_secret = 'it\'s a secret'
+        self.chewie.radius_lifecycle = Mock(**{'build_event_radius_message_received.side_effect':
+            return_if(
+                (fake_radius,),
+                'fake event'
+            )})
+        radius_parse.side_effect = return_if(
+            ('message from socket', 'SECRET', self.chewie.radius_lifecycle),
+            fake_radius
+            )
         # not checking args as we can't mock the callback
         self.chewie.receive_radius_messages()
         state_machine().event.assert_called_with(
-            EventMessageReceived(FakeRadiusMessage('fake src mac'))
+            'fake event'
             )
+
+    @patch("chewie.chewie.Chewie.running", Mock(side_effect=[True, False]))
+    @patch("chewie.chewie.sleep", Mock())
+    def test_radius_output_packet_gets_packed_and_sent(self): #pylint: disable=invalid-name
+        """test EAP packet creates a new state machine and is sent on"""
+        self.chewie.radius_socket = Mock()
+
+        self.chewie.radius_output_messages.put('fake radius output bits')
+        self.chewie.radius_lifecycle = Mock(**{'process_outbound.side_effect':
+            return_if(
+                ('fake radius output bits',),
+                'packed radius'
+            )})
+        self.chewie.send_radius_messages()
+        self.chewie.radius_socket.send.assert_called_with("packed radius")

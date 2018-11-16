@@ -180,7 +180,6 @@ class Chewie:
     def send_eap_to_state_machine(self, eap, dst_mac):
         """sends an eap message to the state machine"""
         self.logger.info("eap EAP(): %s", eap)
-        self.logger.info("Received message: %s" % eap.__dict__)
         state_machine = self.get_state_machine(eap.src_mac, dst_mac)
         event = EventMessageReceived(eap, dst_mac)
         state_machine.event(event)
