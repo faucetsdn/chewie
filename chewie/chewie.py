@@ -1,20 +1,16 @@
 """Entry point for 802.1X speaker.
 """
-import os
-import struct
 
-from chewie import timer_scheduler
 from eventlet import sleep, GreenPool
-from eventlet.green import socket
 from eventlet.queue import Queue
 
+from chewie import timer_scheduler
 from chewie.eap_socket import EapSocket
 from chewie.radius_socket import RadiusSocket
 from chewie.eap_state_machine import FullEAPStateMachine
-from chewie.radius_attributes import EAPMessage, State, CalledStationId, NASIdentifier, NASPortType
+from chewie.radius_attributes import EAPMessage, State
 from chewie.radius_lifecycle import RadiusLifecycle
 from chewie.message_parser import MessageParser, MessagePacker
-from chewie.mac_address import MacAddress
 from chewie.event import EventMessageReceived, EventRadiusMessageReceived, EventPortStatusChange
 from chewie.utils import get_logger
 

@@ -1,8 +1,10 @@
+"""A placeholder object for RADIUS logic extracted from Chewie"""
+
 import os
 import struct
 
-from chewie.message_parser import MessageParser, MessagePacker
-from chewie.radius_attributes import EAPMessage, State, CalledStationId, NASIdentifier, NASPortType
+from chewie.message_parser import MessagePacker
+from chewie.radius_attributes import CalledStationId, NASIdentifier, NASPortType
 
 def port_id_to_int(port_id):
     """"Convert a port_id str '00:00:00:00:aa:01 to integer'"""
@@ -10,6 +12,7 @@ def port_id_to_int(port_id):
     return int.from_bytes(struct.pack('!HH', int(dp, 16), int(port, 16)), 'big')  # pytype: disable=attribute-error
 
 class RadiusLifecycle:
+    """A placeholder object for RADIUS logic extracted from Chewie"""
     def __init__(self, radius_secret, server_id, logger):
         self.radius_secret = radius_secret
         self.server_id = server_id
@@ -22,6 +25,7 @@ class RadiusLifecycle:
         self.packet_id_to_request_authenticator = {}
 
     def process_outbound(self, radius_output_bits):
+        """Placeholder method extracted from Chewie.send_radius_messages()"""
         eap_message, src_mac, username, state, port_id = radius_output_bits
         self.logger.info("got eap to send to radius.. mac: %s %s, username: %s",
                          type(src_mac), src_mac, username)
