@@ -25,7 +25,7 @@ def patch_things(func):
     """decorator to mock patch socket operations and random number generators"""
     @patch('chewie.chewie.EapSocket', FakeEapSocket)
     @patch('chewie.chewie.RadiusSocket', FakeRadiusSocket)
-    @patch('chewie.chewie.os.urandom', urandom_helper)
+    @patch('chewie.chewie.RadiusLifecycle.generate_request_authenticator', urandom_helper)
     @patch('chewie.chewie.FullEAPStateMachine.nextId', nextId)
     def wrapper_patch(self):
         func(self)

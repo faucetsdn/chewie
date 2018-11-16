@@ -37,13 +37,17 @@ class RadiusLifecycle:
         radius_packet_id = self.get_next_radius_packet_id()
         self.packet_id_to_mac[radius_packet_id] = {'src_mac': src_mac, 'port_id': port_id}
         # message is eap. needs to be wrapped into a radius packet.
-        request_authenticator = os.urandom(16)
+        request_authenticator = self.generate_request_authenticator()
         self.packet_id_to_request_authenticator[radius_packet_id] = request_authenticator
         return MessagePacker.radius_pack(eap_message, src_mac, username,
                                          radius_packet_id, request_authenticator, state,
                                          self.radius_secret,
                                          port_id_to_int(port_id),
                                          self.extra_radius_request_attributes)
+
+    def generate_request_authenticator(self):
+        """Workaround until we get this extracted for easy mocking"""
+        return os.urandom(16)
 
     def get_next_radius_packet_id(self):
         """Calulate the next RADIUS Packet ID
