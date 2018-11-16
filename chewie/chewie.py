@@ -8,10 +8,9 @@ from chewie import timer_scheduler
 from chewie.eap_socket import EapSocket
 from chewie.radius_socket import RadiusSocket
 from chewie.eap_state_machine import FullEAPStateMachine
-from chewie.radius_attributes import EAPMessage, State
 from chewie.radius_lifecycle import RadiusLifecycle
 from chewie.message_parser import MessageParser, MessagePacker
-from chewie.event import EventMessageReceived, EventRadiusMessageReceived, EventPortStatusChange
+from chewie.event import EventMessageReceived, EventPortStatusChange
 from chewie.utils import get_logger
 
 def unpack_byte_string(byte_string):
@@ -171,13 +170,16 @@ class Chewie:
             self.logger.info("waiting for eap.")
             packed_message = self.eap_socket.receive()
             self.logger.info("Received packed_message: %s", str(packed_message))
+            eap, dst_mac = MessageParser.ethernet_parse(packed_message)
+            self.send_eap_to_state_machine(eap, dst_mac)
 
-            message, dst_mac = MessageParser.ethernet_parse(packed_message)
-            self.logger.info("eap EAP(): %s", message)
-            self.logger.info("Received message: %s" % message.__dict__)
-            state_machine = self.get_state_machine(message.src_mac, dst_mac)
-            event = EventMessageReceived(message, dst_mac)
-            state_machine.event(event)
+    def send_eap_to_state_machine(self, eap, dst_mac):
+        """sends an eap message to the state machine"""
+        self.logger.info("eap EAP(): %s", eap)
+        self.logger.info("Received message: %s" % eap.__dict__)
+        state_machine = self.get_state_machine(eap.src_mac, dst_mac)
+        event = EventMessageReceived(eap, dst_mac)
+        state_machine.event(event)
 
     def send_radius_messages(self):
         """send RADIUS messages to RADIUS Server forever."""
@@ -196,14 +198,14 @@ class Chewie:
             packed_message = self.radius_socket.receive()
             radius = MessageParser.radius_parse(packed_message, self.radius_secret,
                                                 self.radius_lifecycle)
+            self.send_radius_to_state_machine(radius)
             self.logger.info("Received RADIUS message: %s", radius)
-            eap_msg_attribute = radius.attributes.find(EAPMessage.DESCRIPTION)
-            state_machine = self.get_state_machine_from_radius_packet_id(radius.packet_id)
-            eap_msg = eap_msg_attribute.data_type.data()
-            state = radius.attributes.find(State.DESCRIPTION)
-            self.logger.info("radius EAP: %s", eap_msg)
-            event = EventRadiusMessageReceived(eap_msg, state, radius.attributes.to_dict())
-            state_machine.event(event)
+
+    def send_radius_to_state_machine(self, radius):
+        """sends a radius message to the state machine"""
+        event = self.radius_lifecycle.build_event_radius_message_received(radius)
+        state_machine = self.get_state_machine_from_radius_packet_id(radius.packet_id)
+        state_machine.event(event)
 
     def get_state_machine_from_radius_packet_id(self, packet_id):
         """Gets a FullEAPStateMachine from the RADIUS message packet_id

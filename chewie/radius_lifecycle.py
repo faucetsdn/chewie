@@ -4,7 +4,8 @@ import os
 import struct
 
 from chewie.message_parser import MessagePacker
-from chewie.radius_attributes import CalledStationId, NASIdentifier, NASPortType
+from chewie.radius_attributes import EAPMessage, State, CalledStationId, NASIdentifier, NASPortType
+from chewie.event import EventRadiusMessageReceived
 
 def port_id_to_int(port_id):
     """"Convert a port_id str '00:00:00:00:aa:01 to integer'"""
@@ -44,6 +45,14 @@ class RadiusLifecycle:
                                          self.radius_secret,
                                          port_id_to_int(port_id),
                                          self.extra_radius_request_attributes)
+
+    def build_event_radius_message_received(self, radius):
+        """Build a EventRadiusMessageReceived from a radius message"""
+        eap_msg_attribute = radius.attributes.find(EAPMessage.DESCRIPTION)
+        eap_msg = eap_msg_attribute.data_type.data()
+        state = radius.attributes.find(State.DESCRIPTION)
+        self.logger.info("radius EAP: %s", eap_msg)
+        return EventRadiusMessageReceived(eap_msg, state, radius.attributes.to_dict())
 
     def generate_request_authenticator(self):
         """Workaround until we get this extracted for easy mocking"""
