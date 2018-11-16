@@ -68,6 +68,10 @@ class Chewie:
         self.setup_radius_socket()
         self.start_threads_and_wait()
 
+    def running(self):
+        """Used to nicely exit the event loops"""
+        return True
+
     def shutdown(self):
         """kill eventlets and quit"""
         for eventlet in self.eventlets:
@@ -156,7 +160,7 @@ class Chewie:
 
     def send_eap_messages(self):
         """send eap messages to supplicant forever."""
-        while True:
+        while self.running():
             sleep(0)
             message, src_mac, port_mac = self.eap_output_messages.get()
             self.logger.info("Sending message %s from %s to %s" %
@@ -165,7 +169,7 @@ class Chewie:
 
     def receive_eap_messages(self):
         """receive eap messages from supplicant forever."""
-        while True:
+        while self.running():
             sleep(0)
             self.logger.info("waiting for eap.")
             packed_message = self.eap_socket.receive()
@@ -176,14 +180,13 @@ class Chewie:
     def send_eap_to_state_machine(self, eap, dst_mac):
         """sends an eap message to the state machine"""
         self.logger.info("eap EAP(): %s", eap)
-        self.logger.info("Received message: %s" % eap.__dict__)
         state_machine = self.get_state_machine(eap.src_mac, dst_mac)
         event = EventMessageReceived(eap, dst_mac)
         state_machine.event(event)
 
     def send_radius_messages(self):
         """send RADIUS messages to RADIUS Server forever."""
-        while True:
+        while self.running():
             sleep(0)
             radius_output_bits = self.radius_output_messages.get()
             packed_message = self.radius_lifecycle.process_outbound(radius_output_bits)
@@ -192,7 +195,7 @@ class Chewie:
 
     def receive_radius_messages(self):
         """receive RADIUS messages from RADIUS server forever."""
-        while True:
+        while self.running():
             sleep(0)
             self.logger.info("waiting for radius.")
             packed_message = self.radius_socket.receive()
