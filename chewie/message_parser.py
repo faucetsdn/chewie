@@ -158,10 +158,10 @@ class MessageParser:
                ethernet_packet.dst_mac
 
     @staticmethod
-    def radius_parse(packed_message, secret, request_authenticator_callback):
+    def radius_parse(packed_message, secret, radius_lifecycle):
         """Parses a RADIUS packet"""
         parsed_radius = Radius.parse(packed_message, secret,
-                                     request_authenticator_callback=request_authenticator_callback)
+                                     radius_lifecycle=radius_lifecycle)
         return parsed_radius
 
 

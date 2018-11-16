@@ -39,13 +39,12 @@ class Radius:
     STATUS_CLIENT = 13
 
     @staticmethod
-    def parse(packed_message, secret, request_authenticator_callback=None):
+    def parse(packed_message, secret, radius_lifecycle=None):
         """
         Args:
             packed_message:
             secret (str): Shared sceret between chewie and RADIUS server.
-            request_authenticator_callback: function that takes single argument (packet_id) and
-             returns the coresponding RequestAuthenticator
+            radius_lifecycle: RadiusLifecycle object
         Returns:
             RadiusPacket - RadiusAccessChallenge/RadiusAccessRequest/
                             RadiusAccessAccept/RadiusAccessFailure
@@ -57,7 +56,7 @@ class Radius:
             radius_packet = PACKET_TYPE_PARSERS[code](packet_id, response_authenticator,
                                                       RadiusAttributesList.parse(
                                                           packed_message[RADIUS_HEADER_LENGTH:]))
-            request_authenticator = request_authenticator_callback(packet_id)
+            request_authenticator = radius_lifecycle.packet_id_to_request_authenticator[packet_id]
             return radius_packet.validate_packet(secret,
                                                  request_authenticator=request_authenticator)
         raise ValueError("Unable to parse radius code: %d" % code)
