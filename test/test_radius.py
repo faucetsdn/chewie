@@ -4,8 +4,9 @@
 
 import binascii
 import unittest
+from collections import namedtuple
 
-from chewie.message_parser import  SuccessMessage
+from chewie.message_parser import SuccessMessage
 from chewie.radius import Radius, RadiusAccessAccept, RadiusAttributesList, \
     InvalidResponseAuthenticatorError, RadiusAccessChallenge, RadiusAccessRequest
 from chewie.radius_attributes import UserName, ServiceType, FramedMTU, CalledStationId,\
@@ -17,8 +18,9 @@ from chewie.radius_datatypes import Vsa, String, Enum, Text, Integer, Concat
 class RadiusTestCase(unittest.TestCase):
     def test_radius_access_request_parses(self):
         packed_message = bytes.fromhex("010000a3982a0ba06d3557f0dbc8ba6e823822f1010b686f737431757365721e1434342d34342d34342d34342d34342d34343a3d06000000130606000000021f1330302d30302d30302d31312d31312d30314d17434f4e4e45435420304d627073203830322e3131622c12433634383030344139433930353537390c06000005784f100201000e01686f73743175736572501273f82750f6f261a95a7cc7d318b9f573")
+        # this needs to change - missing key raises a key error, it doesn't return None
         message = Radius.parse(packed_message, secret="SECRET",
-                               request_authenticator_callback=lambda x: None)
+                               radius_lifecycle=namedtuple('RadiusLifecycle', 'packet_id_to_request_authenticator')({0: None}))
         self.assertEqual(message.packet_id, 0)
         self.assertEqual(message.authenticator, b"982a0ba06d3557f0dbc8ba6e823822f1")
         msg_attr = message.attributes
@@ -45,8 +47,9 @@ class RadiusTestCase(unittest.TestCase):
     def test_radius_access_accept_parses(self):
         packed_message = bytes.fromhex("0201004602970aff2ef0700780f70848e90d24101a0f00003039010973747564656e744f06030200045012d7ec84e8864dd6cd00916c1d5a3cf41b010b686f73743175736572")
         message = Radius.parse(packed_message, secret="SECRET",
-                               request_authenticator_callback=
-                               lambda x: bytes.fromhex("a0b4ace0b367114b1a16d76e2bfed5d8"))
+                               radius_lifecycle=namedtuple('RadiusLifecycle', 'packet_id_to_request_authenticator')({
+                                 1: bytes.fromhex("a0b4ace0b367114b1a16d76e2bfed5d8")
+                               }))
         self.assertEqual(message.packet_id, 1)
         self.assertEqual(message.authenticator, b"02970aff2ef0700780f70848e90d2410")
         msg_attr = message.attributes
@@ -88,8 +91,9 @@ class RadiusTestCase(unittest.TestCase):
 
         self.assertRaises(InvalidResponseAuthenticatorError, Radius.parse,
                           packed_message, secret="SECRET",
-                          request_authenticator_callback=
-                          lambda x: bytes.fromhex("982a0ba06d3557f0dbc8ba6e823822f1"))
+                          radius_lifecycle=namedtuple('RadiusLifecycle', 'packet_id_to_request_authenticator')({
+                            0: bytes.fromhex("982a0ba06d3557f0dbc8ba6e823822f1")
+                          }))
 
         # the original response authenticator does not match the computed one
         #  because the message authenticator was 'corrupted'
@@ -98,8 +102,9 @@ class RadiusTestCase(unittest.TestCase):
 
         self.assertRaises(InvalidResponseAuthenticatorError, Radius.parse, packed_message,
                           secret="SECRET",
-                          request_authenticator_callback=
-                          lambda x: bytes.fromhex("982a0ba06d3557f0dbc8ba6e823822f1"))
+                          radius_lifecycle=namedtuple('RadiusLifecycle', 'packet_id_to_request_authenticator')({
+                            0: bytes.fromhex("982a0ba06d3557f0dbc8ba6e823822f1")
+                          }))
 
         # TODO How can we test that response authenticator is correct
         #  but message authenticator is not?
@@ -111,15 +116,17 @@ class RadiusTestCase(unittest.TestCase):
             "0b00005056d9280d3e4fed327eb31cf1823f8c244f1801020016041074d3db089b727d9cc5774599e4a32a295012ecc840b316217c851bd6708afb554b24181219ddf6d119dff272fa2fe16c34990c7d")
 
         self.assertRaises(ValueError, Radius.parse, packed_message, secret="",
-                          request_authenticator_callback=
-                          lambda x: bytes.fromhex("982a0ba06d3557f0dbc8ba6e823822f1"))
+                          radius_lifecycle=namedtuple('RadiusLifecycle', 'packet_id_to_request_authenticator')({
+                            0: bytes.fromhex("982a0ba06d3557f0dbc8ba6e823822f1")
+                          }))
 
     def test_radius_access_challenge_parses(self):
         packed_message = bytes.fromhex(
             "0b00005056d9280d3e4fed327eb31cf1823f8c244f1801020016041074d3db089b727d9cc5774599e4a32a295012ecc840b316217c851bd6708afb554b24181219ddf6d119dff272fa2fe16c34990c7d")
         message = Radius.parse(packed_message, secret="SECRET",
-                               request_authenticator_callback=
-                               lambda x: bytes.fromhex("982a0ba06d3557f0dbc8ba6e823822f1"))
+                               radius_lifecycle=namedtuple('RadiusLifecycle', 'packet_id_to_request_authenticator')({
+                                 0: bytes.fromhex("982a0ba06d3557f0dbc8ba6e823822f1")
+                               }))
         self.assertEqual(message.packet_id, 0)
         self.assertEqual(message.authenticator, b"56d9280d3e4fed327eb31cf1823f8c24")
         msg_attr = message.attributes
@@ -139,8 +146,9 @@ class RadiusTestCase(unittest.TestCase):
         packed_message = bytes.fromhex(
             "0b06042c54dbc73332c00c0347fc4b462d1811a74fff016a03ec15c000000a76160303003e0200003a0303114aa9dae3f9d452ca12535b03aee03cd4dabe3ca7639929dd3b645d1f86ad6500c030000012ff01000100000b000403000102000f00010116030308d30b0008cf0008cc0003de308203da308202c2a003020102020101300d06092a864886f70d01010b0500308193310b3009060355040613024652310f300d06035504080c065261646975733112301006035504070c09536f6d65776865726531153013060355040a0c0c4578616d706c6520496e632e3120301e06092a864886f70d010901161161646d696e406578616d706c652e6f72673126302406035504030c1d4578616d706c6520434fff6572746966696361746520417574686f72697479301e170d3138303630353033353134345a170d3138303830343033353134345a307c310b3009060355040613024652310f300d06035504080c0652616469757331153013060355040a0c0c4578616d706c6520496e632e3123302106035504030c1a4578616d706c65205365727665722043657274696669636174653120301e06092a864886f70d010901161161646d696e406578616d706c652e6f726730820122300d06092a864886f70d01010105000382010f003082010a0282010100cf5456d7e6142383101cf79275f6396e2c9b3f7cb2878d35e5ecc6f47ee11ef20bc8a8b3217a89351c554fff856e5cd5eed2d10037c9bcce89fbdf927e4cc4f069863acbac4accee7e80f2105ad80d837fa50a931c5b41d03c993f5e338cfd8e69e23818360053501c34c08132ec3d6e14df89ff29c5cec5c7a87d48c4afdcf9d3f8290050be5b903ba6a2a5ce2eb79c922cae70869618c75923059f9a8d62144e8ecdaf0a9f02886afa0e73e3d68037ea9fdca2bdd0f0785e05f5ac88031010c105575dbb09eb4f307547622120ee384ab454376de8e14e0afea02f1211801b6c932324ef6dba7abf3f48f8e3e84716c40b59041ec936cb273d684b22aa1c9d24e10203010001a34f304d30130603551d25040c300a06082b0601050507030130360603551d1f042f4ff7302d302ba029a0278625687474703a2f2f7777772e6578616d706c652e636f6d2f6578616d706c655f63612e63726c300d06092a864886f70d01010b0500038201010054fdcdabdc3a153dc167d6b210d1b324ecfac0e3b8d385704463a7f8ebf46e2e6952f249f4436ec66760868860e5ed50b519ec14628179472c312f507bc9349971d21f8f2b7d6b329b02fab448bd90fd4ce4dfbc78f23a8c4eed74d5589f4c3bd11b552535b8ab8a1a6ab9d1dfda21f247a93354702c12fdde1113cb8dd0e46e2a3a94547c9871df2a88943751d8276dc43f7f6aed921f43f6a33f9beba804c3d2b5781d754abe36ba58461798be8585b8b2501226e219fc875fd78976eb2b9b475b14881812c1591073c33305b4fa8bd26dd27eafd9")
         message = Radius.parse(packed_message, secret="SECRET",
-                               request_authenticator_callback=
-                               lambda x: bytes.fromhex("0d64ffb8bc76d457d337e5f5692534aa"))
+                               radius_lifecycle=namedtuple('RadiusLifecycle', 'packet_id_to_request_authenticator')({
+                                 6: bytes.fromhex("0d64ffb8bc76d457d337e5f5692534aa")
+                               }))
         self.assertEqual(message.packet_id, 6)
         self.assertEqual(message.authenticator, b"54dbc73332c00c0347fc4b462d1811a7")
         msg_attr = message.attributes

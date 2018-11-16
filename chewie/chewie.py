@@ -12,6 +12,7 @@ from chewie.eap_socket import EapSocket
 from chewie.radius_socket import RadiusSocket
 from chewie.eap_state_machine import FullEAPStateMachine
 from chewie.radius_attributes import EAPMessage, State, CalledStationId, NASIdentifier, NASPortType
+from chewie.radius_lifecycle import RadiusLifecycle
 from chewie.message_parser import MessageParser, MessagePacker
 from chewie.mac_address import MacAddress
 from chewie.event import EventMessageReceived, EventRadiusMessageReceived, EventPortStatusChange
@@ -20,12 +21,6 @@ from chewie.utils import get_logger
 def unpack_byte_string(byte_string):
     """unpacks a byte string"""
     return "".join("%02x" % x for x in byte_string)
-
-
-def port_id_to_int(port_id):
-    """"Convert a port_id str '00:00:00:00:aa:01 to integer'"""
-    dp, port = str(port_id).split(':')[4:]
-    return int.from_bytes(struct.pack('!HH', int(dp, 16), int(port, 16)), 'big')  # pytype: disable=attribute-error
 
 
 class Chewie:
@@ -54,18 +49,15 @@ class Chewie:
                                                # 'Called-Station' in Access-Request
         if chewie_id:
             self.chewie_id = chewie_id
-        self.extra_radius_request_attributes = self.prepare_extra_radius_attributes()
 
         self.state_machines = {}  # mac: state_machine
-        self.packet_id_to_mac = {}  # radius_packet_id: mac
-        self.packet_id_to_request_authenticator = {}
 
         self.eap_output_messages = Queue()
         self.radius_output_messages = Queue()
 
+        self.radius_lifecycle = RadiusLifecycle(self.radius_secret, self.chewie_id, self.logger)
         self.timer_scheduler = timer_scheduler.TimerScheduler(self.logger)
 
-        self.radius_id = -1
         self.eap_socket = None
         self.pool = None
         self.eventlets = None
@@ -195,25 +187,9 @@ class Chewie:
         """send RADIUS messages to RADIUS Server forever."""
         while True:
             sleep(0)
-            eap_message, src_mac, username, state, port_id = self.radius_output_messages.get()
-            self.logger.info("got eap to send to radius.. mac: %s %s, username: %s",
-                             type(src_mac), src_mac, username)
-            state_dict = None
-            if state:
-                state_dict = state.__dict__
-            self.logger.info("Sending to RADIUS eap message %s with state %s",
-                             eap_message.__dict__, state_dict)
-            radius_packet_id = self.get_next_radius_packet_id()
-            self.packet_id_to_mac[radius_packet_id] = {'src_mac': src_mac, 'port_id': port_id}
-            # message is eap. needs to be wrapped into a radius packet.
-            request_authenticator = os.urandom(16)
-            self.packet_id_to_request_authenticator[radius_packet_id] = request_authenticator
-            data = MessagePacker.radius_pack(eap_message, src_mac, username,
-                                             radius_packet_id, request_authenticator, state,
-                                             self.radius_secret,
-                                             port_id_to_int(port_id),
-                                             self.extra_radius_request_attributes)
-            self.radius_socket.send(data)
+            radius_output_bits = self.radius_output_messages.get()
+            packed_message = self.radius_lifecycle.process_outbound(radius_output_bits)
+            self.radius_socket.send(packed_message)
             self.logger.info("sent radius message.")
 
     def receive_radius_messages(self):
@@ -223,7 +199,7 @@ class Chewie:
             self.logger.info("waiting for radius.")
             packed_message = self.radius_socket.receive()
             radius = MessageParser.radius_parse(packed_message, self.radius_secret,
-                                                self.request_authenticator_callback)
+                                                self.radius_lifecycle)
             self.logger.info("Received RADIUS message: %s", radius)
             eap_msg_attribute = radius.attributes.find(EAPMessage.DESCRIPTION)
             state_machine = self.get_state_machine_from_radius_packet_id(radius.packet_id)
@@ -233,22 +209,6 @@ class Chewie:
             event = EventRadiusMessageReceived(eap_msg, state, radius.attributes.to_dict())
             state_machine.event(event)
 
-    def request_authenticator_callback(self, packet_id):
-        """Callback to get the RADIUS request Authenticator
-        Args:
-            packet_id (int):
-        Returns:
-            the request authenticator sent with the packet_id
-            """
-        return self.packet_id_to_request_authenticator[packet_id]
-
-    def prepare_extra_radius_attributes(self):
-        """Create RADIUS Attirbutes to be sent with every RADIUS request"""
-        attr_list = [CalledStationId.create(self.chewie_id),
-                     NASPortType.create(15),
-                     NASIdentifier.create(self.chewie_id)]
-        return attr_list
-
     def get_state_machine_from_radius_packet_id(self, packet_id):
         """Gets a FullEAPStateMachine from the RADIUS message packet_id
         Args:
@@ -256,7 +216,7 @@ class Chewie:
         Returns:
             FullEAPStateMachine
         """
-        return self.get_state_machine(**self.packet_id_to_mac[packet_id])
+        return self.get_state_machine(**self.radius_lifecycle.packet_id_to_mac[packet_id])
 
     def get_state_machine(self, src_mac, port_id):
         """Gets or creates if it does not already exist an FullEAPStateMachine for the src_mac.
@@ -282,13 +242,3 @@ class Chewie:
             state_machine.portEnabled = True
             self.state_machines[port_id_str][src_mac_str] = state_machine
         return state_machine
-
-    def get_next_radius_packet_id(self):
-        """Calulate the next RADIUS Packet ID
-        Returns:
-            int
-        """
-        self.radius_id += 1
-        if self.radius_id > 255:
-            self.radius_id = 0
-        return self.radius_id

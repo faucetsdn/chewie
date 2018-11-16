@@ -27,7 +27,6 @@ def patch_things(func):
     @patch('chewie.chewie.RadiusSocket', FakeRadiusSocket)
     @patch('chewie.chewie.os.urandom', urandom_helper)
     @patch('chewie.chewie.FullEAPStateMachine.nextId', nextId)
-    @patch('chewie.chewie.Chewie.get_next_radius_packet_id', get_next_radius_packet_id)
     def wrapper_patch(self):
         func(self)
 
@@ -160,17 +159,6 @@ def nextId(eap_state_machine):  # pylint: disable=invalid-name
     return _id
 
 
-def get_next_radius_packet_id(chewie):
-    """mocked Chewie.get_next_radius_packet_id"""
-    if chewie.radius_id == -1:
-        chewie.radius_id = 4
-        return chewie.radius_id
-    chewie.radius_id += 1
-    if chewie.radius_id > 255:
-        chewie.radius_id = 0
-    return chewie.radius_id
-
-
 def auth_handler(client_mac, port_id_mac):  # pylint: disable=unused-argument
     """dummy handler for successful authentications"""
     print('Successful auth from MAC %s on port: %s' % (str(client_mac), str(port_id_mac)))
@@ -197,9 +185,9 @@ class ChewieTestCase(unittest.TestCase):
                                header + "010000160275001604103abcadc86714b2d75d09dd7ff53edf6b")]
 
     radius_replies_success = [bytes.fromhex(
-        "0b040050e5e40d846576a2310755e906c4b2b5064f180175001604101a16a3baa37a0238f33384f6c11067425012ce61ba97026b7a05b194a930a922405218126aa866456add628e3a55a4737872cad6"),
+        "0b000050066300262c8ee8a33f43ad4e837e63c54f180175001604101a16a3baa37a0238f33384f6c11067425012a3bf83bea0eeb69645088527dc491eed18126aa866456add628e3a55a4737872cad6"),
                               bytes.fromhex(
-                                  "02050032fb4c4926caa21a02f74501a65c96f9c74f06037500045012c060ca6a19c47d0998c7b20fd4d771c1010675736572")]
+                                  "02010032ec22830bb2fbde37f635e91690410b334f060375000450129a08d246ec3da2f371ec4ff16eed9310010675736572")]
 
     sup_replies_logoff = [bytes.fromhex(header + "01000009027400090175736572"),
                           bytes.fromhex(
@@ -270,8 +258,8 @@ class ChewieTestCase(unittest.TestCase):
 
     def test_get_state_machine_by_packet_id(self):
         """Tests Chewie.get_state_machine_by_packet_id()"""
-        self.chewie.packet_id_to_mac[56] = {'src_mac': '12:34:56:78:9a:bc',
-                                            'port_id': '00:00:00:00:00:01'}
+        self.chewie.radius_lifecycle.packet_id_to_mac[56] = {'src_mac': '12:34:56:78:9a:bc',
+                                                             'port_id': '00:00:00:00:00:01'}
         state_machine = self.chewie.get_state_machine('12:34:56:78:9a:bc',  # pylint: disable=invalid-name
                                            '00:00:00:00:00:01')
 
@@ -279,13 +267,6 @@ class ChewieTestCase(unittest.TestCase):
                       state_machine)
         with self.assertRaises(KeyError):
             self.chewie.get_state_machine_from_radius_packet_id(20)
-
-    def test_get_next_radius_packet_id(self):
-        """Tests Chewie.get_next_radius_packet_id()"""
-        for i in range(0, 260):
-            _i = i % 256
-            self.assertEqual(self.chewie.get_next_radius_packet_id(),
-                             _i)
 
     @patch_things
     @setup_generators(sup_replies_success, radius_replies_success)
