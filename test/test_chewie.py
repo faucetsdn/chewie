@@ -261,7 +261,7 @@ class ChewieTestCase(unittest.TestCase):
         self.chewie.radius_lifecycle.packet_id_to_mac[56] = {'src_mac': '12:34:56:78:9a:bc',
                                                              'port_id': '00:00:00:00:00:01'}
         state_machine = self.chewie.get_state_machine('12:34:56:78:9a:bc',  # pylint: disable=invalid-name
-                                           '00:00:00:00:00:01')
+                                                      '00:00:00:00:00:01')
 
         self.assertIs(self.chewie.get_state_machine_from_radius_packet_id(56),
                       state_machine)
@@ -275,7 +275,7 @@ class ChewieTestCase(unittest.TestCase):
         FROM_SUPPLICANT.put(bytes.fromhex("0000000000010242ac17006f888e01010000"))
         
         pool = eventlet.GreenPool()
-        chewie_thread = pool.spawn(self.chewie.run)
+        pool.spawn(self.chewie.run)
 
         eventlet.sleep(0.1)
 
@@ -306,7 +306,7 @@ class ChewieTestCase(unittest.TestCase):
         FROM_SUPPLICANT.put(bytes.fromhex("0000000000010242ac17006f888e01010000"))
 
         pool = eventlet.GreenPool()
-        chewie_thread = pool.spawn(self.chewie.run)
+        pool.spawn(self.chewie.run)
 
         eventlet.sleep(0.1)
 
@@ -329,7 +329,7 @@ class ChewieTestCase(unittest.TestCase):
         FROM_SUPPLICANT.put(bytes.fromhex("0000000000010242ac17006f888e01010000"))
 
         pool = eventlet.GreenPool()
-        chewie_thread = pool.spawn(self.chewie.run)
+        pool.spawn(self.chewie.run)
 
         while not self.fake_scheduler.jobs:
             eventlet.sleep(0.1)
@@ -353,7 +353,7 @@ class ChewieTestCase(unittest.TestCase):
         FROM_SUPPLICANT.put(bytes.fromhex("0000000000010242ac17006f888e01010000"))
 
         pool = eventlet.GreenPool()
-        chewie_thread = pool.spawn(self.chewie.run)
+        pool.spawn(self.chewie.run)
 
         while not self.fake_scheduler.jobs:
             eventlet.sleep(0.1)
