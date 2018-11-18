@@ -103,13 +103,13 @@ class FakeEapSocket:
 
         print('mocked eap_send')
         if data:
-            TO_SUPPLICANT.put(data)
+            TO_SUPPLICANT.put_nowait(data)
         try:
             next_reply = next(SUPPLICANT_REPLY_GENERATOR)
         except StopIteration:
             return
         if next_reply:
-            FROM_SUPPLICANT.put(next_reply)
+            FROM_SUPPLICANT.put_nowait(next_reply)
 
 class FakeRadiusSocket:
     def __init__(self, _listen_ip, _listen_port, _server_ip, _server_port):
@@ -134,13 +134,13 @@ class FakeRadiusSocket:
         global RADIUS_REPLY_GENERATOR
 
         print('mocked radius_send')
-        TO_RADIUS.put(data)
+        TO_RADIUS.put_nowait(data)
         try:
             next_reply = next(RADIUS_REPLY_GENERATOR)
         except StopIteration:
             return
         if next_reply:
-            FROM_RADIUS.put(next_reply)
+            FROM_RADIUS.put_nowait(next_reply)
 
 
 def do_nothing(chewie):  # pylint: disable=unused-argument
@@ -272,7 +272,7 @@ class ChewieTestCase(unittest.TestCase):
     @setup_generators(sup_replies_success, radius_replies_success)
     def test_success_dot1x(self):
         """Test success api"""
-        FROM_SUPPLICANT.put(bytes.fromhex("0000000000010242ac17006f888e01010000"))
+        FROM_SUPPLICANT.put_nowait(bytes.fromhex("0000000000010242ac17006f888e01010000"))
         
         pool = eventlet.GreenPool()
         pool.spawn(self.chewie.run)
@@ -303,7 +303,7 @@ class ChewieTestCase(unittest.TestCase):
         """Test logoff"""
         self.chewie.get_state_machine(MacAddress.from_string('02:42:ac:17:00:6f'),
                                       MacAddress.from_string('00:00:00:00:00:01'))
-        FROM_SUPPLICANT.put(bytes.fromhex("0000000000010242ac17006f888e01010000"))
+        FROM_SUPPLICANT.put_nowait(bytes.fromhex("0000000000010242ac17006f888e01010000"))
 
         pool = eventlet.GreenPool()
         pool.spawn(self.chewie.run)
@@ -326,7 +326,7 @@ class ChewieTestCase(unittest.TestCase):
                                       MacAddress.from_string(
                                           '00:00:00:00:00:01')).DEFAULT_TIMEOUT = 0.5
 
-        FROM_SUPPLICANT.put(bytes.fromhex("0000000000010242ac17006f888e01010000"))
+        FROM_SUPPLICANT.put_nowait(bytes.fromhex("0000000000010242ac17006f888e01010000"))
 
         pool = eventlet.GreenPool()
         pool.spawn(self.chewie.run)
@@ -350,7 +350,7 @@ class ChewieTestCase(unittest.TestCase):
                                       MacAddress.from_string(
                                           '00:00:00:00:00:01')).DEFAULT_TIMEOUT = 0.5
 
-        FROM_SUPPLICANT.put(bytes.fromhex("0000000000010242ac17006f888e01010000"))
+        FROM_SUPPLICANT.put_nowait(bytes.fromhex("0000000000010242ac17006f888e01010000"))
 
         pool = eventlet.GreenPool()
         pool.spawn(self.chewie.run)
