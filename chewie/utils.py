@@ -15,3 +15,21 @@ def log_method(method):
         self.logger.info('Entering %s' % method.__name__)
         return method(self, *args, **kwargs)
     return wrapped
+
+
+class MessageParseError(Exception):
+    """Error for when parsing cannot be successfully completed."""
+
+    def __init__(self, message=None, original_error=None):
+        """
+
+        Args:
+            message (str):
+            original_error (Exception): error that MessageParser is silencing.
+        """
+        super().__init__()
+        self.message = message
+        self.original_error = original_error
+
+    def __str__(self):
+        return "Message: %s. original_error: %s" % (self.message, self.original_error)

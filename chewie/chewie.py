@@ -11,7 +11,8 @@ from chewie.eap_state_machine import FullEAPStateMachine
 from chewie.radius_lifecycle import RadiusLifecycle
 from chewie.message_parser import MessageParser, MessagePacker
 from chewie.event import EventMessageReceived, EventPortStatusChange
-from chewie.utils import get_logger
+from chewie.utils import get_logger, MessageParseError
+
 
 def unpack_byte_string(byte_string):
     """unpacks a byte string"""
@@ -174,7 +175,11 @@ class Chewie:
             self.logger.info("waiting for eap.")
             packed_message = self.eap_socket.receive()
             self.logger.info("Received packed_message: %s", str(packed_message))
-            eap, dst_mac = MessageParser.ethernet_parse(packed_message)
+            try:
+                eap, dst_mac = MessageParser.ethernet_parse(packed_message)
+            except MessageParseError as exception:
+                self.logger.info("MessageParser.ethernet_parse threw exception: %s", exception)
+                continue
             self.send_eap_to_state_machine(eap, dst_mac)
 
     def send_eap_to_state_machine(self, eap, dst_mac):
