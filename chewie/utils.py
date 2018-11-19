@@ -27,9 +27,6 @@ class MessageParseError(Exception):
             message (str):
             original_error (Exception): error that MessageParser is silencing.
         """
-        super().__init__()
+        super().__init__(message)
         self.message = message
         self.original_error = original_error
-
-    def __str__(self):
-        return "Message: %s. original_error: %s" % (self.message, self.original_error)
