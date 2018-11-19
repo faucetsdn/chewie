@@ -202,6 +202,16 @@ class RadiusAttributesList:
 
     @classmethod
     def parse(cls, attributes_data):
+        """
+
+        Args:
+            attributes_data:
+
+        Returns:
+            RadiusAttributeList
+        Raises:
+            MessageParseError: if unable to parse an attribute's data.
+        """
         attributes = []
         attributes_to_concat = {}
         cls.extract_attributes(attributes_data, attributes, attributes_to_concat)
@@ -220,6 +230,9 @@ class RadiusAttributesList:
             attributes_to_concat (dict): attribute - position.
         Returns:
             attributes (list)
+        Raises:
+            MessageParseError: RadiusAttribute.parse will raise error
+            if it cannot parse the attribute's data
         """
         # Join Attributes that's datatype is Concat into one attribute.
         concatenated_attributes = []
@@ -248,6 +261,9 @@ class RadiusAttributesList:
             attributes_data (): data to extract from (input).
             attributes: attributes extracted (output variable).
             attributes_to_concat (dict): (output variable).
+        Raises:
+            MessageParseError: RadiusAttribute.parse will raise error
+            if it cannot parse the attribute's data
         """
         total_length = len(attributes_data)
         pos = 0

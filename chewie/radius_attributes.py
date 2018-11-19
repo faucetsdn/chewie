@@ -39,6 +39,8 @@ class Attribute():
             packed_value (bytes): pre-packed value
         Returns:
             Attribute subclass.
+        Raises:
+            MessageParseError: if unable to parse the packed_value into the appropriate datatype.
         """
         return cls(cls.DATA_TYPE.parse(packed_value))
 
