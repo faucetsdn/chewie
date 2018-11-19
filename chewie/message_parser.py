@@ -163,6 +163,8 @@ class MessageParser:
         """Parses the ethernet header part, and payload
         Args:
             packed_message:
+        Returns:
+            ***Message & destination mac address.
         Raises:
             MessageParseError: the packed_message cannot be parsed."""
         ethernet_packet = EthernetPacket.parse(packed_message)
@@ -171,11 +173,15 @@ class MessageParser:
                                     ethernet_packet)
 
         return MessageParser.one_x_parse(ethernet_packet.data, ethernet_packet.src_mac), \
-               ethernet_packet.dst_mac
+            ethernet_packet.dst_mac
 
     @staticmethod
     def radius_parse(packed_message, secret, radius_lifecycle):
-        """Parses a RADIUS packet"""
+        """Parses a RADIUS packet
+        Returns:
+            RadiusPacket
+        Raises:
+            MessageParseError: the packed_message cannot be parsed"""
         parsed_radius = Radius.parse(packed_message, secret,
                                      radius_lifecycle=radius_lifecycle)
         return parsed_radius

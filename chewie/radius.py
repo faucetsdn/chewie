@@ -7,7 +7,7 @@ import struct
 
 from chewie.radius_attributes import ATTRIBUTE_TYPES, Attribute, MessageAuthenticator
 from chewie.radius_datatypes import Concat
-
+from chewie.utils import MessageParseError
 
 RADIUS_HEADER_LENGTH = 1 + 1 + 2 + 16
 
@@ -48,6 +48,8 @@ class Radius:
         Returns:
             RadiusPacket - RadiusAccessChallenge/RadiusAccessRequest/
                             RadiusAccessAccept/RadiusAccessFailure
+        Raises:
+            MessageParseError: if packed_message cannot be parsed
         """
         code, packet_id, length, response_authenticator = struct.unpack("!BBH16s",
                                                                         packed_message[:RADIUS_HEADER_LENGTH])
@@ -57,9 +59,14 @@ class Radius:
                                                       RadiusAttributesList.parse(
                                                           packed_message[RADIUS_HEADER_LENGTH:]))
             request_authenticator = radius_lifecycle.packet_id_to_request_authenticator[packet_id]
-            return radius_packet.validate_packet(secret,
-                                                 request_authenticator=request_authenticator)
-        raise ValueError("Unable to parse radius code: %d" % code)
+            try:
+                return radius_packet.validate_packet(secret,
+                                                     request_authenticator=request_authenticator)
+            except (InvalidMessageAuthenticatorError,
+                    InvalidResponseAuthenticatorError) as exception:
+                raise MessageParseError(message="Unable to parse Radius packet",
+                                        original_error=exception) from exception
+        raise MessageParseError(message="Unable to parse radius code: %d" % code)
 
     def pack(self):
         pass

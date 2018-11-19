@@ -178,7 +178,12 @@ class Chewie:
             try:
                 eap, dst_mac = MessageParser.ethernet_parse(packed_message)
             except MessageParseError as exception:
-                self.logger.info("MessageParser.ethernet_parse threw exception: %s", exception)
+                self.logger.info(
+                    "MessageParser.ethernet_parse threw exception.\n"
+                    " packed_message: '%s'.\n"
+                    " exception: '%s'.",
+                    packed_message,
+                    exception)
                 continue
             self.send_eap_to_state_machine(eap, dst_mac)
 
@@ -204,8 +209,17 @@ class Chewie:
             sleep(0)
             self.logger.info("waiting for radius.")
             packed_message = self.radius_socket.receive()
-            radius = MessageParser.radius_parse(packed_message, self.radius_secret,
-                                                self.radius_lifecycle)
+            try:
+                radius = MessageParser.radius_parse(packed_message, self.radius_secret,
+                                                    self.radius_lifecycle)
+            except MessageParseError as exception:
+                self.logger.info(
+                    "MessageParser.radius_parse threw exception.\n"
+                    " packed_message: '%s'.\n"
+                    " exception: '%s'.",
+                    packed_message,
+                    exception)
+                continue
             self.send_radius_to_state_machine(radius)
             self.logger.info("Received RADIUS message: %s", radius)
 

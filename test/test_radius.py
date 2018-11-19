@@ -13,6 +13,7 @@ from chewie.radius_attributes import UserName, ServiceType, FramedMTU, CalledSta
     AcctSessionId, NASPortType, ConnectInfo, EAPMessage, MessageAuthenticator, State,\
     VendorSpecific, CallingStationId
 from chewie.radius_datatypes import Vsa, String, Enum, Text, Integer, Concat
+from chewie.utils import MessageParseError
 
 
 class RadiusTestCase(unittest.TestCase):
@@ -89,22 +90,29 @@ class RadiusTestCase(unittest.TestCase):
         packed_message = bytes.fromhex(
             "0b00005056d9280d3e4fed327eb31cf1823f8c244f1801020016041074d3db089b727d9cc5774599e4a32a295012982a0ba06d3557f0dbc8ba6e823822f1181219ddf6d119dff272fa26666666666666")
 
-        self.assertRaises(InvalidResponseAuthenticatorError, Radius.parse,
-                          packed_message, secret="SECRET",
+        try:
+            Radius.parse(packed_message, secret="SECRET",
                           radius_lifecycle=namedtuple('RadiusLifecycle', 'packet_id_to_request_authenticator')({
                             0: bytes.fromhex("982a0ba06d3557f0dbc8ba6e823822f1")
                           }))
+            self.fail()
+        except MessageParseError as exception:
+            self.assertIsInstance(exception.original_error, InvalidResponseAuthenticatorError)
 
         # the original response authenticator does not match the computed one
         #  because the message authenticator was 'corrupted'
         packed_message = bytes.fromhex(
             "0b00005056d9280d3e4fed327eb31cf1823f8c244f1801020016041074d3db089b727d9cc5774599e4a32a29501266666666666666666666666666666666181219ddf6d119dff272fa2fe16c34990c7d")
 
-        self.assertRaises(InvalidResponseAuthenticatorError, Radius.parse, packed_message,
+        try:
+            Radius.parse(packed_message,
                           secret="SECRET",
                           radius_lifecycle=namedtuple('RadiusLifecycle', 'packet_id_to_request_authenticator')({
                             0: bytes.fromhex("982a0ba06d3557f0dbc8ba6e823822f1")
                           }))
+            self.fail()
+        except MessageParseError as exception:
+            self.assertIsInstance(exception.original_error, InvalidResponseAuthenticatorError)
 
         # TODO How can we test that response authenticator is correct
         #  but message authenticator is not?
@@ -239,30 +247,30 @@ class RadiusTestCase(unittest.TestCase):
 
     def test_parse_illegal_radius_datatype_lengths(self):
 
-        self.assertRaises(ValueError, Integer.parse, (1500).to_bytes(3, byteorder='big'))
-        self.assertRaises(ValueError, Integer.parse, bytes.fromhex("01234567890123456789"))
+        self.assertRaises(MessageParseError, Integer.parse, (1500).to_bytes(3, byteorder='big'))
+        self.assertRaises(MessageParseError, Integer.parse, bytes.fromhex("01234567890123456789"))
 
-        self.assertRaises(ValueError, Enum.parse, bytes.fromhex("000002"))
-        self.assertRaises(ValueError, Enum.parse, bytes.fromhex("01234567890123456789"))
+        self.assertRaises(MessageParseError, Enum.parse, bytes.fromhex("000002"))
+        self.assertRaises(MessageParseError, Enum.parse, bytes.fromhex("01234567890123456789"))
 
-        self.assertRaises(ValueError, Text.parse, "".encode())
-        self.assertRaises(ValueError, Text.parse,
+        self.assertRaises(MessageParseError, Text.parse, "".encode())
+        self.assertRaises(MessageParseError, Text.parse,
                           "260CharacterLengthUserName260CharacterLengthUserName"
                           "260CharacterLengthUserName260CharacterLengthUserName"
                           "260CharacterLengthUserName260CharacterLengthUserName"
                           "260CharacterLengthUserName260CharacterLengthUserName"
                           "260CharacterLengthUserName260CharacterLengthUserName".encode())
 
-        self.assertRaises(ValueError, String.parse, "".encode())
-        self.assertRaises(ValueError, String.parse, "260CharacterLengthState260CharacterLengthState"
+        self.assertRaises(MessageParseError, String.parse, "".encode())
+        self.assertRaises(MessageParseError, String.parse, "260CharacterLengthState260CharacterLengthState"
                                                     "260CharacterLengthState260CharacterLengthState"
                                                     "260CharacterLengthState260CharacterLengthState"
                                                     "260CharacterLengthState260CharacterLengthState"
                                                     "260CharacterLengthState260CharacterLengthState"
                                                     "260CharacterLengthState260Char".encode())
 
-        self.assertRaises(ValueError, Vsa.parse, "abcd".encode())
-        self.assertRaises(ValueError, Vsa.parse,
+        self.assertRaises(MessageParseError, Vsa.parse, "abcd".encode())
+        self.assertRaises(MessageParseError, Vsa.parse,
                           "270CharacterLengthVSAAttribute270CharacterLengthVSAAttribute"
                           "270CharacterLengthVSAAttribute270CharacterLengthVSAAttribute"
                           "270CharacterLengthVSAAttribute270CharacterLengthVSAAttribute"

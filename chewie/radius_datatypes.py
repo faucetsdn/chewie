@@ -3,6 +3,7 @@ import math
 import struct
 
 import chewie.message_parser
+from chewie.utils import MessageParseError
 
 
 class DataType():
@@ -68,14 +69,20 @@ class Integer(DataType):
         if raw_data:
             try:
                 bytes_data = raw_data.to_bytes(self.MAX_DATA_LENGTH, "big")
-            except OverflowError:
-                raise ValueError("Integer must be >= 0  and <= 2^32-1, was %d" % raw_data)
+            except OverflowError as exception:
+                raise ValueError("Integer must be >= 0  and <= 2^32-1, was %d" %
+                                                raw_data)
         self.bytes_data = bytes_data
 
     @classmethod
     def parse(cls, packed_value):
-        cls.is_valid_length(packed_value)
-        return cls(bytes_data=struct.unpack("!4s", packed_value)[0])
+
+        try:
+            cls.is_valid_length(packed_value)
+            return cls(bytes_data=struct.unpack("!4s", packed_value)[0])
+        except (ValueError, struct.error)as exception:
+            raise MessageParseError(message="%s unable to unpack." % cls.__name__,
+                                    original_error=exception) from exception
 
     def pack(self, attribute_type):
         return struct.pack("!4s", self.bytes_data)
@@ -102,8 +109,12 @@ class Enum(DataType):
 
     @classmethod
     def parse(cls, packed_value):
-        cls.is_valid_length(packed_value)
-        return cls(bytes_data=struct.unpack("!4s", packed_value)[0])
+        try:
+            cls.is_valid_length(packed_value)
+            return cls(bytes_data=struct.unpack("!4s", packed_value)[0])
+        except (ValueError, struct.error)as exception:
+            raise MessageParseError(message="%s unable to unpack." % cls.__name__,
+                                    original_error=exception) from exception
 
     def pack(self, attribute_type):
         return struct.pack("!4s", self.bytes_data)
@@ -126,8 +137,12 @@ class Text(DataType):
 
     @classmethod
     def parse(cls, packed_value):
-        cls.is_valid_length(packed_value)
-        return cls(struct.unpack("!%ds" % len(packed_value), packed_value)[0])
+        try:
+            cls.is_valid_length(packed_value)
+            return cls(struct.unpack("!%ds" % len(packed_value), packed_value)[0])
+        except (ValueError, struct.error) as exception:
+            raise MessageParseError(message="%s unable to unpack." % cls.__name__,
+                                    original_error=exception) from exception
 
     def pack(self, attribute_type):
         return struct.pack("!%ds" % len(self.bytes_data), self.bytes_data)
@@ -154,8 +169,12 @@ class String(DataType):
 
     @classmethod
     def parse(cls, packed_value):
-        cls.is_valid_length(packed_value)
-        return cls(struct.unpack("!%ds" % len(packed_value), packed_value)[0])
+        try:
+            cls.is_valid_length(packed_value)
+            return cls(struct.unpack("!%ds" % len(packed_value), packed_value)[0])
+        except (ValueError, struct.error) as exception:
+            raise MessageParseError(message="%s unable to unpack." % cls.__name__,
+                                    original_error=exception) from exception
 
     def pack(self, attribute_type):
         return struct.pack("!%ds" % len(self.bytes_data), self.bytes_data)
@@ -186,7 +205,11 @@ class Concat(DataType):
         # Packing is (generally) for packets going to the radius server.
         #
         # Therefore we error out if length is too long (you are not allowed to have AVP that are too long)
-        return cls(struct.unpack("!%ds" % len(packed_value), packed_value)[0])
+        try:
+            return cls(struct.unpack("!%ds" % len(packed_value), packed_value)[0])
+        except struct.error as exception:
+            raise MessageParseError(message="%s unable to unpack." % cls.__name__,
+                                    original_error=exception) from exception
 
     def pack(self, attribute_type):
 
@@ -235,10 +258,14 @@ class Vsa(DataType):
 
     @classmethod
     def parse(cls, packed_value):
-        cls.is_valid_length(packed_value)
         # TODO Vsa.parse does not currently separate the vendor-id from the vsa-data
         # we could do that at some point (e.g. if we wanted to use Vendor-Specific)
-        return cls(struct.unpack("!%ds" % len(packed_value), packed_value)[0])
+        try:
+            cls.is_valid_length(packed_value)
+            return cls(struct.unpack("!%ds" % len(packed_value), packed_value)[0])
+        except (ValueError, struct.error) as exception:
+            raise MessageParseError(message="%s unable to unpack." % cls.__name__,
+                                    original_error=exception) from exception
 
     def pack(self, attribute_type):
         return struct.pack("!%ds" % (self.data_length()), self.bytes_data)
