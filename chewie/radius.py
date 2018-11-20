@@ -51,8 +51,13 @@ class Radius:
         Raises:
             MessageParseError: if packed_message cannot be parsed
         """
-        code, packet_id, length, response_authenticator = struct.unpack("!BBH16s",
-                                                                        packed_message[:RADIUS_HEADER_LENGTH])
+        try:
+            code, packet_id, length, response_authenticator = struct.unpack("!BBH16s",
+                                                                            packed_message[:RADIUS_HEADER_LENGTH])
+        except struct.error as exception:
+            raise MessageParseError(message='Unable to unpack first 20 bytes of RADIUS header',
+                                    original_error=exception) from exception
+
         response_authenticator = binascii.hexlify(response_authenticator)
         if code in PACKET_TYPE_PARSERS.keys():
             radius_packet = PACKET_TYPE_PARSERS[code](packet_id, response_authenticator,
