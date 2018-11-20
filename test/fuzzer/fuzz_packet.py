@@ -17,6 +17,12 @@ from chewie.radius import InvalidResponseAuthenticatorError, InvalidMessageAuthe
 ROUNDS = 1
 
 
+class NoneDict(dict):
+    """Dictionary that will always return None"""
+    def __getitem__(self, key):
+        return None
+
+
 def main(eap):
     """Run AFL repeatedly with externally supplied generated packet from STDIN."""
 
@@ -51,7 +57,7 @@ def main(eap):
 def test_eap_parse(data):
     try:
         MessageParser.eap_parse(data, MacAddress.from_string("00:00:00:12:34:56"))
-    except MessageParseError as e:
+    except MessageParseError:
         # Ignore exceptions the parser intentionally throws, and are caught by the caller.
         pass
 
@@ -63,14 +69,10 @@ def test_radius_parse(data):
         MessageParser.radius_parse(data, "SECRET",
                                    radius_lifecycle=namedtuple('RadiusLifecycle',
                                                                'packet_id_to_request_authenticator')
-                                   ({0x0f:None, 0x08: None, 0x0a: None, 0xbc: None, }))
-    except MessageParseError as e:
+                                   (NoneDict()))
+    except MessageParseError:
+        # Ignore exceptions the parser intentionally throws, and are caught by the caller.
         pass
-    # except (ValueError) as e:
-    #     if e.message.startswith("Unable to parse radius code:"):
-    #         pass
-    #     else:
-    #         raise
 
 
 if __name__ == "__main__":
