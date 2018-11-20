@@ -38,21 +38,26 @@ class Eap:
         Raises:
             MessageParseError if packed_message cannot be parsed.
         """
-        code, packet_id, length = struct.unpack("!BBH", packed_message[:EAP_HEADER_LENGTH])
+        try:
+            code, packet_id, length = struct.unpack("!BBH", packed_message[:EAP_HEADER_LENGTH])
+        except struct.error as exception:
+            raise MessageParseError(message="unable to unpack EAP header (4 bytes)",
+                                    original_error=exception) from exception
+
         if code in (Eap.REQUEST, Eap.RESPONSE):
             try:
                 packet_type, = struct.unpack("!B",
                                              packed_message[EAP_HEADER_LENGTH :
                                                             EAP_HEADER_LENGTH + EAP_TYPE_LENGTH])
             except struct.error as exception:
-                raise MessageParseError(message="%s unable to unpack first byte" % Eap.__name__,
+                raise MessageParseError(message="EAP unable to unpack packet_type byte",
                                         original_error=exception) from exception
 
             data = packed_message[EAP_HEADER_LENGTH+EAP_TYPE_LENGTH:length]
             try:
                 return PARSERS[packet_type](code, packet_id, data)
             except KeyError as exception:
-                raise MessageParseError(message="%s bad packet_type" % Eap.__name__,
+                raise MessageParseError(message="EAP packet_type: %s not supported" % packet_type,
                                         original_error=exception) from exception
         elif code == Eap.SUCCESS:
             return EapSuccess(packet_id)
