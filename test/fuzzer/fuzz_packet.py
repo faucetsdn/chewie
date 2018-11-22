@@ -12,7 +12,7 @@ from chewie.utils import MessageParseError
 
 from chewie.mac_address import MacAddress
 from chewie.message_parser import MessageParser
-from chewie.radius import InvalidResponseAuthenticatorError, InvalidMessageAuthenticatorError
+
 
 ROUNDS = 1
 
