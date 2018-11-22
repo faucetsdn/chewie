@@ -6,7 +6,7 @@
 import sys
 from collections import namedtuple
 
-import afl
+import afl  # pylint: disable=import-error
 
 from chewie.utils import MessageParseError
 
@@ -20,7 +20,7 @@ ROUNDS = 1
 class NoneDict(dict):
     """Dictionary that will always return None"""
     def __getitem__(self, key):
-        return None
+        return None  # pylint: disable=useless-return
 
 
 def main(eap):
@@ -55,6 +55,9 @@ def main(eap):
 
 
 def test_eap_parse(data):
+    """Tests the eap_parse function
+    Args:
+        data: payload to parse"""
     try:
         MessageParser.eap_parse(data, MacAddress.from_string("00:00:00:12:34:56"))
     except MessageParseError:
@@ -63,6 +66,10 @@ def test_eap_parse(data):
 
 
 def test_radius_parse(data):
+    """Tests the radiuse_parse function
+    Args:
+        data: payload to parse"""
+
     try:
         # The dict sets the packet ID for the known packet_id (test/fuzzer/radius_packet*.ex)
         #  to none. so no validation is done.
@@ -76,8 +83,8 @@ def test_radius_parse(data):
 
 
 if __name__ == "__main__":
-    parser = sys.argv[1]
-    eap = False
-    if parser == 'eap':
-        eap = True
-    main(eap)
+    PARSER = sys.argv[1]
+    EAP = False
+    if PARSER == 'eap':
+        EAP = True
+    main(EAP)
