@@ -55,8 +55,8 @@ class Radius:
             code, packet_id, length, response_authenticator = struct.unpack("!BBH16s",
                                                                             packed_message[:RADIUS_HEADER_LENGTH])
         except struct.error as exception:
-            raise MessageParseError(message='Unable to unpack first 20 bytes of RADIUS header',
-                                    original_error=exception) from exception
+            raise MessageParseError('Unable to unpack first 20 bytes of RADIUS header') \
+                from exception
 
         response_authenticator = binascii.hexlify(response_authenticator)
         if code in PACKET_TYPE_PARSERS.keys():
@@ -66,16 +66,16 @@ class Radius:
             try:
                 request_authenticator = radius_lifecycle.packet_id_to_request_authenticator[packet_id]
             except KeyError as exception:
-                raise MessageParseError(message='Unknown RAIDUS packet_id: %s' % packet_id,
-                                        original_error=exception) from exception
+                raise MessageParseError('Unknown RAIDUS packet_id: %s' % packet_id,) \
+                    from exception
             try:
                 return radius_packet.validate_packet(secret,
                                                      request_authenticator=request_authenticator)
             except (InvalidMessageAuthenticatorError,
                     InvalidResponseAuthenticatorError) as exception:
-                raise MessageParseError(message="Unable to parse Radius packet",
-                                        original_error=exception) from exception
-        raise MessageParseError(message="Unable to parse radius code: %d" % code)
+                raise MessageParseError("Unable to parse Radius packet") \
+                    from exception
+        raise MessageParseError("Unable to parse radius code: %d" % code)
 
     def pack(self):
         pass
@@ -283,8 +283,8 @@ class RadiusAttributesList:
                 type_, attr_length = struct.unpack("!BB",
                                                    attributes_data[pos:pos + Attribute.HEADER_SIZE])
             except struct.error as exception:
-                raise MessageParseError(message='Unable to unpack first 2 bytes of attribute header',
-                                        original_error=exception) from exception
+                raise MessageParseError('Unable to unpack first 2 bytes of attribute header')\
+                    from exception
             data = attributes_data[pos + Attribute.HEADER_SIZE: pos + attr_length]
             pos += attr_length
 
@@ -292,9 +292,8 @@ class RadiusAttributesList:
             try:
                 attribute = ATTRIBUTE_TYPES[type_].parse(packed_value)
             except KeyError as exception:
-                raise MessageParseError(message='Cannot find parser for RADIUS attribute %s' %
-                                        type_,
-                                        original_error=exception) from exception
+                raise MessageParseError('Cannot find parser for RADIUS attribute %s' %
+                                        type_) from exception
             # keep track of where the concated AVP should be in the attributes list.
             # required so the hashing gives correct hash.
             if attribute.DATA_TYPE != Concat or last_attribute != attribute.TYPE:

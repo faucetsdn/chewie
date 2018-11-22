@@ -41,8 +41,7 @@ class Eap:
         try:
             code, packet_id, length = struct.unpack("!BBH", packed_message[:EAP_HEADER_LENGTH])
         except struct.error as exception:
-            raise MessageParseError(message="unable to unpack EAP header (4 bytes)",
-                                    original_error=exception) from exception
+            raise MessageParseError("unable to unpack EAP header (4 bytes)") from exception
 
         if code in (Eap.REQUEST, Eap.RESPONSE):
             try:
@@ -50,15 +49,15 @@ class Eap:
                                              packed_message[EAP_HEADER_LENGTH :
                                                             EAP_HEADER_LENGTH + EAP_TYPE_LENGTH])
             except struct.error as exception:
-                raise MessageParseError(message="EAP unable to unpack packet_type byte",
-                                        original_error=exception) from exception
+                raise MessageParseError("EAP unable to unpack packet_type byte") \
+                    from exception
 
             data = packed_message[EAP_HEADER_LENGTH+EAP_TYPE_LENGTH:length]
             try:
                 return PARSERS[packet_type](code, packet_id, data)
             except KeyError as exception:
-                raise MessageParseError(message="EAP packet_type: %s not supported" % packet_type,
-                                        original_error=exception) from exception
+                raise MessageParseError("EAP packet_type: %s not supported" % packet_type) \
+                    from exception
         elif code == Eap.SUCCESS:
             return EapSuccess(packet_id)
         elif code == Eap.FAILURE:
@@ -98,7 +97,7 @@ class EapIdentity(Eap):
         try:
             identity = packed_message.decode()
         except UnicodeDecodeError as exception:
-            raise MessageParseError(message=cls.__name__, original_error=exception) from exception
+            raise MessageParseError("%s unable to decode identity" % cls.__name__) from exception
         return cls(code, packet_id, identity)
 
     def pack(self):
@@ -131,8 +130,8 @@ class EapMd5Challenge(Eap):
         try:
             value_length, = struct.unpack("!B", packed_message[:1])
         except struct.error as exception:
-            raise MessageParseError(message="%s unable to unpack first byte" % cls.__name__,
-                                    original_error=exception) from exception
+            raise MessageParseError("%s unable to unpack first byte" % cls.__name__) \
+                from exception
         challenge = packed_message[1:1+value_length]
         extra_data = packed_message[1+value_length:]
         return cls(code, packet_id, challenge, extra_data)
@@ -200,8 +199,7 @@ class EapLegacyNak(Eap):
         try:
             desired_auth_types = struct.unpack("!%ds" % value_len, packed_msg)
         except struct.error as exception:
-            raise MessageParseError(message="%s unable to unpack." % cls.__name__,
-                                    original_error=exception) from exception
+            raise MessageParseError("%s unable to unpack." % cls.__name__) from exception
         return cls(code, packet_id, desired_auth_types)
 
     def pack(self):
@@ -238,8 +236,7 @@ class EapTLSBase(Eap):
         try:
             unpacked = struct.unpack(fmt_str, packed_msg)
         except struct.error as exception:
-            raise MessageParseError(message="%s unable to unpack" % cls.__name__,
-                                    original_error=exception) from exception
+            raise MessageParseError("%s unable to unpack" % cls.__name__) from exception
         extra_data = b""
         if value_len > 1:
             flags, extra_data = unpacked

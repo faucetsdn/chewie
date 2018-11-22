@@ -97,7 +97,7 @@ class RadiusTestCase(unittest.TestCase):
                           }))
             self.fail()
         except MessageParseError as exception:
-            self.assertIsInstance(exception.original_error, InvalidResponseAuthenticatorError)
+            self.assertIsInstance(exception.__cause__, InvalidResponseAuthenticatorError)
 
         # the original response authenticator does not match the computed one
         #  because the message authenticator was 'corrupted'
@@ -112,7 +112,7 @@ class RadiusTestCase(unittest.TestCase):
                           }))
             self.fail()
         except MessageParseError as exception:
-            self.assertIsInstance(exception.original_error, InvalidResponseAuthenticatorError)
+            self.assertIsInstance(exception.__cause__, InvalidResponseAuthenticatorError)
 
         # TODO How can we test that response authenticator is correct
         #  but message authenticator is not?

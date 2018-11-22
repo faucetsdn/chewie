@@ -286,7 +286,7 @@ class MessageParserTestCase(unittest.TestCase):
         try:
             MessageParser.eap_parse(data, MacAddress.from_string("00:00:00:12:34:56"))
         except MessageParseError as exception:
-            self.assertIsInstance(exception.original_error, UnicodeDecodeError)
+            self.assertIsInstance(exception.__cause__, UnicodeDecodeError)
             return
         self.fail()
 
@@ -295,7 +295,7 @@ class MessageParserTestCase(unittest.TestCase):
         try:
             MessageParser.eap_parse(data, MacAddress.from_string("00:00:00:12:34:56"))
         except MessageParseError as exception:
-            self.assertIsInstance(exception.original_error, struct.error)
+            self.assertIsInstance(exception.__cause__, struct.error)
             return
         self.fail()
 

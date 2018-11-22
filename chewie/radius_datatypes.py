@@ -81,8 +81,7 @@ class Integer(DataType):
             cls.is_valid_length(packed_value)
             return cls(bytes_data=struct.unpack("!4s", packed_value)[0])
         except (ValueError, struct.error)as exception:
-            raise MessageParseError(message="%s unable to unpack." % cls.__name__,
-                                    original_error=exception) from exception
+            raise MessageParseError("%s unable to unpack." % cls.__name__) from exception
 
     def pack(self, attribute_type):
         return struct.pack("!4s", self.bytes_data)
@@ -113,8 +112,7 @@ class Enum(DataType):
             cls.is_valid_length(packed_value)
             return cls(bytes_data=struct.unpack("!4s", packed_value)[0])
         except (ValueError, struct.error)as exception:
-            raise MessageParseError(message="%s unable to unpack." % cls.__name__,
-                                    original_error=exception) from exception
+            raise MessageParseError("%s unable to unpack." % cls.__name__) from exception
 
     def pack(self, attribute_type):
         return struct.pack("!4s", self.bytes_data)
@@ -141,8 +139,7 @@ class Text(DataType):
             cls.is_valid_length(packed_value)
             return cls(struct.unpack("!%ds" % len(packed_value), packed_value)[0])
         except (ValueError, struct.error) as exception:
-            raise MessageParseError(message="%s unable to unpack." % cls.__name__,
-                                    original_error=exception) from exception
+            raise MessageParseError("%s unable to unpack." % cls.__name__) from exception
 
     def pack(self, attribute_type):
         return struct.pack("!%ds" % len(self.bytes_data), self.bytes_data)
@@ -173,8 +170,7 @@ class String(DataType):
             cls.is_valid_length(packed_value)
             return cls(struct.unpack("!%ds" % len(packed_value), packed_value)[0])
         except (ValueError, struct.error) as exception:
-            raise MessageParseError(message="%s unable to unpack." % cls.__name__,
-                                    original_error=exception) from exception
+            raise MessageParseError("%s unable to unpack." % cls.__name__) from exception
 
     def pack(self, attribute_type):
         return struct.pack("!%ds" % len(self.bytes_data), self.bytes_data)
@@ -208,8 +204,7 @@ class Concat(DataType):
         try:
             return cls(struct.unpack("!%ds" % len(packed_value), packed_value)[0])
         except struct.error as exception:
-            raise MessageParseError(message="%s unable to unpack." % cls.__name__,
-                                    original_error=exception) from exception
+            raise MessageParseError("%s unable to unpack." % cls.__name__) from exception
 
     def pack(self, attribute_type):
 
@@ -264,8 +259,7 @@ class Vsa(DataType):
             cls.is_valid_length(packed_value)
             return cls(struct.unpack("!%ds" % len(packed_value), packed_value)[0])
         except (ValueError, struct.error) as exception:
-            raise MessageParseError(message="%s unable to unpack." % cls.__name__,
-                                    original_error=exception) from exception
+            raise MessageParseError("%s unable to unpack." % cls.__name__) from exception
 
     def pack(self, attribute_type):
         return struct.pack("!%ds" % (self.data_length()), self.bytes_data)

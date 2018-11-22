@@ -19,14 +19,4 @@ def log_method(method):
 
 class MessageParseError(Exception):
     """Error for when parsing cannot be successfully completed."""
-
-    def __init__(self, message=None, original_error=None):
-        """
-
-        Args:
-            message (str):
-            original_error (Exception): error that MessageParser is silencing.
-        """
-        super().__init__(message)
-        self.message = message
-        self.original_error = original_error
+    pass
