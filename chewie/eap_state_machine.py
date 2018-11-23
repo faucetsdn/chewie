@@ -304,6 +304,10 @@ class FullEAPStateMachine:
         self.eapFail = True  # pylint: disable=invalid-name
 
     @log_method
+    def timeout_failure_state(self):
+        self.eapTimeout = True
+
+    @log_method
     def success_state(self):
         self.eapReqData = self.buildSuccess()
         if self.eapKeyData:
@@ -560,6 +564,7 @@ class FullEAPStateMachine:
             if self.currentState == FullEAPStateMachine.RETRANSMIT:
                 self.retransmit_state()
                 if self.retransCount > self.MAX_RETRANS:
+                    self.timeout_failure_state()
                     self.currentState = FullEAPStateMachine.TIMEOUT_FAILURE
                 else:
                     self.currentState = FullEAPStateMachine.IDLE
@@ -704,6 +709,7 @@ class FullEAPStateMachine:
         self.logoff = False
 
         self.aaaEapResp = False
+        self.aaaTimeout = False
 
     def event(self, event):
         """Processes an event.

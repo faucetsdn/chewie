@@ -1,14 +1,11 @@
 """Unittests for eap_state_machine.FullEAPStateMachine"""
 # pylint: disable=missing-docstring
 
-import heapq
 import logging
 from queue import Queue
 import tempfile
-import time
 import unittest
 
-from chewie import timer_scheduler
 from chewie.eap import Eap
 from chewie.mac_address import MacAddress
 from chewie.message_parser import EapolStartMessage, IdentityMessage, Md5ChallengeMessage, \
@@ -16,7 +13,6 @@ from chewie.message_parser import EapolStartMessage, IdentityMessage, Md5Challen
     LegacyNakMessage, TtlsMessage, FailureMessage, EapolLogoffMessage
 from chewie.eap_state_machine import FullEAPStateMachine
 from chewie.event import EventMessageReceived, EventRadiusMessageReceived, EventPortStatusChange
-from chewie.utils import get_logger
 from helpers import FakeTimerScheduler
 
 
@@ -44,6 +40,7 @@ def check_counters(_func=None, *,
         return decorator_check_counters
     else:
         return decorator_check_counters(_func)
+
 
 class FullStateMachineStartTestCase(unittest.TestCase):
     # TODO tests could be more thorough, and test that
@@ -139,6 +136,22 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.assertEqual(self.sm.currentState, self.sm.TIMEOUT_FAILURE)
         self.assertEqual(self.eap_output_queue.qsize(), 0)
         self.assertEqual(old_radius_count, self.radius_output_queue.qsize())
+
+    @check_counters(expected_auth_counter=1)
+    def test_auth_success_after_timeout_failure2_from_max_retransmits(self):
+        self.test_timeout_failure2_from_max_retransmits()
+        self.eap_output_queue.queue.clear()
+        self.test_success2()
+
+    @check_counters(expected_auth_counter=1)
+    def test_auth_success_after_timeout_failure2_from_aaa_timeout(self):
+        self.test_timeout_failure2_from_aaa_timeout()
+        self.test_success2()
+
+    @check_counters(expected_auth_counter=1)
+    def test_auth_success_after_timeout_failure_after_max_retransmits(self):
+        self.test_timeout_failure_from_max_retransmits()
+        self.test_success2()
 
     @check_counters
     def test_timeout_failure2_from_aaa_timeout(self):
