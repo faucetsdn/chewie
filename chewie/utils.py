@@ -15,3 +15,8 @@ def log_method(method):
         self.logger.info('Entering %s' % method.__name__)
         return method(self, *args, **kwargs)
     return wrapped
+
+
+class MessageParseError(Exception):
+    """Error for when parsing cannot be successfully completed."""
+    pass

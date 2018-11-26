@@ -7,7 +7,7 @@ import struct
 
 from chewie.radius_attributes import ATTRIBUTE_TYPES, Attribute, MessageAuthenticator
 from chewie.radius_datatypes import Concat
-
+from chewie.utils import MessageParseError
 
 RADIUS_HEADER_LENGTH = 1 + 1 + 2 + 16
 
@@ -48,18 +48,34 @@ class Radius:
         Returns:
             RadiusPacket - RadiusAccessChallenge/RadiusAccessRequest/
                             RadiusAccessAccept/RadiusAccessFailure
+        Raises:
+            MessageParseError: if packed_message cannot be parsed
         """
-        code, packet_id, length, response_authenticator = struct.unpack("!BBH16s",
-                                                                        packed_message[:RADIUS_HEADER_LENGTH])
+        try:
+            code, packet_id, length, response_authenticator = struct.unpack("!BBH16s",
+                                                                            packed_message[:RADIUS_HEADER_LENGTH])
+        except struct.error as exception:
+            raise MessageParseError('Unable to unpack first 20 bytes of RADIUS header') \
+                from exception
+
         response_authenticator = binascii.hexlify(response_authenticator)
         if code in PACKET_TYPE_PARSERS.keys():
             radius_packet = PACKET_TYPE_PARSERS[code](packet_id, response_authenticator,
                                                       RadiusAttributesList.parse(
                                                           packed_message[RADIUS_HEADER_LENGTH:]))
-            request_authenticator = radius_lifecycle.packet_id_to_request_authenticator[packet_id]
-            return radius_packet.validate_packet(secret,
-                                                 request_authenticator=request_authenticator)
-        raise ValueError("Unable to parse radius code: %d" % code)
+            try:
+                request_authenticator = radius_lifecycle.packet_id_to_request_authenticator[packet_id]
+            except KeyError as exception:
+                raise MessageParseError('Unknown RAIDUS packet_id: %s' % packet_id,) \
+                    from exception
+            try:
+                return radius_packet.validate_packet(secret,
+                                                     request_authenticator=request_authenticator)
+            except (InvalidMessageAuthenticatorError,
+                    InvalidResponseAuthenticatorError) as exception:
+                raise MessageParseError("Unable to parse Radius packet") \
+                    from exception
+        raise MessageParseError("Unable to parse radius code: %d" % code)
 
     def pack(self):
         pass
@@ -143,7 +159,7 @@ class RadiusPacket(Radius):
         radius_packet.authenticator = request_authenticator
         radius_packet.pack()
         calculated_response_authenticator = binascii.hexlify(hashlib.md5(radius_packet.packed +
-                                                        bytearray(secret, 'utf-8')).digest())
+                                                             bytearray(secret, 'utf-8')).digest())
         if calculated_response_authenticator != response_authenticator:
             raise InvalidResponseAuthenticatorError(
                 "Original ResponseAuthenticator: '%s', does not match calculated: '%s' %s" % (
@@ -195,6 +211,16 @@ class RadiusAttributesList:
 
     @classmethod
     def parse(cls, attributes_data):
+        """
+
+        Args:
+            attributes_data:
+
+        Returns:
+            RadiusAttributeList
+        Raises:
+            MessageParseError: if unable to parse an attribute's data.
+        """
         attributes = []
         attributes_to_concat = {}
         cls.extract_attributes(attributes_data, attributes, attributes_to_concat)
@@ -213,6 +239,9 @@ class RadiusAttributesList:
             attributes_to_concat (dict): attribute - position.
         Returns:
             attributes (list)
+        Raises:
+            MessageParseError: RadiusAttribute.parse will raise error
+            if it cannot parse the attribute's data
         """
         # Join Attributes that's datatype is Concat into one attribute.
         concatenated_attributes = []
@@ -241,20 +270,30 @@ class RadiusAttributesList:
             attributes_data (): data to extract from (input).
             attributes: attributes extracted (output variable).
             attributes_to_concat (dict): (output variable).
+        Raises:
+            MessageParseError: RadiusAttribute.parse will raise error
+            if it cannot parse the attribute's data
         """
         total_length = len(attributes_data)
         pos = 0
         index = -1
         last_attribute = -1
         while pos < total_length:
-            type_, attr_length = struct.unpack("!BB",
-                                               attributes_data[pos:pos + Attribute.HEADER_SIZE])
+            try:
+                type_, attr_length = struct.unpack("!BB",
+                                                   attributes_data[pos:pos + Attribute.HEADER_SIZE])
+            except struct.error as exception:
+                raise MessageParseError('Unable to unpack first 2 bytes of attribute header')\
+                    from exception
             data = attributes_data[pos + Attribute.HEADER_SIZE: pos + attr_length]
             pos += attr_length
 
             packed_value = data[:attr_length - Attribute.HEADER_SIZE]
-
-            attribute = ATTRIBUTE_TYPES[type_].parse(packed_value)
+            try:
+                attribute = ATTRIBUTE_TYPES[type_].parse(packed_value)
+            except KeyError as exception:
+                raise MessageParseError('Cannot find parser for RADIUS attribute %s' %
+                                        type_) from exception
             # keep track of where the concated AVP should be in the attributes list.
             # required so the hashing gives correct hash.
             if attribute.DATA_TYPE != Concat or last_attribute != attribute.TYPE:

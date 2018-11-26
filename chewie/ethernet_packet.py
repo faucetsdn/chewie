@@ -1,5 +1,6 @@
 import struct
 from chewie.mac_address import MacAddress
+from chewie.utils import MessageParseError
 
 ETHERNET_HEADER_LENGTH = 6 + 6 + 2
 
@@ -19,9 +20,15 @@ class EthernetPacket:
             packed_message (bytes):
         Returns:
             EthernetPacket
+        Raises:
+            MessageParseError: if packed_message cannot be successfully parsed.
         """
-        dst_mac, src_mac, ethertype = struct.unpack("!6s6sH",
-                                                    packed_message[:ETHERNET_HEADER_LENGTH])
+        try:
+            dst_mac, src_mac, ethertype = struct.unpack("!6s6sH",
+                                                        packed_message[:ETHERNET_HEADER_LENGTH])
+        except struct.error as exception:
+            raise MessageParseError(message="Unable to parse Ethernet header (14bytes)",
+                                    original_error=exception) from exception
         data = packed_message[ETHERNET_HEADER_LENGTH:]
         return cls(MacAddress(dst_mac), MacAddress(src_mac), ethertype, data)
 
