@@ -31,8 +31,7 @@ class Auth8021x:
             version, packet_type, length = struct.unpack("!BBH",
                                                          packed_message[:AUTH_8021X_HEADER_LENGTH])
         except struct.error as exception:
-            raise MessageParseError(message="Auth8021x unable to parse first 4 bytes",
-                                    original_error=exception) from exception
+            raise MessageParseError("Auth8021x unable to parse first 4 bytes") from exception
         data = packed_message[AUTH_8021X_HEADER_LENGTH:AUTH_8021X_HEADER_LENGTH+length]
         return cls(version, packet_type, data)
 
