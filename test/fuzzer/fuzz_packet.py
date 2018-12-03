@@ -27,8 +27,6 @@ def main(eap):
     """Run AFL repeatedly with externally supplied generated packet from STDIN."""
 
     while afl.loop(ROUNDS):
-    # afl.start()
-    # if True:
         # receive input from afl
         rcv = sys.stdin.read()
         data = None
@@ -37,29 +35,17 @@ def main(eap):
         except (ValueError, TypeError):
             return
         if eap:
-            test_eap_parse(data)
+            test_one_x_parse(data)
         else:
             test_radius_parse(data)
-#
-#
-# def test_ethernet_parse(data):
-#     try:
-#         MessageParser.ethernet_parse(data)
-#     except (ValueError, struct.error) as e:
-#         if e.message.startswith("unpack requires a buffer of 14 bytes"):
-#             pass
-#         elif e.message.startswith("Ethernet packet with bad ethertype received:"):
-#             pass
-#         else:
-#             raise
 
 
-def test_eap_parse(data):
-    """Tests the eap_parse function
+def test_one_x_parse(data):
+    """Tests the one_x_parse function
     Args:
         data: payload to parse"""
     try:
-        MessageParser.eap_parse(data, MacAddress.from_string("00:00:00:12:34:56"))
+        MessageParser.one_x_parse(data, MacAddress.from_string("00:00:00:12:34:56"))
     except MessageParseError:
         # Ignore exceptions the parser intentionally throws, and are caught by the caller.
         pass
