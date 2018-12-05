@@ -15,4 +15,4 @@ RUN ln -s /usr/bin/pip3 /usr/bin/pip
 
 # Run Tests
 WORKDIR /chewie
-CMD["./run_tests.sh"]
+CMD ["./run_tests.sh"]
