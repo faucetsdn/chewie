@@ -5,7 +5,7 @@ from chewie.eap import Eap
 from chewie.event import EventMessageReceived, EventRadiusMessageReceived, EventTimerExpired, \
     EventPortStatusChange, EventSessionTimeout
 from chewie.message_parser import SuccessMessage, FailureMessage, EapolStartMessage, \
-    IdentityMessage, EapolLogoffMessage
+    IdentityMessage, EapolLogoffMessage, EapMessage
 from chewie.radius_attributes import SessionTimeout
 from chewie.utils import get_logger, log_method
 
@@ -832,19 +832,24 @@ class FullEAPStateMachine:
         Args:
             event (EventMessageReceived): event being processed.
         """
-        self.logger.info('type: %s, message %s ', type(event.message), event.message)
+        message = event.message
+        self.logger.info('type: %s, message %s ', type(message), message)
         if event.port_id:
             self.port_id_mac = event.port_id
 
-        if isinstance(event.message, EapolStartMessage):
+        if isinstance(message, EapolStartMessage) or \
+                (self.currentState in (FullEAPStateMachine.TIMEOUT_FAILURE,
+                                       FullEAPStateMachine.TIMEOUT_FAILURE2) and
+                 isinstance(message, EapMessage) and message.code == Eap.RESPONSE
+                ):
             self.eapRestart = True
-        elif isinstance(event.message, EapolLogoffMessage):
+        elif isinstance(message, EapolLogoffMessage):
             self.logoff = True
 
         if isinstance(event, EventRadiusMessageReceived):
             self.process_radius_message(event)
         else:
-            self.eapRespData = event.message  # pylint: disable=invalid-name
+            self.eapRespData = message  # pylint: disable=invalid-name
             self.eapResp = True
 
     def process_radius_message(self, event):
