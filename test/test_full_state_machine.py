@@ -153,6 +153,20 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.test_timeout_failure_from_max_retransmits()
         self.test_success2()
 
+    @check_counters()
+    def test_leave_timeout_failure2_with_identiy_response(self):
+        self.test_timeout_failure2_from_max_retransmits()
+        start_eap_q_size = self.eap_output_queue.qsize()
+        start_radius_q_size = self.radius_output_queue.qsize()
+        message = IdentityMessage(self.src_mac, 25, Eap.RESPONSE, "host1user")
+        self.sm.event(EventMessageReceived(message, None))
+        self.assertEqual(self.sm.currentState, self.sm.AAA_IDLE)
+
+        self.assertEqual(self.eap_output_queue.qsize(), start_eap_q_size + 0)
+        self.assertEqual(self.radius_output_queue.qsize(), start_radius_q_size + 1)
+        self.assertIsInstance(self.radius_output_queue.get_nowait()[0], IdentityMessage)
+
+
     @check_counters
     def test_timeout_failure2_from_aaa_timeout(self):
         """no response from AAA server equals timeout_failure2"""

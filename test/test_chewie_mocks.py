@@ -7,6 +7,8 @@ from unittest.mock import patch, Mock
 
 from chewie.chewie import Chewie
 from chewie.event import EventMessageReceived
+from chewie.utils import EapQueueMessage
+
 
 def return_if(expected, return_value):
     """allows us to do expect-this-return-that style mocking"""
@@ -53,7 +55,8 @@ class ChewieWithMocksTestCase(unittest.TestCase):
         """test EAP packet creates a new state machine and is sent on"""
         self.chewie.eap_socket = Mock()
         ethernet_pack.return_value = "packed ethernet"
-        self.chewie.eap_output_messages.put_nowait(["output eap message", "src mac", "port mac"])
+        self.chewie.eap_output_messages.put_nowait(
+            EapQueueMessage("output eap message", "src mac", "port mac"))
         self.chewie.send_eap_messages()
         self.chewie.eap_socket.send.assert_called_with("packed ethernet")
 
