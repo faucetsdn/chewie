@@ -6,7 +6,8 @@ services:
             context: .
             dockerfile: Dockerfile.wpasupplicant
         image: 'chewie/wpasupplicant:latest'
-        command: bash -c "wpa_supplicant -dd -c/tmp/wpasupplicant/wired-tls.conf -ieth0 -Dwired;"
+        depends_on: chewie
+        command: bash -c "wpa_supplicant -dd -c/tmp/wpasupplicant/wired-peap.conf -ieth0 -Dwired;"
         networks:
             wpasupplicant-net:
                 ipv4_address: 172.23.0.111
@@ -16,7 +17,7 @@ services:
             - ./etc/wpasupplicant/:/tmp/wpasupplicant/
             - ./etc/wpasupplicant/cert/:/tmp/cert/
 
-    test:
+    chewie:
         build:
             context: .
             dockerfile: Dockerfile.chewie
@@ -32,21 +33,21 @@ services:
         volumes:
             - ./:/chewie-src/
 
-    hostapd:
-        build:
-            context: .
-            dockerfile: Dockerfile.hostapd
-        image: 'chewie/chewie:latest'
-        command: bash -c "ls /sys/class/net/ ; hostapd -i eth1 /tmp/hostapd.conf"
-        networks:
-            wpasupplicant-net:
-                ipv4_address: 172.23.0.112
-            radius-net:
-                ipv4_address: 172.24.0.112
-        cap_add:
-        - ALL
-        volumes:
-        - ./etc/hostapd/hostapd.conf:/tmp/hostapd.conf
+#    hostapd:
+#        build:
+#            context: .
+#            dockerfile: Dockerfile.hostapd
+#        image: 'chewie/chewie:latest'
+#        command: bash -c "ls /sys/class/net/ ; hostapd -i eth1 /tmp/hostapd.conf"
+#        networks:
+#            wpasupplicant-net:
+#                ipv4_address: 172.23.0.112
+#            radius-net:
+#                ipv4_address: 172.24.0.112
+#        cap_add:
+#        - ALL
+#        volumes:
+#        - ./etc/hostapd/hostapd.conf:/tmp/hostapd.conf
 
     freeradius:
         build:

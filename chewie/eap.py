@@ -22,6 +22,7 @@ class Eap:
     MD5_CHALLENGE = 4
     TLS = 13
     TTLS = 21
+    PEAP = 25
 
     code = None
     packet_id = None
@@ -77,9 +78,10 @@ def register_parser(cls):
     return cls
 
 
+
 @register_parser
 class EapIdentity(Eap):
-    PACKET_TYPE = 1
+    PACKET_TYPE = Eap.IDENTITY
 
     def __init__(self, code, packet_id, identity):
         self.code = code
@@ -111,7 +113,7 @@ class EapIdentity(Eap):
 
 @register_parser
 class EapMd5Challenge(Eap):
-    PACKET_TYPE = 4
+    PACKET_TYPE = Eap.MD5_CHALLENGE
 
     def __init__(self, code, packet_id, challenge, extra_data):
         self.code = code
@@ -180,7 +182,7 @@ class EapFailure(Eap):
 
 @register_parser
 class EapLegacyNak(Eap):
-    PACKET_TYPE = 3
+    PACKET_TYPE = Eap.LEGACY_NAK
 
     def __init__(self, code, packet_id, desired_auth_types):
         self.code = code
@@ -259,9 +261,14 @@ class EapTLSBase(Eap):
 
 @register_parser
 class EapTLS(EapTLSBase):
-    PACKET_TYPE = 13
+    PACKET_TYPE = Eap.TLS
 
 
 @register_parser
 class EapTTLS(EapTLSBase):
-    PACKET_TYPE = 21
+    PACKET_TYPE = Eap.TTLS
+
+
+@register_parser
+class EapPEAP(EapTLSBase):
+    PACKET_TYPE = Eap.PEAP

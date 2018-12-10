@@ -814,6 +814,7 @@ class FullEAPStateMachine:
             True if this event is being ignored and no further processing is required.
             Otherwise False.
         """
+        # TODO Should this still log all ExpiredTimerEvents when none are cancelled?
         self.logger.info("Expired Timer Event Received")
         if self.sent_count == event.sent_count:
             self.logger.debug("processing timer event. haven't received a reply. %s %s",
