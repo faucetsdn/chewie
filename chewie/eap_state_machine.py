@@ -14,17 +14,17 @@ class Policy:
     """Fleshed out enough to support passthrough mode."""
 
     @staticmethod
-    def getNextMethod(eapRespData):  # pylint: disable=invalid-name
+    def get_next_method(eap_resp_data):
         # TODO Probably should do something else
-        if isinstance(eapRespData, EapolStartMessage):
+        if isinstance(eap_resp_data, EapolStartMessage):
             return "IDENTITY"
         return "IDENTITY"
         # return "NOTIFICATION"
 
     @staticmethod
-    def getDecision(eapRespData):  # pylint: disable=invalid-name
+    def get_decision(eap_resp_data):
         # TODO if not offloading return success/failure/Continue
-        if eapRespData is None or isinstance(eapRespData, EapolStartMessage):
+        if eap_resp_data is None or isinstance(eap_resp_data, EapolStartMessage):
             return Decision.CONTINUE
         return Decision.PASSTHROUGH
 
@@ -60,10 +60,10 @@ class MPassthrough:
     done = False
     src_mac = None
 
-    def check(self, eapRespData):  # pylint: disable=invalid-name
+    def check(self, eap_resp_data):
         """
         Args:
-             eapRespData (Message):
+             eap_resp_data (Message):
         Returns:
             True if packet should be ignored. otherwise False if packet is good.
         """
@@ -71,8 +71,8 @@ class MPassthrough:
         #  The IDs already match (done on entry to INTEGRITY_CHECK state)
         return False
 
-    def process(self, eapRespData):  # pylint: disable=invalid-name
-        if isinstance(eapRespData, IdentityMessage):
+    def process(self, eap_resp_data):
+        if isinstance(eap_resp_data, IdentityMessage):
             self.done = True
 
     def init(self, src_mac):
@@ -81,16 +81,16 @@ class MPassthrough:
     def reset(self):
         self.done = False
 
-    def isDone(self):  # pylint: disable=invalid-name
+    def is_done(self):
         return self.done
 
-    def getTimeout(self):  # pylint: disable=invalid-name
+    def get_timeout(self):
         return 1
 
-    def getKey(self):  # pylint: disable=invalid-name
+    def get_key(self):
         return None
 
-    def buildReq(self, current_id):  # pylint: disable=invalid-name
+    def build_req(self, current_id):
         return IdentityMessage(self.src_mac, current_id, Eap.REQUEST, "")
 
 
@@ -103,7 +103,7 @@ class FullEAPStateMachine:
     DEFAULT_TIMEOUT = 5  # Number of Seconds
     DEFAULT_SESSION_TIMEOUT = 3600  # Number of Seconds
 
-    currentState = None
+    current_state = None
     eap_output_messages = None
     src_mac = None
     # TODO can use dst_mac to verify where packet came rom more thoughly
@@ -153,50 +153,50 @@ class FullEAPStateMachine:
     MAX_RETRANS = 5  # Configurable  max for retransmissions before aborting.
 
     # Variables (AAA Interface to Full Authenticator)
-    aaaEapReq = None        # bool
-    aaaEapNoReq = None      # bool
-    aaaSuccess = None       # bool
-    aaaFail = None          # bool
-    aaaEapReqData = None    # EAP packet
-    aaaEapKeyData = None    # EAP Key
-    aaaEapKeyAvailable = None   # bool
-    aaaMethodTimeout = None     # integer or NONE
+    aaa_eap_req = None        # bool
+    aaa_eap_no_req = None      # bool
+    aaa_success = None       # bool
+    aaa_fail = None          # bool
+    aaa_eap_req_data = None    # EAP packet
+    aaa_eap_key_data = None    # EAP Key
+    aaa_eap_key_available = None   # bool
+    aaa_method_timeout = None     # integer or NONE
 
     # Variables (Full Authenticator to AAA Interface)
-    aaaEapResp = None       # bool
-    aaaEapRespData = None   # EAP Packet
-    aaaIdentity = None      # EAP Packet
-    aaaTimeout = None      # bool
+    aaa_eap_resp = None       # bool
+    aaa_eap_resp_data = None   # EAP Packet
+    aaa_identity = None      # EAP Packet
+    aaa_timeout = None      # bool
 
     # Stand-Alone Authenticator State Machine Local Variables
-    currentMethod = None    # EAP type
-    currentId = None        # integer
-    methodState = None      # enum
-    retransCount = None     # integer
-    lastReqData = None      # EAP packet
-    methodTimeout = None    # integer
+    current_method = None    # EAP type
+    current_id = None        # integer
+    method_state = None      # enum
+    retrans_count = None     # integer
+    last_req_data = None      # EAP packet
+    method_timeout = None    # integer
     logoff = None           # bool
 
     # Lower Later  to Stand-Alone Authenticator
-    eapResp = None      # bool
-    eapRespData = None  # EAP Packet
-    portEnabled = None  # bool
-    retransWhile = None     # integer
-    eapRestart = None   # bool
-    eapSRTT = None      # integer
-    eapRTTVAR = None    # integer
+    eap_resp = None      # bool
+    eap_resp_data = None  # EAP Packet
+    port_enabled = None  # bool
+    retrans_while = None     # integer
+    eap_restart = None   # bool
+    eap_srtt = None      # integer
+    eap_rttvar = None    # integer
 
     # Stand-Alone authenticator to Lower Layer
-    eapReq = None       # bool
-    eapNoReq = None     # bool
-    eapSuccess = None   # bool
-    eapFail = None      # bool
-    eapTimeout = None   # bool
-    eapReqData = None   # EAP Packet
-    eapKeyData = None   # EAP Key
-    eapKeyAvailable = None  # bool
+    eap_req = None       # bool
+    eap_no_req = None     # bool
+    eap_success = None   # bool
+    eap_fail = None      # bool
+    eap_timeout = None   # bool
+    eap_req_data = None   # EAP Packet
+    eap_key_data = None   # EAP Key
+    eap_key_available = None  # bool
     # Non RFC 4137
-    eapLogoff = None    # bool
+    eap_logoff = None    # bool
 
     def __init__(self, eap_output_queue, radius_output_queue, src_mac, timer_scheduler,
                  auth_handler, failure_handler, logoff_handler, log_prefix):
@@ -219,8 +219,7 @@ class FullEAPStateMachine:
         self.failure_handler = failure_handler
         self.logoff_handler = logoff_handler
 
-
-        self.currentState = FullEAPStateMachine.NO_STATE  # pylint: disable=invalid-name
+        self.current_state = FullEAPStateMachine.NO_STATE
         # TODO dynamically assign this or make a way to give it multiple methods
         # and self.m is the one currently in use.
         # if we want to deal with each method locally.
@@ -228,56 +227,56 @@ class FullEAPStateMachine:
         logname = ".SM - %s" % self.src_mac
         self.logger = get_logger(log_prefix + logname)
 
-    def getId(self):  # pylint: disable=invalid-name
+    def get_id(self):
         """Determines the identifier value chosen by the AAA server for the current EAP request.
          The return value is an integer."""
-        return self.eapReqData.message_id
+        return self.eap_req_data.message_id
 
-    def calculateTimeout(self, retransCount, eapSRTT, eapRTTVAR, methodTimeout):  # pylint: disable=invalid-name
+    def calculate_timeout(self, retrans_count, eap_srtt, eap_rttvar, method_timeout):
         """https://tools.ietf.org/html/rfc3748#section-4.3
         Args:
-            retransCount:
-            eapSRTT:
-            eapRTTVAR:
-            methodTimeout:
+            retrans_count:
+            eap_srtt:
+            eap_rttvar:
+            method_timeout:
 
         Returns:
             Milliseconds"""
         # TODO actually implement.
         return self.DEFAULT_TIMEOUT
 
-    def parseEapResp(self):  # pylint: disable=invalid-name
+    def parse_eap_resp(self):
         """
         Returns:
             int, int, EAP Type (str)
         """
-        eap = self.eapRespData
-        respMethod = None  # pylint: disable=invalid-name
+        eap = self.eap_resp_data
+        resp_method = None
 
         _id = eap.message_id
 
         if isinstance(eap, IdentityMessage):
-            respMethod = MethodState.IDENTITY
+            resp_method = MethodState.IDENTITY
         # RFC 4137 #section 5.4 says eap.code should actually be a bool
-        return eap.code, _id, respMethod
+        return eap.code, _id, resp_method
 
-    def buildSuccess(self):  # pylint: disable=invalid-name
+    def build_success(self):
         """Creates an EAP Sucecss Pakcet. Returns an EAP packet"""
-        return SuccessMessage(self.src_mac, self.currentId)
+        return SuccessMessage(self.src_mac, self.current_id)
 
-    def buildFailure(self):  # pylint: disable=invalid-name
+    def build_failure(self):
         """Creates an EAP Failure Packet. Returns an EAP packet"""
-        return FailureMessage(self.src_mac, self.currentId)
+        return FailureMessage(self.src_mac, self.current_id)
 
-    def nextId(self):  # pylint: disable=invalid-name
+    def next_id(self):
         """Determines the next identifier value to use, based on the previous one.
         Returns:
             integer"""
-        if self.currentId is None:
+        if self.current_id is None:
             # I'm assuming we cant have ids wrap around in the same series.
             #  so the 200 provides a large buffer.
             return random.randint(0, 200)
-        _id = self.currentId + 1
+        _id = self.current_id + 1
         # not tested
         if _id > 255:
             return random.randint(0, 200)
@@ -291,76 +290,76 @@ class FullEAPStateMachine:
 
     @log_method
     def propose_method_state(self):
-        self.currentMethod = Policy.getNextMethod(self.eapRespData)  # pylint: disable=invalid-name
+        self.current_method = Policy.get_next_method(self.eap_resp_data)
         self.m.init(self.src_mac)
-        if self.currentMethod == "IDENTITY" or self.currentMethod == "NOTIFICATION":
-            self.methodState = MethodState.CONTINUE  # pylint: disable=invalid-name
+        if self.current_method == "IDENTITY" or self.current_method == "NOTIFICATION":
+            self.method_state = MethodState.CONTINUE
         else:
-            self.methodState = MethodState.PROPOSED
+            self.method_state = MethodState.PROPOSED
 
     @log_method
     def failure_state(self):
-        self.eapReqData = self.buildFailure()  # pylint: disable=invalid-name
-        self.eapFail = True  # pylint: disable=invalid-name
+        self.eap_req_data = self.build_failure()
+        self.eap_fail = True
 
     @log_method
     def timeout_failure_state(self):
-        self.eapTimeout = True
+        self.eap_timeout = True
 
     @log_method
     def success_state(self):
-        self.eapReqData = self.buildSuccess()
-        if self.eapKeyData:
-            self.eapKeyAvailable = True  # pylint: disable=invalid-name
-        self.eapSuccess = True  # pylint: disable=invalid-name
+        self.eap_req_data = self.build_success()
+        if self.eap_key_data:
+            self.eap_key_available = True
+        self.eap_success = True
 
     @log_method
     def initialize_state(self):
         """Initializes variables when the state machine is activated"""
-        self.currentId = None  # pylint: disable=invalid-name
-        self.eapSuccess = False
-        self.eapFail = False
-        self.eapTimeout = False  # pylint: disable=invalid-name
-        self.eapKeyData = None  # pylint: disable=invalid-name
-        self.eapRestart = False  # pylint: disable=invalid-name
+        self.current_id = None
+        self.eap_success = False
+        self.eap_fail = False
+        self.eap_timeout = False
+        self.eap_key_data = None
+        self.eap_restart = False
 
-        self.eapLogoff = False  # pylint: disable=invalid-name
+        self.eap_logoff = False
 
     @log_method
     def idle_state(self):
         """The state machine spends most of its time here, waiting for something to happen"""
-        self.retransWhile = self.calculateTimeout(self.retransCount, self.eapSRTT,  # pylint: disable=invalid-name
-                                                  self.eapRTTVAR, self.methodTimeout)
+        self.retrans_while = self.calculate_timeout(self.retrans_count, self.eap_srtt,
+                                                    self.eap_rttvar, self.method_timeout)
 
     @log_method
     def recieved_state(self):
         """This state is entered when an EAP packet is received. The packet header is parsed here"""
-        rxResp, respId, respMethod = self.parseEapResp()  # pylint: disable=invalid-name
-        return rxResp, respId, respMethod
+        rx_resp, resp_id, resp_method = self.parse_eap_resp()
+        return rx_resp, resp_id, resp_method
 
     @log_method
     def select_action_state(self):
-        decision = Policy.getDecision(self.eapRespData)
+        decision = Policy.get_decision(self.eap_resp_data)
         return decision
 
     @log_method
     def method_response_state(self):
-        self.m.process(self.eapRespData)
-        if self.m.isDone():
+        self.m.process(self.eap_resp_data)
+        if self.m.is_done():
             Policy.update()
-            self.eapKeyData = self.m.getKey()  # pylint: disable=assignment-from-none
-            self.methodState = MethodState.END
+            self.eap_key_data = self.m.get_key()
+            self.method_state = MethodState.END
         else:
-            self.methodState = MethodState.CONTINUE
+            self.method_state = MethodState.CONTINUE
 
     @log_method
     def discard_state(self):
-        self.eapResp = False  # pylint: disable=invalid-name
-        self.eapNoReq = True  # pylint: disable=invalid-name
+        self.eap_resp = False
+        self.eap_no_req = True
 
     @log_method
     def integrity_check_state(self):
-        ignore = self.m.check(self.eapRespData)
+        ignore = self.m.check(self.eap_resp_data)
         return ignore
 
     @log_method
@@ -370,104 +369,104 @@ class FullEAPStateMachine:
 
     @log_method
     def retransmit_state(self):
-        self.retransCount += 1  # pylint: disable=invalid-name
-        if self.retransCount <= self.MAX_RETRANS:
-            self.eapReqData = self.lastReqData
-            self.eapReq = True  # pylint: disable=invalid-name
+        self.retrans_count += 1
+        if self.retrans_count <= self.MAX_RETRANS:
+            self.eap_req_data = self.last_req_data
+            self.eap_req = True
 
     @log_method
     def send_request_state(self):
-        self.retransCount = 0
-        self.lastReqData = self.eapReqData  # pylint: disable=invalid-name
-        self.eapResp = False
-        self.eapReq = True
+        self.retrans_count = 0
+        self.last_req_data = self.eap_req_data
+        self.eap_resp = False
+        self.eap_req = True
 
     @log_method
     def method_request_state(self):
-        self.currentId = self.nextId()
-        self.eapReqData = self.m.buildReq(self.currentId)
-        self.methodTimeout = self.m.getTimeout()  # pylint: disable=invalid-name
+        self.current_id = self.next_id()
+        self.eap_req_data = self.m.build_req(self.current_id)
+        self.method_timeout = self.m.get_timeout()
 
     @log_method
     def initialize_passthrough_state(self):
-        self.aaaEapResp = None  # pylint: disable=invalid-name
+        self.aaa_eap_resp = None
 
     @log_method
     def idle2_state(self):
-        self.retransWhile = self.calculateTimeout(self.retransCount, self.eapSRTT,
-                                                  self.eapRTTVAR, self.methodTimeout)
+        self.retrans_while = self.calculate_timeout(self.retrans_count, self.eap_srtt,
+                                                    self.eap_rttvar, self.method_timeout)
 
     @log_method
     def received2_state(self):
-        rxResp, respId, respMethod = self.parseEapResp()  # pylint: disable=invalid-name
-        return rxResp, respId, respMethod
+        rx_resp, resp_id, resp_method = self.parse_eap_resp()
+        return rx_resp, resp_id, resp_method
 
     @log_method
-    def aaa_request_state(self, respMethod):  # pylint: disable=invalid-name
-        if respMethod == MethodState.IDENTITY:
-            self.aaaIdentity = self.eapRespData  # pylint: disable=invalid-name
-        self.aaaEapRespData = self.eapRespData  # pylint: disable=invalid-name
+    def aaa_request_state(self, resp_method):
+        if resp_method == MethodState.IDENTITY:
+            self.aaa_identity = self.eap_resp_data
+        self.aaa_eap_resp_data = self.eap_resp_data
 
     @log_method
     def aaa_idle_state(self):
-        self.aaaFail = False  # pylint: disable=invalid-name
-        self.aaaSuccess = False  # pylint: disable=invalid-name
-        self.aaaEapReq = False  # pylint: disable=invalid-name
-        self.aaaEapNoReq = False  # pylint: disable=invalid-name
-        self.aaaEapResp = True
+        self.aaa_fail = False
+        self.aaa_success = False
+        self.aaa_eap_req = False
+        self.aaa_eap_no_req = False
+        self.aaa_eap_resp = True
 
     @log_method
     def aaa_response_state(self):
-        self.eapReqData = self.aaaEapReqData
-        self.currentId = self.getId()
-        self.methodTimeout = self.aaaMethodTimeout
+        self.eap_req_data = self.aaa_eap_req_data
+        self.current_id = self.get_id()
+        self.method_timeout = self.aaa_method_timeout
 
     @log_method
     def send_request2_state(self):
-        self.retransCount = 0
-        self.lastReqData = self.eapReqData
-        self.eapResp = False
-        self.eapReq = True
+        self.retrans_count = 0
+        self.last_req_data = self.eap_req_data
+        self.eap_resp = False
+        self.eap_req = True
 
     @log_method
     def discard2_state(self):
-        self.eapResp = False
-        self.eapNoReq = True
+        self.eap_resp = False
+        self.eap_no_req = True
 
     @log_method
     def retransmit2_state(self):
-        self.retransCount += 1
-        if self.retransCount <= self.MAX_RETRANS:
-            self.eapReqData = self.lastReqData
-            self.eapReq = True
+        self.retrans_count += 1
+        if self.retrans_count <= self.MAX_RETRANS:
+            self.eap_req_data = self.last_req_data
+            self.eap_req = True
 
     @log_method
     def success2_state(self):
-        self.eapReq = True
-        self.eapReqData = self.aaaEapReqData
-        self.eapKeyData = self.aaaEapKeyData
-        self.eapKeyAvailable = self.aaaEapKeyAvailable
-        self.eapSuccess = True
+        self.eap_req = True
+        self.eap_req_data = self.aaa_eap_req_data
+        self.eap_key_data = self.aaa_eap_key_data
+        self.eap_key_available = self.aaa_eap_key_available
+        self.eap_success = True
 
     @log_method
     def failure2_state(self):
-        self.eapReq = True
-        self.eapReqData = self.aaaEapReqData
-        self.eapFail = True
+        self.eap_req = True
+        self.eap_req_data = self.aaa_eap_req_data
+        self.eap_fail = True
 
     @log_method
     def timeout_failure2_state(self):
-        self.eapTimeout = True
+        self.eap_timeout = True
 
     @log_method
     def logoff_state(self):
-        self.eapSuccess = False
-        self.eapLogoff = True
+        self.eap_success = False
+        self.eap_logoff = True
 
     @log_method
     def logoff2_state(self):
-        self.eapSuccess = False
-        self.eapLogoff = True
+        self.eap_success = False
+        self.eap_logoff = True
 
     def handle_message_received(self):
         """Main state machine loop"""
@@ -481,235 +480,235 @@ class FullEAPStateMachine:
         # so execute zzzz_state(), currentState = zzzz_state.
         # next loop iter, currentstate( i.e. zzzz) == zzzz, yyyy_state(), currentState = yyyy
 
-        rxResp = None  # pylint: disable=invalid-name
-        respId = None  # pylint: disable=invalid-name
-        respMethod = None  # pylint: disable=invalid-name
+        rx_resp = None
+        resp_id = None
+        resp_method = None
         ignore = None
         decision = None
 
         last_state = None
 
-        while self.currentState != last_state:
-            last_state = self.currentState
-            if not self.portEnabled and self.currentState != FullEAPStateMachine.DISABLED:
+        while self.current_state != last_state:
+            last_state = self.current_state
+            if not self.port_enabled and self.current_state != FullEAPStateMachine.DISABLED:
                 self.disabled_state()
-                self.currentState = FullEAPStateMachine.DISABLED
+                self.current_state = FullEAPStateMachine.DISABLED
 
-            if self.eapRestart and self.portEnabled:
+            if self.eap_restart and self.port_enabled:
                 self.initialize_state()
-                self.currentState = FullEAPStateMachine.INITIALIZE
+                self.current_state = FullEAPStateMachine.INITIALIZE
 
-            if self.currentState == FullEAPStateMachine.INITIALIZE:
+            if self.current_state == FullEAPStateMachine.INITIALIZE:
                 decision = self.select_action_state()
-                self.currentState = FullEAPStateMachine.SELECT_ACTION
+                self.current_state = FullEAPStateMachine.SELECT_ACTION
 
             # not tested
-            if self.currentState == FullEAPStateMachine.DISABLED and self.portEnabled:
+            if self.current_state == FullEAPStateMachine.DISABLED and self.port_enabled:
                 self.initialize_state()
-                self.currentState = FullEAPStateMachine.INITIALIZE
+                self.current_state = FullEAPStateMachine.INITIALIZE
 
-            if self.currentState == FullEAPStateMachine.SELECT_ACTION:
+            if self.current_state == FullEAPStateMachine.SELECT_ACTION:
                 # not tested
                 if decision == Decision.SUCCESS:
                     self.success_state()
-                    self.currentState = FullEAPStateMachine.SUCCESS
+                    self.current_state = FullEAPStateMachine.SUCCESS
                 # not tested
                 elif decision == Decision.FAILURE:
                     self.failure_state()
-                    self.currentState = FullEAPStateMachine.FAILURE
+                    self.current_state = FullEAPStateMachine.FAILURE
                 elif decision == Decision.PASSTHROUGH:
                     self.initialize_passthrough_state()
-                    self.currentState = FullEAPStateMachine.INITIALIZE_PASSTRHOUGH
+                    self.current_state = FullEAPStateMachine.INITIALIZE_PASSTRHOUGH
                 else:
                     self.propose_method_state()
-                    self.currentState = FullEAPStateMachine.PROPOSE_METHOD
+                    self.current_state = FullEAPStateMachine.PROPOSE_METHOD
 
-            if self.currentState == FullEAPStateMachine.FAILURE:
+            if self.current_state == FullEAPStateMachine.FAILURE:
                 # Do nothing.
                 pass
 
-            if self.currentState == FullEAPStateMachine.SUCCESS:
+            if self.current_state == FullEAPStateMachine.SUCCESS:
                 # RFC 4137 says do nothing from success(2), but we're adding a logoff state.
                 # hopefully it will work as intended.
                 # Otherwise allow transition to logoff from all states.
                 # not tested
                 if self.logoff:
                     self.logoff_state()
-                    self.currentState = FullEAPStateMachine.LOGOFF
+                    self.current_state = FullEAPStateMachine.LOGOFF
 
-            if self.currentState == FullEAPStateMachine.TIMEOUT_FAILURE:
+            if self.current_state == FullEAPStateMachine.TIMEOUT_FAILURE:
                 # Do nothing.
                 pass
 
-            if self.currentState == FullEAPStateMachine.PROPOSE_METHOD:
+            if self.current_state == FullEAPStateMachine.PROPOSE_METHOD:
                 self.method_request_state()
-                self.currentState = FullEAPStateMachine.METHOD_REQUEST
+                self.current_state = FullEAPStateMachine.METHOD_REQUEST
 
-            if self.currentState == FullEAPStateMachine.METHOD_REQUEST:
+            if self.current_state == FullEAPStateMachine.METHOD_REQUEST:
                 self.send_request_state()
-                self.currentState = FullEAPStateMachine.SEND_REQUEST
+                self.current_state = FullEAPStateMachine.SEND_REQUEST
 
-            if self.currentState == FullEAPStateMachine.SEND_REQUEST:
+            if self.current_state == FullEAPStateMachine.SEND_REQUEST:
                 self.idle_state()
-                self.currentState = FullEAPStateMachine.IDLE
+                self.current_state = FullEAPStateMachine.IDLE
 
-            if self.currentState == FullEAPStateMachine.IDLE:
-                if self.retransWhile == 0:
+            if self.current_state == FullEAPStateMachine.IDLE:
+                if self.retrans_while == 0:
                     self.retransmit_state()
-                    self.currentState = FullEAPStateMachine.RETRANSMIT
-                elif self.eapResp:
-                    rxResp, respId, respMethod = self.recieved_state()  # pylint: disable=invalid-name
-                    self.currentState = FullEAPStateMachine.RECEIVED
+                    self.current_state = FullEAPStateMachine.RETRANSMIT
+                elif self.eap_resp:
+                    rx_resp, resp_id, resp_method = self.recieved_state()
+                    self.current_state = FullEAPStateMachine.RECEIVED
 
-            if self.currentState == FullEAPStateMachine.RETRANSMIT:
+            if self.current_state == FullEAPStateMachine.RETRANSMIT:
                 self.retransmit_state()
-                if self.retransCount > self.MAX_RETRANS:
+                if self.retrans_count > self.MAX_RETRANS:
                     self.timeout_failure_state()
-                    self.currentState = FullEAPStateMachine.TIMEOUT_FAILURE
+                    self.current_state = FullEAPStateMachine.TIMEOUT_FAILURE
                 else:
-                    self.currentState = FullEAPStateMachine.IDLE
+                    self.current_state = FullEAPStateMachine.IDLE
 
-            if self.currentState == FullEAPStateMachine.RECEIVED:
-                self.logger.debug("RECEIVED- rxResp: %s, respId: %d, respMethod: %s",
-                                  rxResp, respId, respMethod)
+            if self.current_state == FullEAPStateMachine.RECEIVED:
+                self.logger.debug("RECEIVED- rx_resp: %s, resp_id: %d, resp_method: %s",
+                                  rx_resp, resp_id, resp_method)
                 self.logger.debug("RECIEVED- currentId: %d, currentMethod: %s, methodState: %s",
-                                  self.currentId, self.currentMethod, self.methodState)
+                                  self.current_id, self.current_method, self.method_state)
                 # not tested
-                if rxResp and respId == self.currentId \
-                        and (respMethod in (MethodState.NAK, MethodState.EXPANDED_NAK)) \
-                        and self.methodState == MethodState.PROPOSED:
+                if rx_resp and resp_id == self.current_id \
+                        and (resp_method in (MethodState.NAK, MethodState.EXPANDED_NAK)) \
+                        and self.method_state == MethodState.PROPOSED:
                     self.nak_state()
-                    self.currentState = FullEAPStateMachine.NAK
-                elif rxResp and respId == self.currentId and respMethod == self.currentMethod:
+                    self.current_state = FullEAPStateMachine.NAK
+                elif rx_resp and resp_id == self.current_id and resp_method == self.current_method:
                     ignore = self.integrity_check_state()
-                    self.currentState = FullEAPStateMachine.INTEGRITY_CHECK
+                    self.current_state = FullEAPStateMachine.INTEGRITY_CHECK
                 else:
                     self.discard_state()
-                    self.currentState = FullEAPStateMachine.DISCARD
+                    self.current_state = FullEAPStateMachine.DISCARD
 
-            if self.currentState == FullEAPStateMachine.DISCARD:
+            if self.current_state == FullEAPStateMachine.DISCARD:
                 self.idle_state()
-                self.currentState = FullEAPStateMachine.IDLE
+                self.current_state = FullEAPStateMachine.IDLE
 
             # not tested
-            if self.currentState == FullEAPStateMachine.NAK:
+            if self.current_state == FullEAPStateMachine.NAK:
                 decision = self.select_action_state
-                self.currentState = FullEAPStateMachine.SELECT_ACTION
+                self.current_state = FullEAPStateMachine.SELECT_ACTION
 
-            if self.currentState == FullEAPStateMachine.INTEGRITY_CHECK:
+            if self.current_state == FullEAPStateMachine.INTEGRITY_CHECK:
                 # not tested
                 if ignore:
                     self.discard_state()
-                    self.currentState = FullEAPStateMachine.DISCARD
+                    self.current_state = FullEAPStateMachine.DISCARD
                 else:
                     self.method_response_state()
-                    self.currentState = FullEAPStateMachine.METHOD_RESPONSE
+                    self.current_state = FullEAPStateMachine.METHOD_RESPONSE
 
-            if self.currentState == FullEAPStateMachine.METHOD_RESPONSE:
-                if self.methodState == MethodState.END:
+            if self.current_state == FullEAPStateMachine.METHOD_RESPONSE:
+                if self.method_state == MethodState.END:
                     decision = self.select_action_state()
-                    self.currentState = FullEAPStateMachine.SELECT_ACTION
+                    self.current_state = FullEAPStateMachine.SELECT_ACTION
                 # not tested
                 else:
                     self.method_request_state()
-                    self.currentState = FullEAPStateMachine.METHOD_REQUEST
+                    self.current_state = FullEAPStateMachine.METHOD_REQUEST
 
-            if self.currentState == FullEAPStateMachine.INITIALIZE_PASSTRHOUGH:
-                if self.currentId is not None:
-                    self.aaa_request_state(respMethod)
-                    self.currentState = FullEAPStateMachine.AAA_REQUEST
+            if self.current_state == FullEAPStateMachine.INITIALIZE_PASSTRHOUGH:
+                if self.current_id is not None:
+                    self.aaa_request_state(resp_method)
+                    self.current_state = FullEAPStateMachine.AAA_REQUEST
                 # not tested
                 else:
                     self.aaa_idle_state()
-                    self.currentState = FullEAPStateMachine.AAA_IDLE
+                    self.current_state = FullEAPStateMachine.AAA_IDLE
 
-            if self.currentState == FullEAPStateMachine.AAA_IDLE:
-                if self.aaaFail:
+            if self.current_state == FullEAPStateMachine.AAA_IDLE:
+                if self.aaa_fail:
                     self.failure2_state()
-                    self.currentState = FullEAPStateMachine.FAILURE2
-                elif self.aaaSuccess:
+                    self.current_state = FullEAPStateMachine.FAILURE2
+                elif self.aaa_success:
                     self.success2_state()
-                    self.currentState = FullEAPStateMachine.SUCCESS2
-                elif self.aaaTimeout:
+                    self.current_state = FullEAPStateMachine.SUCCESS2
+                elif self.aaa_timeout:
                     self.timeout_failure2_state()
-                    self.currentState = FullEAPStateMachine.TIMEOUT_FAILURE2
-                elif self.aaaEapReq:
+                    self.current_state = FullEAPStateMachine.TIMEOUT_FAILURE2
+                elif self.aaa_eap_req:
                     self.aaa_response_state()
-                    self.currentState = FullEAPStateMachine.AAA_RESPONSE
+                    self.current_state = FullEAPStateMachine.AAA_RESPONSE
                 # not tested
-                elif self.aaaEapNoReq:
+                elif self.aaa_eap_no_req:
                     self.discard2_state()
-                    self.currentState = FullEAPStateMachine.DISCARD2
+                    self.current_state = FullEAPStateMachine.DISCARD2
 
-            if self.currentState == FullEAPStateMachine.AAA_RESPONSE:
+            if self.current_state == FullEAPStateMachine.AAA_RESPONSE:
                 self.send_request2_state()
-                self.currentState = FullEAPStateMachine.SEND_REQUEST2
+                self.current_state = FullEAPStateMachine.SEND_REQUEST2
 
-            if self.currentState == FullEAPStateMachine.SEND_REQUEST2:
+            if self.current_state == FullEAPStateMachine.SEND_REQUEST2:
                 self.idle2_state()
-                self.currentState = FullEAPStateMachine.IDLE2
+                self.current_state = FullEAPStateMachine.IDLE2
 
-            if self.currentState == FullEAPStateMachine.DISCARD2:
+            if self.current_state == FullEAPStateMachine.DISCARD2:
                 self.idle2_state()
-                self.currentState = FullEAPStateMachine.IDLE2
+                self.current_state = FullEAPStateMachine.IDLE2
 
-            if self.currentState == FullEAPStateMachine.IDLE2:
-                if self.retransWhile == 0:
+            if self.current_state == FullEAPStateMachine.IDLE2:
+                if self.retrans_while == 0:
                     self.retransmit2_state()
-                    self.currentState = FullEAPStateMachine.RETRANSMIT2
-                elif self.eapResp:
-                    rxResp, respId, respMethod = self.received2_state()  # pylint: disable=invalid-name
-                    self.currentState = FullEAPStateMachine.RECEIVED2
+                    self.current_state = FullEAPStateMachine.RETRANSMIT2
+                elif self.eap_resp:
+                    rx_resp, resp_id, resp_method = self.received2_state()
+                    self.current_state = FullEAPStateMachine.RECEIVED2
 
-            if self.currentState == FullEAPStateMachine.RETRANSMIT2:
-                if self.retransCount > self.MAX_RETRANS:
+            if self.current_state == FullEAPStateMachine.RETRANSMIT2:
+                if self.retrans_count > self.MAX_RETRANS:
                     self.timeout_failure2_state()
-                    self.currentState = FullEAPStateMachine.TIMEOUT_FAILURE2
+                    self.current_state = FullEAPStateMachine.TIMEOUT_FAILURE2
                 else:
                     self.idle2_state()
-                    self.currentState = FullEAPStateMachine.IDLE2
+                    self.current_state = FullEAPStateMachine.IDLE2
 
-            if self.currentState == FullEAPStateMachine.RECEIVED2:
-                if rxResp and respId == self.currentId:
-                    self.aaa_request_state(respMethod)
-                    self.currentState = FullEAPStateMachine.AAA_REQUEST
+            if self.current_state == FullEAPStateMachine.RECEIVED2:
+                if rx_resp and resp_id == self.current_id:
+                    self.aaa_request_state(resp_method)
+                    self.current_state = FullEAPStateMachine.AAA_REQUEST
                 else:
                     self.discard2_state()
-                    self.currentState = FullEAPStateMachine.DISCARD2
+                    self.current_state = FullEAPStateMachine.DISCARD2
 
-            if self.currentState == FullEAPStateMachine.AAA_REQUEST:
+            if self.current_state == FullEAPStateMachine.AAA_REQUEST:
                 self.aaa_idle_state()
-                self.currentState = FullEAPStateMachine.AAA_IDLE
+                self.current_state = FullEAPStateMachine.AAA_IDLE
 
-            if self.currentState == FullEAPStateMachine.FAILURE2:
+            if self.current_state == FullEAPStateMachine.FAILURE2:
                 # Do nothing.
                 pass
 
-            if self.currentState == FullEAPStateMachine.SUCCESS2:
+            if self.current_state == FullEAPStateMachine.SUCCESS2:
                 # RFC 4137 says do nothing from success(2), but we're adding a logoff state.
                 # hopefully it will work as intended.
                 # Otherwise allow transition to logoff from all states.
                 if self.logoff:
                     self.logoff2_state()
-                    self.currentState = FullEAPStateMachine.LOGOFF2
+                    self.current_state = FullEAPStateMachine.LOGOFF2
 
-            if self.currentState == FullEAPStateMachine.TIMEOUT_FAILURE2:
+            if self.current_state == FullEAPStateMachine.TIMEOUT_FAILURE2:
                 # Do nothing.
                 pass
 
     def lower_layer_reset(self):
         """Sets variables that are meant to be set by the lower layer
         RFC4137 5.1.2 (standalone authenticator to Lower Layer)"""
-        self.eapReq = False
-        self.eapNoReq = False
-        self.eapSuccess = False
-        self.eapFail = False
-        self.eapTimeout = False
+        self.eap_req = False
+        self.eap_no_req = False
+        self.eap_success = False
+        self.eap_fail = False
+        self.eap_timeout = False
 
         self.logoff = False
 
-        self.aaaEapResp = False
-        self.aaaTimeout = False
+        self.aaa_eap_resp = False
+        self.aaa_timeout = False
 
     def event(self, event):
         """Processes an event.
@@ -734,42 +733,45 @@ class FullEAPStateMachine:
             self.session_timeout_event_received()
 
         self.handle_message_received()
-        self.logger.info('end state: %s', self.currentState)
+        self.logger.info('end state: %s', self.current_state)
 
-        if self.eapReq:
-            if (hasattr(self.eapReqData, 'code') and self.eapReqData.code == Eap.REQUEST) \
-                    or isinstance(self.eapReqData, (SuccessMessage, FailureMessage)):
-                self.logger.info('outputting eap, %s %s %s', self.eapReqData, self.src_mac, self.port_id_mac)
+        if self.eap_req:
+            if (hasattr(self.eap_req_data, 'code') and self.eap_req_data.code == Eap.REQUEST) \
+                    or isinstance(self.eap_req_data, (SuccessMessage, FailureMessage)):
+                self.logger.info('outputting eap, %s %s %s',
+                                 self.eap_req_data, self.src_mac, self.port_id_mac)
                 self.eap_output_messages.put_nowait(
-                    EapQueueMessage(self.eapReqData, self.src_mac, self.port_id_mac))
+                    EapQueueMessage(self.eap_req_data, self.src_mac, self.port_id_mac))
                 self.sent_count += 1
                 self.set_timer()
             # not tested
             else:
-                self.logger.error('cant find code --- %s', self.eapReqData)
-            self.eapReq = False
+                self.logger.error('cant find code --- %s', self.eap_req_data)
+            self.eap_req = False
 
-        if self.aaaEapResp and self.aaaEapRespData:
-            if self.aaaEapRespData.code == Eap.RESPONSE:
+        if self.aaa_eap_resp and self.aaa_eap_resp_data:
+            if self.aaa_eap_resp_data.code == Eap.RESPONSE:
                 self.logger.info('outputing radius')
                 self.radius_output_messages.put_nowait(
-                    RadiusQueueMessage(self.aaaEapRespData, self.src_mac, self.aaaIdentity.identity,
+                    RadiusQueueMessage(self.aaa_eap_resp_data, self.src_mac,
+                                       self.aaa_identity.identity,
                                        self.radius_state_attribute, self.port_id_mac))
+
                 self.sent_count += 1
                 self.set_timer()
-            self.aaaEapResp = False
+            self.aaa_eap_resp = False
         # not tested
-        elif self.aaaEapResp:
+        elif self.aaa_eap_resp:
             self.logger.error("aaaEapResp is true. but data is false. This should never happen")
 
-        if self.eapSuccess:
+        if self.eap_success:
             self.handle_success()
 
-        if self.eapFail:
+        if self.eap_fail:
             self.logger.info('oh authentication not successful %s', self.src_mac)
             self.failure_handler(self.src_mac, str(self.port_id_mac))
 
-        if self.eapLogoff:
+        if self.eap_logoff:
             self.handle_logoff()
 
     def handle_logoff(self):
@@ -782,7 +784,7 @@ class FullEAPStateMachine:
     def handle_success(self):
         """Notify the success callback and sets a timer event to expire this session"""
         self.logger.info('Yay authentication successful %s %s',
-                         self.src_mac, self.aaaIdentity.identity)
+                         self.src_mac, self.aaa_identity.identity)
         self.auth_handler(self.src_mac, str(self.port_id_mac))
         # new authentication so cancel the old session timeout event
         if self.session_timeout_job:
@@ -801,7 +803,7 @@ class FullEAPStateMachine:
         Args:
             event (EventPortStatusChange):
         """
-        self.portEnabled = event.port_status  # pylint: disable=invalid-name
+        self.port_enabled = event.port_status
 
     def timer_expired_event_received(self, event):
         """Check if the event has been replied to. and set variables.
@@ -818,10 +820,10 @@ class FullEAPStateMachine:
             self.logger.debug("processing timer event. haven't received a reply. %s %s",
                               self.sent_count, event.sent_count)
 
-            if self.currentState == self.AAA_IDLE:
-                self.aaaTimeout = True  # pylint: disable=invalid-name
-            if self.currentState == self.IDLE2 or self.currentState == self.IDLE:
-                self.retransWhile = 0
+            if self.current_state == self.AAA_IDLE:
+                self.aaa_timeout = True
+            if self.current_state == self.IDLE2 or self.current_state == self.IDLE:
+                self.retrans_while = 0
             return False
         self.logger.debug("ignoring timer event, already received a reply.")
         return True
@@ -837,35 +839,35 @@ class FullEAPStateMachine:
             self.port_id_mac = event.port_id
 
         if isinstance(message, EapolStartMessage) or \
-                (self.currentState in (FullEAPStateMachine.TIMEOUT_FAILURE,
-                                       FullEAPStateMachine.TIMEOUT_FAILURE2) and
+                (self.current_state in (FullEAPStateMachine.TIMEOUT_FAILURE,
+                                        FullEAPStateMachine.TIMEOUT_FAILURE2) and
                  isinstance(message, EapMessage) and message.code == Eap.RESPONSE
                 ):
-            self.eapRestart = True
+            self.eap_restart = True
         elif isinstance(message, EapolLogoffMessage):
             self.logoff = True
 
         if isinstance(event, EventRadiusMessageReceived):
             self.process_radius_message(event)
         else:
-            self.eapRespData = message  # pylint: disable=invalid-name
-            self.eapResp = True
+            self.eap_resp_data = message
+            self.eap_resp = True
 
     def process_radius_message(self, event):
         """Process radius message (set and extract radius specific variables)"""
-        self.eapRespData = None
-        self.eapResp = False
+        self.eap_resp_data = None
+        self.eap_resp = False
         self.logger.info('radius attributes %s', event.attributes)
         self.radius_state_attribute = event.state
-        self.aaaEapReq = True
-        self.aaaEapReqData = event.message  # pylint: disable=invalid-name
-        self.logger.info('sm ev.msg: %s', self.aaaEapReqData)
-        if isinstance(self.aaaEapReqData, SuccessMessage):
+        self.aaa_eap_req = True
+        self.aaa_eap_req_data = event.message
+        self.logger.info('sm ev.msg: %s', self.aaa_eap_req_data)
+        if isinstance(self.aaa_eap_req_data, SuccessMessage):
             self.logger.info("aaaSuccess")
-            self.aaaSuccess = True
-        if isinstance(self.aaaEapReqData, FailureMessage):
+            self.aaa_success = True
+        if isinstance(self.aaa_eap_req_data, FailureMessage):
             self.logger.info("aaaFail")
-            self.aaaFail = True
+            self.aaa_fail = True
         self.logger.info('radius event %s', event.__dict__)
         self.set_vars_from_radius(event.attributes)
 
@@ -887,10 +889,10 @@ class FullEAPStateMachine:
         """Sets a timer to trigger a retransmit if no packet received.
         """
         # These messages should not expect a reply, so set the timer.
-        if self.currentState not in [self.SUCCESS, self.SUCCESS2,
-                                     self.FAILURE, self.FAILURE2,
-                                     self.TIMEOUT_FAILURE, self.TIMEOUT_FAILURE2]:
-            timeout = self.retransWhile
+        if self.current_state not in [self.SUCCESS, self.SUCCESS2,
+                                      self.FAILURE, self.FAILURE2,
+                                      self.TIMEOUT_FAILURE, self.TIMEOUT_FAILURE2]:
+            timeout = self.retrans_while
             self.timer_scheduler.call_later(timeout,
                                             self.event,
                                             EventTimerExpired(self, self.sent_count))
