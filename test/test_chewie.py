@@ -278,7 +278,7 @@ class ChewieTestCase(unittest.TestCase):
         pool = eventlet.GreenPool()
         pool.spawn(self.chewie.run)
 
-        eventlet.sleep(0.1)
+        eventlet.sleep(1)
 
         self.assertEqual(
             self.chewie.get_state_machine('02:42:ac:17:00:6f',
