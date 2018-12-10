@@ -62,7 +62,7 @@ class MPassthrough:
     done = False
     src_mac = None
 
-    def check(self, eap_resp_data):
+    def check(self, eap_resp_data):  # pylint: disable=unused-argument
         """
         Args:
              eap_resp_data (Message):
@@ -432,7 +432,7 @@ class FullEAPStateMachine:
          The return value is an integer."""
         return self.eap_req_data.message_id
 
-    def calculate_timeout(self, retrans_count, eap_srtt, eap_rttvar, method_timeout):
+    def calculate_timeout(self, retrans_count, eap_srtt, eap_rttvar, method_timeout):  # pylint: disable=unused-argument
         """https://tools.ietf.org/html/rfc3748#section-4.3
         Args:
             retrans_count:
@@ -824,7 +824,7 @@ class FullEAPStateMachine:
 
         if isinstance(message, EapolStartMessage) or \
                 (self.state in (FullEAPStateMachine.TIMEOUT_FAILURE,
-                                        FullEAPStateMachine.TIMEOUT_FAILURE2) and
+                                FullEAPStateMachine.TIMEOUT_FAILURE2) and
                  isinstance(message, EapMessage) and message.code == Eap.RESPONSE
                 ):
             self.eap_restart = True
@@ -874,8 +874,8 @@ class FullEAPStateMachine:
         """
         # These messages should not expect a reply, so set the timer.
         if self.state not in [self.SUCCESS, self.SUCCESS2,
-                                      self.FAILURE, self.FAILURE2,
-                                      self.TIMEOUT_FAILURE, self.TIMEOUT_FAILURE2]:
+                              self.FAILURE, self.FAILURE2,
+                              self.TIMEOUT_FAILURE, self.TIMEOUT_FAILURE2]:
             timeout = self.retrans_while
             self.timer_scheduler.call_later(timeout,
                                             self.event,
