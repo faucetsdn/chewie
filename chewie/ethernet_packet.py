@@ -27,8 +27,7 @@ class EthernetPacket:
             dst_mac, src_mac, ethertype = struct.unpack("!6s6sH",
                                                         packed_message[:ETHERNET_HEADER_LENGTH])
         except struct.error as exception:
-            raise MessageParseError(message="Unable to parse Ethernet header (14bytes)",
-                                    original_error=exception) from exception
+            raise MessageParseError("Unable to parse Ethernet header (14bytes)") from exception
         data = packed_message[ETHERNET_HEADER_LENGTH:]
         return cls(MacAddress(dst_mac), MacAddress(src_mac), ethertype, data)
 
