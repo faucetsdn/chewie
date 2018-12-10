@@ -1,6 +1,6 @@
 """Utility Functions"""
 import logging
-from collections import namedtuple
+from collections import namedtuple  # pytype: disable=pyi-error
 
 
 def get_logger(logname):
