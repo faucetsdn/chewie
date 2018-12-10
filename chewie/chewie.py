@@ -164,8 +164,6 @@ class Chewie:
         while self.running():
             sleep(0)
             eap_queue_message = self.eap_output_messages.get()
-            print('*********')
-            print('type: ', type(eap_queue_message), eap_queue_message)
             self.logger.info("Sending message %s from %s to %s" %
                              (eap_queue_message.message, str(eap_queue_message.port_mac),
                               str(eap_queue_message.src_mac)))
