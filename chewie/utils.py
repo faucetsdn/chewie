@@ -1,5 +1,6 @@
 """Utility Functions"""
 import logging
+from collections import namedtuple
 
 
 def get_logger(logname):
@@ -19,4 +20,14 @@ def log_method(method):
 
 class MessageParseError(Exception):
     """Error for when parsing cannot be successfully completed."""
+    pass
+
+
+class EapQueueMessage(namedtuple('EapQueueMessage',
+                                 'message src_mac port_mac')):
+    pass
+
+
+class RadiusQueueMessage(namedtuple('RadiusQueueMessage',
+                                    'message src_mac identity state port_mac')):
     pass

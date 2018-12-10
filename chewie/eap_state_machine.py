@@ -7,7 +7,7 @@ from chewie.event import EventMessageReceived, EventRadiusMessageReceived, Event
 from chewie.message_parser import SuccessMessage, FailureMessage, EapolStartMessage, \
     IdentityMessage, EapolLogoffMessage, EapMessage
 from chewie.radius_attributes import SessionTimeout
-from chewie.utils import get_logger, log_method
+from chewie.utils import get_logger, log_method, RadiusQueueMessage, EapQueueMessage
 
 
 class Policy:
@@ -740,8 +740,8 @@ class FullEAPStateMachine:
             if (hasattr(self.eapReqData, 'code') and self.eapReqData.code == Eap.REQUEST) \
                     or isinstance(self.eapReqData, (SuccessMessage, FailureMessage)):
                 self.logger.info('outputting eap, %s %s %s', self.eapReqData, self.src_mac, self.port_id_mac)
-                # this should be an object - we shouldn't be handing around tuples
-                self.eap_output_messages.put_nowait((self.eapReqData, self.src_mac, self.port_id_mac))
+                self.eap_output_messages.put_nowait(
+                    EapQueueMessage(self.eapReqData, self.src_mac, self.port_id_mac))
                 self.sent_count += 1
                 self.set_timer()
             # not tested
@@ -752,11 +752,9 @@ class FullEAPStateMachine:
         if self.aaaEapResp and self.aaaEapRespData:
             if self.aaaEapRespData.code == Eap.RESPONSE:
                 self.logger.info('outputing radius')
-                # this should be an object - we shouldn't be handing around tuples
-                self.radius_output_messages.put_nowait((self.aaaEapRespData, self.src_mac,
-                                                        self.aaaIdentity.identity,
-                                                        self.radius_state_attribute,
-                                                        self.port_id_mac))
+                self.radius_output_messages.put_nowait(
+                    RadiusQueueMessage(self.aaaEapRespData, self.src_mac, self.aaaIdentity.identity,
+                                       self.radius_state_attribute, self.port_id_mac))
                 self.sent_count += 1
                 self.set_timer()
             self.aaaEapResp = False

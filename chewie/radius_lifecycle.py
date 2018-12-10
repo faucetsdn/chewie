@@ -27,7 +27,12 @@ class RadiusLifecycle:
 
     def process_outbound(self, radius_output_bits):
         """Placeholder method extracted from Chewie.send_radius_messages()"""
-        eap_message, src_mac, username, state, port_id = radius_output_bits
+        eap_message = radius_output_bits.message
+        src_mac = radius_output_bits.src_mac
+        username = radius_output_bits.identity
+        state = radius_output_bits.state
+        port_id = radius_output_bits.port_mac
+
         self.logger.info("got eap to send to radius.. mac: %s %s, username: %s",
                          type(src_mac), src_mac, username)
         state_dict = None

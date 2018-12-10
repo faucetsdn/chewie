@@ -163,10 +163,15 @@ class Chewie:
         """send eap messages to supplicant forever."""
         while self.running():
             sleep(0)
-            message, src_mac, port_mac = self.eap_output_messages.get()
+            eap_queue_message = self.eap_output_messages.get()
+            print('*********')
+            print('type: ', type(eap_queue_message), eap_queue_message)
             self.logger.info("Sending message %s from %s to %s" %
-                             (message, str(port_mac), str(src_mac)))
-            self.eap_socket.send(MessagePacker.ethernet_pack(message, port_mac, src_mac))
+                             (eap_queue_message.message, str(eap_queue_message.port_mac),
+                              str(eap_queue_message.src_mac)))
+            self.eap_socket.send(MessagePacker.ethernet_pack(eap_queue_message.message,
+                                                             eap_queue_message.port_mac,
+                                                             eap_queue_message.src_mac))
 
     def receive_eap_messages(self):
         """receive eap messages from supplicant forever."""
