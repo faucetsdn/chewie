@@ -27,6 +27,7 @@ setup(
     packages=['chewie'],
     python_requires='>=3',
     install_requires=[
-        'eventlet'
+        'eventlet',
+        'transitions'
     ]
 )

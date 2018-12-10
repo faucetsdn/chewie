@@ -278,11 +278,11 @@ class ChewieTestCase(unittest.TestCase):
         pool = eventlet.GreenPool()
         pool.spawn(self.chewie.run)
 
-        eventlet.sleep(0.1)
+        eventlet.sleep(1)
 
         self.assertEqual(
             self.chewie.get_state_machine('02:42:ac:17:00:6f',
-                                          '00:00:00:00:00:01').current_state,
+                                          '00:00:00:00:00:01').state,
             FullEAPStateMachine.SUCCESS2)
 
     def test_port_status_changes(self):
@@ -313,7 +313,7 @@ class ChewieTestCase(unittest.TestCase):
 
         self.assertEqual(
             self.chewie.get_state_machine('02:42:ac:17:00:6f',
-                                          '00:00:00:00:00:01').current_state,
+                                          '00:00:00:00:00:01').state,
             FullEAPStateMachine.LOGOFF2)
 
     @patch_things
@@ -338,7 +338,7 @@ class ChewieTestCase(unittest.TestCase):
 
         self.assertEqual(
             self.chewie.get_state_machine('02:42:ac:17:00:6f',
-                                          '00:00:00:00:00:01').current_state,
+                                          '00:00:00:00:00:01').state,
             FullEAPStateMachine.TIMEOUT_FAILURE)
 
 
@@ -362,5 +362,5 @@ class ChewieTestCase(unittest.TestCase):
 
         self.assertEqual(
             self.chewie.get_state_machine('02:42:ac:17:00:6f',
-                                          '00:00:00:00:00:01').current_state,
+                                          '00:00:00:00:00:01').state,
             FullEAPStateMachine.TIMEOUT_FAILURE2)
