@@ -4,7 +4,6 @@ import logging
 import random
 import sys
 import tempfile
-import time
 import unittest
 from unittest.mock import patch
 
@@ -16,17 +15,19 @@ from chewie.eap_state_machine import FullEAPStateMachine
 from chewie.mac_address import MacAddress
 from helpers import FakeTimerScheduler
 
+
 FROM_SUPPLICANT = Queue()
 TO_SUPPLICANT = Queue()
 FROM_RADIUS = Queue()
 TO_RADIUS = Queue()
+
 
 def patch_things(func):
     """decorator to mock patch socket operations and random number generators"""
     @patch('chewie.chewie.EapSocket', FakeEapSocket)
     @patch('chewie.chewie.RadiusSocket', FakeRadiusSocket)
     @patch('chewie.chewie.RadiusLifecycle.generate_request_authenticator', urandom_helper)
-    @patch('chewie.chewie.FullEAPStateMachine.nextId', nextId)
+    @patch('chewie.chewie.FullEAPStateMachine.next_id', next_id)
     def wrapper_patch(self):
         func(self)
 
@@ -80,6 +81,7 @@ def urandom_helper(size):  # pylint: disable=unused-argument
 SUPPLICANT_REPLY_GENERATOR = None  # supplicant_replies()
 RADIUS_REPLY_GENERATOR = None  # radius_replies()
 
+
 class FakeEapSocket:
     def __init__(self, _interface_name):
         # TODO inject queues in constructor instead of using globals
@@ -94,7 +96,6 @@ class FakeEapSocket:
         print('mocked eap_receive')
         got = FROM_SUPPLICANT.get()
         return got
-
 
     def send(self, data=None):  # pylint: disable=unused-argument
         global TO_SUPPLICANT
@@ -111,6 +112,7 @@ class FakeEapSocket:
         if next_reply:
             FROM_SUPPLICANT.put_nowait(next_reply)
 
+
 class FakeRadiusSocket:
     def __init__(self, _listen_ip, _listen_port, _server_ip, _server_port):
         # TODO inject queues in constructor instead of using globals
@@ -126,7 +128,6 @@ class FakeRadiusSocket:
         got = FROM_RADIUS.get()
         print('got RADIUS', got)
         return got
-
 
     def send(self, data):  # pylint: disable=unused-argument
         global TO_RADIUS
@@ -149,11 +150,11 @@ def do_nothing(chewie):  # pylint: disable=unused-argument
     pass
 
 
-def nextId(eap_state_machine):  # pylint: disable=invalid-name
+def next_id(eap_state_machine):  # pylint: disable=invalid-name
     """mocked FullEAPStateMachine.nextId"""
-    if eap_state_machine.currentId is None:
+    if eap_state_machine.current_id is None:
         return 116
-    _id = eap_state_machine.currentId + 1
+    _id = eap_state_machine.current_id + 1
     if _id > 255:
         return random.randint(0, 200)
     return _id
@@ -281,7 +282,7 @@ class ChewieTestCase(unittest.TestCase):
 
         self.assertEqual(
             self.chewie.get_state_machine('02:42:ac:17:00:6f',
-                                          '00:00:00:00:00:01').currentState,
+                                          '00:00:00:00:00:01').current_state,
             FullEAPStateMachine.SUCCESS2)
 
     def test_port_status_changes(self):
@@ -312,7 +313,7 @@ class ChewieTestCase(unittest.TestCase):
 
         self.assertEqual(
             self.chewie.get_state_machine('02:42:ac:17:00:6f',
-                                          '00:00:00:00:00:01').currentState,
+                                          '00:00:00:00:00:01').current_state,
             FullEAPStateMachine.LOGOFF2)
 
     @patch_things
@@ -337,7 +338,7 @@ class ChewieTestCase(unittest.TestCase):
 
         self.assertEqual(
             self.chewie.get_state_machine('02:42:ac:17:00:6f',
-                                          '00:00:00:00:00:01').currentState,
+                                          '00:00:00:00:00:01').current_state,
             FullEAPStateMachine.TIMEOUT_FAILURE)
 
 
@@ -361,5 +362,5 @@ class ChewieTestCase(unittest.TestCase):
 
         self.assertEqual(
             self.chewie.get_state_machine('02:42:ac:17:00:6f',
-                                          '00:00:00:00:00:01').currentState,
+                                          '00:00:00:00:00:01').current_state,
             FullEAPStateMachine.TIMEOUT_FAILURE2)

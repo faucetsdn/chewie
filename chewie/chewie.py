@@ -260,8 +260,8 @@ class Chewie:
             state_machine = FullEAPStateMachine(self.eap_output_messages, self.radius_output_messages, src_mac,
                                                 self.timer_scheduler, self.auth_success,
                                                 self.auth_failure, self.auth_logoff, self.logger.name)
-            state_machine.eapRestart = True
+            state_machine.eap_restart = True
             # TODO what if port is not actually enabled, but then how did they auth?
-            state_machine.portEnabled = True
+            state_machine.port_enabled = True
             self.state_machines[port_id_str][src_mac_str] = state_machine
         return state_machine
