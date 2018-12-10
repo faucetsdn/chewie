@@ -677,7 +677,7 @@ class FullEAPStateMachine:
         last_state = None
         while self.state != last_state:
             last_state = self.state
-            self.process()  # pylint: disable=no-member
+            self.process()  # pylint: disable=no-member # pytype: disable=attribute-error
 
     def lower_layer_reset(self):
         """Sets variables that are meant to be set by the lower layer
