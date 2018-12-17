@@ -1,6 +1,6 @@
 #!/bin/sh
 # TODO: must be run from chewie root
-pip install .
+pip3 install .
 if [ -z "${TRAVIS_PYTHON_VERSION}" ]; then
     PYTYPE_TARGET_VERSION=3.6
 else

@@ -401,3 +401,20 @@ class FullStateMachineStartTestCase(unittest.TestCase):
 
         self.timer_scheduler.run_jobs()
         self.assertEqual(self.sm.state, self.sm.LOGOFF2)
+
+    @check_counters(expected_auth_counter=2, expected_logoff_counter=0)
+    def test_port_flap(self):
+        """Test logoff from success2 state."""
+        self.test_success2()
+        # Put port down
+        self.sm.event(EventPortStatusChange(False))
+        self.sm.event(EventPortStatusChange(True))
+
+        self.assertEqual(self.sm.state, self.sm.NO_STATE)
+        self.assertFalse(self.sm.aaa_success)
+        self.assertFalse(self.sm.eap_success)
+
+        self.assertEqual(self.eap_output_queue.qsize(), 0)
+        self.assertEqual(self.radius_output_queue.qsize(), 0)
+
+        self.test_success2()
