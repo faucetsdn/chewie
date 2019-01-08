@@ -7,10 +7,13 @@ from chewie.message_parser import MessagePacker
 from chewie.radius_attributes import EAPMessage, State, CalledStationId, NASIdentifier, NASPortType
 from chewie.event import EventRadiusMessageReceived
 
+
 def port_id_to_int(port_id):
-    """"Convert a port_id str '00:00:00:00:aa:01 to integer'"""
-    dp, port = str(port_id).split(':')[4:]
+    """"Convert a port_id str '00:00:00:aa:00:01 to integer'"""
+    dp, port_half_1, port_half_2 = str(port_id).split(':')[3:]
+    port = port_half_1 + port_half_2
     return int.from_bytes(struct.pack('!HH', int(dp, 16), int(port, 16)), 'big')  # pytype: disable=attribute-error
+
 
 class RadiusLifecycle:
     """A placeholder object for RADIUS logic extracted from Chewie"""
