@@ -146,41 +146,50 @@ class RadiusPacket(Radius):
         """
         # Copy this packet so we can modify the 'Authenticator' and 'Message-Authenticator'
         radius_packet = copy.deepcopy(self)
-        # get the Original Message Authenticator
 
-        message_authenticator = radius_packet.attributes.find(MessageAuthenticator.DESCRIPTION)
-        if not message_authenticator or not request_authenticator:
-            # no validation required.
-            return self
         if not secret:
             raise ValueError("secret cannot be None for hashing")
 
-        response_authenticator = radius_packet.authenticator
-        radius_packet.authenticator = request_authenticator
-        radius_packet.pack()
-        calculated_response_authenticator = binascii.hexlify(hashlib.md5(radius_packet.packed +
-                                                             bytearray(secret, 'utf-8')).digest())
-        if calculated_response_authenticator != response_authenticator:
-            raise InvalidResponseAuthenticatorError(
-                "Original ResponseAuthenticator: '%s', does not match calculated: '%s' %s" % (
-                    response_authenticator,
-                    calculated_response_authenticator,
-                    binascii.hexlify(radius_packet.packed)))
+        self.validate_response_authenticator(radius_packet, request_authenticator, secret)
 
-        original_ma = message_authenticator.data_type.bytes_data
-        # Replace the Original Message Authenticator
-        message_authenticator.data_type.bytes_data = bytes.fromhex("00000000000000000000000000000000")
-        radius_packet.pack()
-
-        # calculate new hash message authenticator
-        new_ma = hmac.new(secret.encode(), radius_packet.packed, 'md5').digest()
-
-        # compare old and new message authenticator
-        if original_ma != new_ma:
-            raise InvalidMessageAuthenticatorError(
-                "Original Message-Authenticator: '%s', does not match calculated: '%s'" %
-                (binascii.hexlify(original_ma), binascii.hexlify(new_ma)))
+        self.validate_message_authenticator(radius_packet, secret)
         return self
+
+    @staticmethod
+    def validate_response_authenticator(radius_packet, request_authenticator, secret):
+        if request_authenticator:
+            response_authenticator = radius_packet.authenticator
+            radius_packet.authenticator = request_authenticator
+            radius_packet.pack()
+            calculated_response_authenticator = binascii.hexlify(
+                hashlib.md5(radius_packet.packed +
+                            bytearray(secret, 'utf-8')).digest())
+            if calculated_response_authenticator != response_authenticator:
+                raise InvalidResponseAuthenticatorError(
+                    "Original ResponseAuthenticator: '%s', does not match calculated: '%s' %s" % (
+                        response_authenticator,
+                        calculated_response_authenticator,
+                        binascii.hexlify(radius_packet.packed)))
+
+    @staticmethod
+    def validate_message_authenticator(radius_packet, secret):
+        message_authenticator = radius_packet.attributes.find(MessageAuthenticator.DESCRIPTION)
+        if message_authenticator:
+            original_ma = message_authenticator.data_type.bytes_data
+            # Replace the Original Message Authenticator
+            message_authenticator.data_type.bytes_data = bytes.fromhex(
+                "00000000000000000000000000000000")
+
+            radius_packet.pack()
+
+            # calculate new hash message authenticator
+            new_ma = hmac.new(secret.encode(), radius_packet.packed, 'md5').digest()
+
+            # compare old and new message authenticator
+            if original_ma != new_ma:
+                raise InvalidMessageAuthenticatorError(
+                    "Original Message-Authenticator: '%s', does not match calculated: '%s'" %
+                    (binascii.hexlify(original_ma), binascii.hexlify(new_ma)))
 
 
 @register_packet_type_parser
