@@ -304,7 +304,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.assertFalse(expiry_job.cancelled())
 
         message = EapolLogoffMessage(self.src_mac)
-        self.sm.event(EventRadiusMessageReceived(message, None))
+        self.sm.event(EventMessageReceived(message, None))
 
         self.assertTrue(expiry_job.cancelled())
 
@@ -320,7 +320,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.test_md5_challenge_request()
 
         message = EapolLogoffMessage(self.src_mac)
-        self.sm.event(EventRadiusMessageReceived(message, None))
+        self.sm.event(EventMessageReceived(message, None))
 
         # should be in same state as when test_md5_challenge_request returned.
 

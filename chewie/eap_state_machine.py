@@ -458,7 +458,8 @@ class FullEAPStateMachine:
         if isinstance(eap, IdentityMessage):
             resp_method = MethodState.IDENTITY
         # RFC 4137 #section 5.4 says eap.code should actually be a bool
-        return eap.code, _id, resp_method
+        eap_code = getattr(eap, 'code', None)
+        return eap_code, _id, resp_method
 
     def build_success(self):
         """Creates an EAP Sucecss Pakcet. Returns an EAP packet"""
