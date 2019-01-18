@@ -52,25 +52,29 @@ class Radius:
             MessageParseError: if packed_message cannot be parsed
         """
         try:
-            code, packet_id, length, response_authenticator = struct.unpack("!BBH16s",
-                                                                            packed_message[:RADIUS_HEADER_LENGTH])
+            code, packet_id, length, authenticator = struct.unpack("!BBH16s",
+                                                                   packed_message[:RADIUS_HEADER_LENGTH])
         except struct.error as exception:
             raise MessageParseError('Unable to unpack first 20 bytes of RADIUS header') \
                 from exception
 
-        response_authenticator = binascii.hexlify(response_authenticator)
         if code in PACKET_TYPE_PARSERS.keys():
-            radius_packet = PACKET_TYPE_PARSERS[code](packet_id, response_authenticator,
+            radius_packet = PACKET_TYPE_PARSERS[code](packet_id, authenticator,
                                                       RadiusAttributesList.parse(
                                                           packed_message[RADIUS_HEADER_LENGTH:]))
-            try:
-                request_authenticator = radius_lifecycle.packet_id_to_request_authenticator[packet_id]
-            except KeyError as exception:
-                raise MessageParseError('Unknown RAIDUS packet_id: %s' % packet_id,) \
-                    from exception
+            if code == Radius.ACCESS_REQUEST:
+                request_authenticator = authenticator
+            else:
+                try:
+                    request_authenticator = radius_lifecycle.packet_id_to_request_authenticator[
+                        packet_id]
+                except KeyError as exception:
+                    raise MessageParseError('Unknown RAIDUS packet_id: %s' % packet_id, ) \
+                        from exception
             try:
                 return radius_packet.validate_packet(secret,
-                                                     request_authenticator=request_authenticator)
+                                                     request_authenticator=request_authenticator,
+                                                     code=code)
             except (InvalidMessageAuthenticatorError,
                     InvalidResponseAuthenticatorError) as exception:
                 raise MessageParseError("Unable to parse Radius packet") \
@@ -129,13 +133,14 @@ class RadiusPacket(Radius):
                                               .digest())
 
             for i in range(16):
-                self.packed[i+position] = message_authenticator[i]
+                self.packed[i + position] = message_authenticator[i]
         return self.packed
 
-    def validate_packet(self, secret, request_authenticator=None):
+    def validate_packet(self, secret, request_authenticator=None, code=None):
         """Calculates the Response Authenticator (in Radius Header) and
         MessageAuthenticator (a Radius Attribute) hashes and compares with what was provided.
         Args:
+            code (int): The RADIUS Code (e.g. Access-Challenge)
             secret (str): secret shared between RADIUS and chewie.
             request_authenticator (): the original request authenticator for this
              packet (which is a response)
@@ -150,20 +155,21 @@ class RadiusPacket(Radius):
         if not secret:
             raise ValueError("secret cannot be None for hashing")
 
-        self.validate_response_authenticator(radius_packet, request_authenticator, secret)
+        self.validate_response_authenticator(radius_packet, request_authenticator, secret, code)
 
-        self.validate_message_authenticator(radius_packet, secret)
+        self.validate_message_authenticator(radius_packet, secret, request_authenticator)
         return self
 
     @staticmethod
-    def validate_response_authenticator(radius_packet, request_authenticator, secret):
-        if request_authenticator:
+    def validate_response_authenticator(radius_packet, request_authenticator, secret, code):
+        if request_authenticator and code in [Radius.ACCESS_REJECT,
+                                              Radius.ACCESS_ACCEPT,
+                                              Radius.ACCESS_CHALLENGE]:
             response_authenticator = radius_packet.authenticator
             radius_packet.authenticator = request_authenticator
             radius_packet.pack()
-            calculated_response_authenticator = binascii.hexlify(
-                hashlib.md5(radius_packet.packed +
-                            bytearray(secret, 'utf-8')).digest())
+            calculated_response_authenticator = hashlib.md5(radius_packet.packed +
+                                                            bytearray(secret, 'utf-8')).digest()
             if calculated_response_authenticator != response_authenticator:
                 raise InvalidResponseAuthenticatorError(
                     "Original ResponseAuthenticator: '%s', does not match calculated: '%s' %s" % (
@@ -172,9 +178,12 @@ class RadiusPacket(Radius):
                         binascii.hexlify(radius_packet.packed)))
 
     @staticmethod
-    def validate_message_authenticator(radius_packet, secret):
+    def validate_message_authenticator(radius_packet, secret, request_authenticator):
         message_authenticator = radius_packet.attributes.find(MessageAuthenticator.DESCRIPTION)
         if message_authenticator:
+
+            radius_packet.authenticator = request_authenticator
+
             original_ma = message_authenticator.data_type.bytes_data
             # Replace the Original Message Authenticator
             message_authenticator.data_type.bytes_data = bytes.fromhex(
@@ -292,7 +301,7 @@ class RadiusAttributesList:
                 type_, attr_length = struct.unpack("!BB",
                                                    attributes_data[pos:pos + Attribute.HEADER_SIZE])
             except struct.error as exception:
-                raise MessageParseError('Unable to unpack first 2 bytes of attribute header')\
+                raise MessageParseError('Unable to unpack first 2 bytes of attribute header') \
                     from exception
             data = attributes_data[pos + Attribute.HEADER_SIZE: pos + attr_length]
             pos += attr_length
