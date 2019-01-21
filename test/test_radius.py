@@ -23,7 +23,7 @@ class RadiusTestCase(unittest.TestCase):
         message = Radius.parse(packed_message, secret="SECRET",
                                radius_lifecycle=namedtuple('RadiusLifecycle', 'packet_id_to_request_authenticator')({0: None}))
         self.assertEqual(message.packet_id, 0)
-        self.assertEqual(message.authenticator, b"982a0ba06d3557f0dbc8ba6e823822f1")
+        self.assertEqual(binascii.hexlify(message.authenticator), b"982a0ba06d3557f0dbc8ba6e823822f1")
         msg_attr = message.attributes
         self.assertEqual(len(msg_attr.attributes), 10)
         self.assertEqual(msg_attr.find(UserName.DESCRIPTION).data_type.data(), 'host1user')
