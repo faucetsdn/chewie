@@ -524,6 +524,8 @@ class FullEAPStateMachine:
 
         self.eap_logoff = False
 
+        self.radius_state_attribute = None
+
     @log_method
     def idle_state(self):
         """The state machine spends most of its time here, waiting for something to happen"""
