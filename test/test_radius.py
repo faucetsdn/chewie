@@ -23,7 +23,7 @@ class RadiusTestCase(unittest.TestCase):
         message = Radius.parse(packed_message, secret="SECRET",
                                radius_lifecycle=namedtuple('RadiusLifecycle', 'packet_id_to_request_authenticator')({0: None}))
         self.assertEqual(message.packet_id, 0)
-        self.assertEqual(message.authenticator, b"982a0ba06d3557f0dbc8ba6e823822f1")
+        self.assertEqual(binascii.hexlify(message.authenticator), b"982a0ba06d3557f0dbc8ba6e823822f1")
         msg_attr = message.attributes
         self.assertEqual(len(msg_attr.attributes), 10)
         self.assertEqual(msg_attr.find(UserName.DESCRIPTION).data_type.data(), 'host1user')
@@ -52,7 +52,7 @@ class RadiusTestCase(unittest.TestCase):
                                  1: bytes.fromhex("a0b4ace0b367114b1a16d76e2bfed5d8")
                                }))
         self.assertEqual(message.packet_id, 1)
-        self.assertEqual(message.authenticator, b"02970aff2ef0700780f70848e90d2410")
+        self.assertEqual(binascii.hexlify(message.authenticator), b"02970aff2ef0700780f70848e90d2410")
         msg_attr = message.attributes
         self.assertEqual(len(msg_attr.attributes), 4)
         eap_msg = msg_attr.find(EAPMessage.DESCRIPTION).data_type.data()
@@ -136,7 +136,7 @@ class RadiusTestCase(unittest.TestCase):
                                  0: bytes.fromhex("982a0ba06d3557f0dbc8ba6e823822f1")
                                }))
         self.assertEqual(message.packet_id, 0)
-        self.assertEqual(message.authenticator, b"56d9280d3e4fed327eb31cf1823f8c24")
+        self.assertEqual(binascii.hexlify(message.authenticator), b"56d9280d3e4fed327eb31cf1823f8c24")
         msg_attr = message.attributes
         self.assertEqual(len(msg_attr.attributes), 3)
         eap_msg = msg_attr.find(EAPMessage.DESCRIPTION).data_type.data()
@@ -158,7 +158,7 @@ class RadiusTestCase(unittest.TestCase):
                                  6: bytes.fromhex("0d64ffb8bc76d457d337e5f5692534aa")
                                }))
         self.assertEqual(message.packet_id, 6)
-        self.assertEqual(message.authenticator, b"54dbc73332c00c0347fc4b462d1811a7")
+        self.assertEqual(binascii.hexlify(message.authenticator), b"54dbc73332c00c0347fc4b462d1811a7")
         msg_attr = message.attributes
         self.assertEqual(len(msg_attr.attributes), 3)
         eap_msg = msg_attr.find(EAPMessage.DESCRIPTION).data_type.data()

@@ -11,7 +11,6 @@ from chewie.message_parser import SuccessMessage, FailureMessage, EapolStartMess
 from chewie.radius_attributes import SessionTimeout
 from chewie.utils import get_logger, log_method, RadiusQueueMessage, EapQueueMessage
 
-
 class Policy:
     """Fleshed out enough to support passthrough mode."""
 
@@ -153,7 +152,7 @@ class FullEAPStateMachine:
     LOGOFF = "LOGOFF"
     LOGOFF2 = "LOGOFF2"
 
-    STATES = [State(NO_STATE),
+    STATES = [State(NO_STATE, 'reset_state'),
               State(DISABLED, 'disabled_state'),
               State(INITIALIZE, 'initialize_state'),
               State(IDLE, 'idle_state'),
@@ -191,7 +190,7 @@ class FullEAPStateMachine:
                    {'trigger': 'process', 'source': '*', 'dest': INITIALIZE,
                     'conditions': ['is_port_enabled',
                                    'is_eap_restart']},
-                   {'trigger': 'process', 'source': DISABLED, 'dest': INITIALIZE,
+                   {'trigger': 'process', 'source': DISABLED, 'dest': NO_STATE,
                     'conditions': ['is_port_enabled']},
                    {'trigger': 'process', 'source': INITIALIZE, 'dest': SELECT_ACTION},
                    {'trigger': 'process', 'source': SELECT_ACTION, 'dest': PROPOSE_METHOD,
@@ -526,6 +525,8 @@ class FullEAPStateMachine:
 
         self.eap_logoff = False
 
+        self.radius_state_attribute = None
+
     @log_method
     def idle_state(self):
         """The state machine spends most of its time here, waiting for something to happen"""
@@ -665,6 +666,16 @@ class FullEAPStateMachine:
     def logoff2_state(self):
         self.eap_success = False
         self.eap_logoff = True
+
+    @log_method
+    def reset_state(self):
+        self.initialize_state()
+        self.aaa_eap_req_data = None
+        self.aaa_eap_key_data = None
+        self.eap_req_data = None
+        self.eap_key_data = None
+        self.eap_success = False
+        self.aaa_success = False
 
     def handle_message_received(self):
         """Main state machine loop"""
