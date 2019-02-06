@@ -60,10 +60,12 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.radius_output_queue = Queue()
         self.timer_scheduler = FakeTimerScheduler()
         self.src_mac = MacAddress.from_string("00:12:34:56:78:90")
+        log_prefix = "chewie.SM - port: %s, client: %s" % (self.src_mac, self.PORT_ID_MAC)
+
         self.sm = FullEAPStateMachine(self.eap_output_queue, self.radius_output_queue, self.src_mac,
                                       self.timer_scheduler,
                                       self.auth_handler, self.failure_handler, self.logoff_handler,
-                                      'Chewie')
+                                      log_prefix)
         # find ways to inject these - overriding consts isn't ideal
         self.MAX_RETRANSMITS = 3
         self.sm.MAX_RETRANS = self.MAX_RETRANSMITS
