@@ -1,6 +1,10 @@
 """Entry point for 802.1X speaker.
 """
+import random
 
+from chewie.eap import Eap
+
+from chewie.mac_address import MacAddress
 from eventlet import sleep, GreenPool
 from eventlet.queue import Queue
 
@@ -9,9 +13,9 @@ from chewie.eap_socket import EapSocket
 from chewie.radius_socket import RadiusSocket
 from chewie.eap_state_machine import FullEAPStateMachine
 from chewie.radius_lifecycle import RadiusLifecycle
-from chewie.message_parser import MessageParser, MessagePacker
+from chewie.message_parser import MessageParser, MessagePacker, IdentityMessage
 from chewie.event import EventMessageReceived, EventPortStatusChange
-from chewie.utils import get_logger, MessageParseError
+from chewie.utils import get_logger, MessageParseError, EapQueueMessage
 
 
 def unpack_byte_string(byte_string):
@@ -19,9 +23,16 @@ def unpack_byte_string(byte_string):
     return "".join("%02x" % x for x in byte_string)
 
 
+def get_random_id():
+    return random.randint(0, 200)
+
+
 class Chewie:
     """Facilitates EAP supplicant and RADIUS server communication"""
     RADIUS_UDP_PORT = 1812
+    PAE_GROUP_ADDRESS = MacAddress.from_string("01:80:C2:00:00:03")
+
+    DEFAULT_PREEMPTIVE_IDENTITY_REQUEST_INTERVAL = 60
 
     def __init__(self, interface_name, logger=None,
                  auth_handler=None, failure_handler=None, logoff_handler=None,
@@ -46,7 +57,8 @@ class Chewie:
         if chewie_id:
             self.chewie_id = chewie_id
 
-        self.state_machines = {}  # mac: state_machine
+        self.state_machines = {}  # port_id_str: { mac : state_machine}
+        self.port_to_eapol_id = {}  # port_id: last ID used in preemptive identity request.
 
         self.eap_output_messages = Queue()
         self.radius_output_messages = Queue()
@@ -127,6 +139,7 @@ class Chewie:
         # all chewie needs to do is change its internal state.
         # faucet will remove the acls by itself.
         self.set_port_status(port_id, False)
+        self.port_to_eapol_id.pop(port_id, None)
 
     def port_up(self, port_id):
         """
@@ -135,7 +148,42 @@ class Chewie:
             port_id (str): id of port.
         """
         self.set_port_status(port_id, True)
-        # TODO send preemptive identity request.
+
+        self.send_preemptive_identity_request(port_id)
+        self.timer_scheduler.call_later(self.DEFAULT_PREEMPTIVE_IDENTITY_REQUEST_INTERVAL,
+                                        self.send_preemptive_identity_request_if_no_active_on_port,
+                                        port_id)
+
+    def send_preemptive_identity_request_if_no_active_on_port(self, port_id):
+        """
+        If there is no active (in progress, or in state success(2)) supplicant send out the
+        preemptive identity request message.
+        Args:
+            port_id (str):
+        """
+        state_machines = self.state_machines.get(port_id, [])
+        for sm in state_machines.values():
+            if sm.state not in [FullEAPStateMachine.LOGOFF, FullEAPStateMachine.LOGOFF2,
+                                FullEAPStateMachine.DISABLED, FullEAPStateMachine.NO_STATE,
+                                FullEAPStateMachine.FAILURE, FullEAPStateMachine.FAILURE2,
+                                FullEAPStateMachine.TIMEOUT_FAILURE,
+                                FullEAPStateMachine.TIMEOUT_FAILURE2]:
+                break
+        else:
+            self.send_preemptive_identity_request(port_id)
+
+    def send_preemptive_identity_request(self, port_id):
+        """
+        Message (EAP Identity Request) that notifies supplicant that port is using 802.1X
+        Args:
+            port_id (str):
+
+        """
+        _id = get_random_id()
+        data = IdentityMessage(self.PAE_GROUP_ADDRESS, _id, Eap.REQUEST, "")
+        self.port_to_eapol_id[port_id] = _id
+        self.eap_output_messages.put_nowait(
+            EapQueueMessage(data, self.PAE_GROUP_ADDRESS, MacAddress.from_string(port_id)))
 
     def set_port_status(self, port_id, status):
         port_id_str = str(port_id)

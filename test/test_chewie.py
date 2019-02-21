@@ -24,6 +24,7 @@ TO_RADIUS = Queue()
 
 def patch_things(func):
     """decorator to mock patch socket operations and random number generators"""
+    @patch('chewie.chewie.get_random_id', get_random_id_helper)
     @patch('chewie.chewie.EapSocket', FakeEapSocket)
     @patch('chewie.chewie.RadiusSocket', FakeRadiusSocket)
     @patch('chewie.chewie.RadiusLifecycle.generate_request_authenticator', urandom_helper)
@@ -41,13 +42,28 @@ def setup_generators(_supplicant_replies=None, _radius_replies=None):
             global SUPPLICANT_REPLY_GENERATOR  # pylint: disable=global-statement
             global RADIUS_REPLY_GENERATOR  # pylint: disable=global-statement
             global URANDOM_GENERATOR  # pylint: disable=global-statement
+            global GET_RANDOM_ID_GENERATOR
 
             SUPPLICANT_REPLY_GENERATOR = supplicant_replies_gen(_supplicant_replies)
             RADIUS_REPLY_GENERATOR = radius_replies_gen(_radius_replies)
             URANDOM_GENERATOR = urandom()
+            GET_RANDOM_ID_GENERATOR = fake_get_random_id()
             func(self)
         return wrapper_setup_gen
     return decorator_setup_gen
+
+
+def fake_get_random_id():
+    for i in [103, 0x99]:
+        yield i
+
+
+GET_RANDOM_ID_GENERATOR = None
+
+
+def get_random_id_helper():  # pylint: disable=unused-argument
+    """helper for urandom_generator"""
+    return next(GET_RANDOM_ID_GENERATOR)
 
 
 def supplicant_replies_gen(replies):
@@ -285,16 +301,36 @@ class ChewieTestCase(unittest.TestCase):
                                           '00:00:00:00:00:01').state,
             FullEAPStateMachine.SUCCESS2)
 
+    @patch_things
     def test_port_status_changes(self):
         """test port status api"""
         # TODO what can actually be checked here?
         # the state machine tests already check the statemachine
         # could check that the preemptive identity request packet is sent. (once implemented)
         # for now just check api works under python version.
-
+        global TO_SUPPLICANT
+        pool = eventlet.GreenPool()
+        pool.spawn(self.chewie.run)
+        eventlet.sleep(1)
         self.chewie.port_down("00:00:00:00:00:01")
 
         self.chewie.port_up("00:00:00:00:00:01")
+
+        # check preemptive sent directly after port up
+        out_packet = TO_SUPPLICANT.get()
+        self.assertEqual(out_packet,
+                         bytes.fromhex('0180C2000003000000000001888e010000050167000501'))
+
+        self.assertTrue(TO_SUPPLICANT.empty())
+
+        while not self.fake_scheduler.jobs:
+            eventlet.sleep(0.1)
+        self.fake_scheduler.run_jobs()
+        eventlet.sleep(0.1)
+        # check preemptive sent after
+        out_packet = TO_SUPPLICANT.get_nowait()
+        self.assertEqual(out_packet,
+                         bytes.fromhex('0180C2000003000000000001888e010000050199000501'))
 
         self.chewie.port_down("00:00:00:00:00:01")
 
