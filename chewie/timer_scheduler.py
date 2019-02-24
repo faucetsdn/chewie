@@ -61,6 +61,7 @@ class TimerScheduler:
         """
         if not args:
             args = []
+        self.logger.warning("submitted job %s %s", func.__name__, args)
         expiry_time = time.time() + timeout
 
         job = TimerJob(expiry_time, func, args)
@@ -85,3 +86,4 @@ class TimerScheduler:
                     self.sleep(1)
             except Exception as e:
                 self.logger.exception(e)
+        self.logger.warning('timer_scheduler finished quuee')

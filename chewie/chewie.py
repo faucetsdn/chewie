@@ -59,6 +59,8 @@ class Chewie:
 
         self.state_machines = {}  # port_id_str: { mac : state_machine}
         self.port_to_eapol_id = {}  # port_id: last ID used in preemptive identity request.
+        self.port_status = {}  # port_id: status (true=up, false=down)
+        self.port_to_identity_job = {}  # port_id: timerJob
 
         self.eap_output_messages = Queue()
         self.radius_output_messages = Queue()
@@ -139,6 +141,10 @@ class Chewie:
         # all chewie needs to do is change its internal state.
         # faucet will remove the acls by itself.
         self.set_port_status(port_id, False)
+
+        job = self.port_to_identity_job.get(port_id, None)
+        if job:
+            job.cancel()
         self.port_to_eapol_id.pop(port_id, None)
 
     def port_up(self, port_id):
@@ -147,12 +153,14 @@ class Chewie:
         Args:
             port_id (str): id of port.
         """
+        self.logger.warning("port %s up", port_id)
         self.set_port_status(port_id, True)
 
         self.send_preemptive_identity_request(port_id)
-        self.timer_scheduler.call_later(self.DEFAULT_PREEMPTIVE_IDENTITY_REQUEST_INTERVAL,
-                                        self.send_preemptive_identity_request_if_no_active_on_port,
-                                        port_id)
+        self.port_to_identity_job[port_id] = self.timer_scheduler.call_later(
+            self.DEFAULT_PREEMPTIVE_IDENTITY_REQUEST_INTERVAL,
+            self.send_preemptive_identity_request_if_no_active_on_port,
+            port_id)
 
     def send_preemptive_identity_request_if_no_active_on_port(self, port_id):
         """
@@ -161,6 +169,16 @@ class Chewie:
         Args:
             port_id (str):
         """
+        self.logger.warning("thinking about executing timer preemptive on port %s", port_id)
+        # schedule next request.
+        self.port_to_identity_job[port_id] = self.timer_scheduler.call_later(
+            self.DEFAULT_PREEMPTIVE_IDENTITY_REQUEST_INTERVAL,
+            self.send_preemptive_identity_request_if_no_active_on_port,
+            port_id)
+        if not self.port_status.get(port_id, False):
+            self.logger.warning('cant send output on port %s is down', port_id)
+            return
+
         state_machines = self.state_machines.get(port_id, [])
         for sm in state_machines.values():
             if sm.state not in [FullEAPStateMachine.LOGOFF, FullEAPStateMachine.LOGOFF2,
@@ -168,8 +186,10 @@ class Chewie:
                                 FullEAPStateMachine.FAILURE, FullEAPStateMachine.FAILURE2,
                                 FullEAPStateMachine.TIMEOUT_FAILURE,
                                 FullEAPStateMachine.TIMEOUT_FAILURE2]:
+                self.logger.warning('port is active not sending on port %s', port_id)
                 break
         else:
+            self.logger.warning("executing timer premptive on port %s", port_id)
             self.send_preemptive_identity_request(port_id)
 
     def send_preemptive_identity_request(self, port_id):
@@ -184,9 +204,13 @@ class Chewie:
         self.port_to_eapol_id[port_id] = _id
         self.eap_output_messages.put_nowait(
             EapQueueMessage(data, self.PAE_GROUP_ADDRESS, MacAddress.from_string(port_id)))
+        self.logger.warning("sending premptive on port %s", port_id)
 
     def set_port_status(self, port_id, status):
         port_id_str = str(port_id)
+
+        self.port_status[port_id] = status
+
         if port_id_str not in self.state_machines:
             self.state_machines[port_id_str] = {}
 
