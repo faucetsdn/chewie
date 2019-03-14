@@ -295,6 +295,8 @@ class FullEAPStateMachine:
     last_req_data = None      # EAP packet
     method_timeout = None    # integer
     logoff = None           # bool
+    # Non RFC 4137
+    override_current_id = None
 
     # Lower Later  to Stand-Alone Authenticator
     eap_resp = None      # bool
@@ -517,6 +519,9 @@ class FullEAPStateMachine:
     def initialize_state(self):
         """Initializes variables when the state machine is activated"""
         self.current_id = None
+        if self.override_current_id:
+            self.current_id = self.override_current_id
+        self.override_current_id = None
         self.eap_success = False
         self.eap_fail = False
         self.eap_timeout = False
@@ -781,6 +786,9 @@ class FullEAPStateMachine:
         self.logger.info('Yay authentication successful %s %s',
                          self.src_mac, self.aaa_identity.identity)
         self.auth_handler(self.src_mac, str(self.port_id_mac))
+
+        self.aaa_eap_resp_data = None
+
         # new authentication so cancel the old session timeout event
         if self.session_timeout_job:
             self.session_timeout_job.cancel()
