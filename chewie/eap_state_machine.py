@@ -902,3 +902,14 @@ class FullEAPStateMachine:
                                             EventTimerExpired(self, self.sent_count))
             # TODO could cancel the scheduled events when
             # they're no longer needed (i.e. response received)
+
+    def is_in_progress(self):
+        return self.state not in [FullEAPStateMachine.LOGOFF, FullEAPStateMachine.LOGOFF2,
+                                  FullEAPStateMachine.DISABLED, FullEAPStateMachine.NO_STATE,
+                                  FullEAPStateMachine.FAILURE, FullEAPStateMachine.FAILURE2,
+                                  FullEAPStateMachine.TIMEOUT_FAILURE,
+                                  FullEAPStateMachine.TIMEOUT_FAILURE2,]
+                                  # FullEAPStateMachine.SUCCESS, FullEAPStateMachine.SUCCESS2]
+
+    def is_success(self):
+        return self.state in [FullEAPStateMachine.SUCCESS, FullEAPStateMachine.SUCCESS2]

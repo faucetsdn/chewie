@@ -27,6 +27,17 @@ def get_random_id():
     return random.randint(0, 200)
 
 
+def log_exception(func):
+    def decorator_log(*args, **kwargs):
+        logger = args[0].logger
+        try:
+            func(*args, **kwargs)
+        except Exception as e:
+            logger.exception(e)
+
+    return decorator_log
+
+
 class Chewie:
     """Facilitates EAP supplicant and RADIUS server communication"""
     RADIUS_UDP_PORT = 1812
@@ -40,7 +51,8 @@ class Chewie:
                  radius_server_ip=None, radius_server_port=None, radius_server_secret=None,
                  chewie_id=None):
         self.interface_name = interface_name
-        self.logger = get_logger(logger.name + "." + Chewie.__name__)
+        self.log_name = logger.name + "." + Chewie.__name__
+        self.logger = get_logger(self.log_name)
         self.auth_handler = auth_handler
         self.failure_handler = failure_handler
         self.logoff_handler = logoff_handler
@@ -115,6 +127,11 @@ class Chewie:
         if self.auth_handler:
             self.auth_handler(src_mac, port_id)
 
+        self.port_to_identity_job[port_id] = self.timer_scheduler.call_later(
+            40,
+            self.reauth_port, src_mac,
+            port_id)
+
     def auth_failure(self, src_mac, port_id):
         """failure shim between faucet and chewie
         Args:
@@ -159,7 +176,7 @@ class Chewie:
 
         self.port_to_identity_job[port_id] = self.timer_scheduler.call_later(
             self.DEFAULT_PORT_UP_IDENTITY_REQUEST_WAIT_PERIOD,
-            self.send_preemptive_identity_request_if_no_active_on_port,
+            self.send_preemptive_identity_request,
             port_id)
 
     def send_preemptive_identity_request_if_no_active_on_port(self, port_id):
@@ -179,13 +196,9 @@ class Chewie:
             self.logger.warning('cant send output on port %s is down', port_id)
             return
 
-        state_machines = self.state_machines.get(port_id, [])
+        state_machines = self.state_machines.get(port_id, {})
         for sm in state_machines.values():
-            if sm.state not in [FullEAPStateMachine.LOGOFF, FullEAPStateMachine.LOGOFF2,
-                                FullEAPStateMachine.DISABLED, FullEAPStateMachine.NO_STATE,
-                                FullEAPStateMachine.FAILURE, FullEAPStateMachine.FAILURE2,
-                                FullEAPStateMachine.TIMEOUT_FAILURE,
-                                FullEAPStateMachine.TIMEOUT_FAILURE2]:
+            if sm.is_in_progress() or sm.is_success():
                 self.logger.warning('port is active not sending on port %s', port_id)
                 break
         else:
@@ -205,6 +218,18 @@ class Chewie:
         self.eap_output_messages.put_nowait(
             EapQueueMessage(data, self.PAE_GROUP_ADDRESS, MacAddress.from_string(port_id)))
         self.logger.warning("sending premptive on port %s", port_id)
+
+    def reauth_port(self, src_mac, port_id):
+        state_machine = self.state_machines.get(port_id, {}).get(str(src_mac), None)
+
+        if state_machine and state_machine.is_success():
+            self.logger.info('reauthenticating src_mac: %s on port: %s', src_mac, port_id)
+            self.send_preemptive_identity_request(port_id)
+        elif state_machine is None:
+            self.logger.info('not reauthing. state machine on port: %s, mac: %s is none', port_id, src_mac)
+        else:
+            self.logger.info("not reauthing, authentication is not in success(2) (state: %s)'",
+                             state_machine.state)
 
     def set_port_status(self, port_id, status):
         port_id_str = str(port_id)
@@ -230,7 +255,7 @@ class Chewie:
         self.radius_socket.setup()
         self.logger.info("Radius Listening on %s:%d" % (self.radius_listen_ip,
                                                         self.radius_listen_port))
-
+    @log_exception
     def send_eap_messages(self):
         """send eap messages to supplicant forever."""
         while self.running():
@@ -243,6 +268,7 @@ class Chewie:
                                                              eap_queue_message.port_mac,
                                                              eap_queue_message.src_mac))
 
+    @log_exception
     def receive_eap_messages(self):
         """receive eap messages from supplicant forever."""
         while self.running():
@@ -270,6 +296,7 @@ class Chewie:
         event = EventMessageReceived(eap, dst_mac)
         state_machine.event(event)
 
+    @log_exception
     def send_radius_messages(self):
         """send RADIUS messages to RADIUS Server forever."""
         while self.running():
@@ -279,6 +306,7 @@ class Chewie:
             self.radius_socket.send(packed_message)
             self.logger.info("sent radius message.")
 
+    @log_exception
     def receive_radius_messages(self):
         """receive RADIUS messages from RADIUS server forever."""
         while self.running():
