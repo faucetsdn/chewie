@@ -785,7 +785,7 @@ class FullEAPStateMachine:
         """Notify the success callback and sets a timer event to expire this session"""
         self.logger.info('Yay authentication successful %s %s',
                          self.src_mac, self.aaa_identity.identity)
-        self.auth_handler(self.src_mac, str(self.port_id_mac))
+        self.auth_handler(self.src_mac, str(self.port_id_mac), self.session_timeout)
 
         self.aaa_eap_resp_data = None
 

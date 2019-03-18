@@ -119,16 +119,17 @@ class Chewie:
 
         self.pool.waitall()
 
-    def auth_success(self, src_mac, port_id):
+    def auth_success(self, src_mac, port_id, period):
         """authentication shim between faucet and chewie
         Args:
             src_mac (MacAddress): the mac of the successful supplicant
-            port_id (MacAddress): the 'mac' identifier of what switch port the success is on"""
+            port_id (MacAddress): the 'mac' identifier of what switch port the success is on
+            period (int): time (seconds) until the session times out."""
         if self.auth_handler:
             self.auth_handler(src_mac, port_id)
 
         self.port_to_identity_job[port_id] = self.timer_scheduler.call_later(
-            40,
+            period,
             self.reauth_port, src_mac,
             port_id)
 
@@ -220,6 +221,12 @@ class Chewie:
         self.logger.warning("sending premptive on port %s", port_id)
 
     def reauth_port(self, src_mac, port_id):
+        """
+        Send an Identity Request to src_mac, on port_id. prompting the supplicant to re authenticate.
+        Args:
+            src_mac (MacAddress):
+            port_id (str):
+        """
         state_machine = self.state_machines.get(port_id, {}).get(str(src_mac), None)
 
         if state_machine and state_machine.is_success():
@@ -255,6 +262,7 @@ class Chewie:
         self.radius_socket.setup()
         self.logger.info("Radius Listening on %s:%d" % (self.radius_listen_ip,
                                                         self.radius_listen_port))
+
     @log_exception
     def send_eap_messages(self):
         """send eap messages to supplicant forever."""
