@@ -301,14 +301,10 @@ class ChewieTestCase(unittest.TestCase):
                                           '00:00:00:00:00:01').state,
             FullEAPStateMachine.SUCCESS2)
 
-    @unittest.skip("Test is broken.")
     @patch_things
     def test_port_status_changes(self):
-        """test port status api"""
-        # TODO what can actually be checked here?
-        # the state machine tests already check the statemachine
-        # could check that the preemptive identity request packet is sent. (once implemented)
-        # for now just check api works under python version.
+        """test port status api and that identity request is sent after port up"""
+
         global TO_SUPPLICANT
         pool = eventlet.GreenPool()
         pool.spawn(self.chewie.run)
@@ -317,23 +313,13 @@ class ChewieTestCase(unittest.TestCase):
 
         self.chewie.port_up("00:00:00:00:00:01")
 
+        while not self.fake_scheduler.jobs:
+            eventlet.sleep(0.1)
+        self.fake_scheduler.run_jobs()
         # check preemptive sent directly after port up
         out_packet = TO_SUPPLICANT.get()
         self.assertEqual(out_packet,
                          bytes.fromhex('0180C2000003000000000001888e010000050167000501'))
-
-        self.assertTrue(TO_SUPPLICANT.empty())
-
-        while not self.fake_scheduler.jobs:
-            eventlet.sleep(0.1)
-        self.fake_scheduler.run_jobs()
-        eventlet.sleep(0.1)
-        # check preemptive sent after
-        out_packet = TO_SUPPLICANT.get_nowait()
-        self.assertEqual(out_packet,
-                         bytes.fromhex('0180C2000003000000000001888e010000050199000501'))
-
-        self.chewie.port_down("00:00:00:00:00:01")
 
     @patch_things
     @setup_generators(sup_replies_logoff, radius_replies_success)
