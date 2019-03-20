@@ -177,7 +177,7 @@ class Chewie:
 
         self.port_to_identity_job[port_id] = self.timer_scheduler.call_later(
             self.DEFAULT_PORT_UP_IDENTITY_REQUEST_WAIT_PERIOD,
-            self.send_preemptive_identity_request,
+            self.send_preemptive_identity_request_if_no_active_on_port,
             port_id)
 
     def send_preemptive_identity_request_if_no_active_on_port(self, port_id):

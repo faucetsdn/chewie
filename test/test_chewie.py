@@ -315,11 +315,17 @@ class ChewieTestCase(unittest.TestCase):
 
         while not self.fake_scheduler.jobs:
             eventlet.sleep(0.1)
-        self.fake_scheduler.run_jobs()
+        self.fake_scheduler.run_jobs(num_jobs=1)
         # check preemptive sent directly after port up
         out_packet = TO_SUPPLICANT.get()
         self.assertEqual(out_packet,
                          bytes.fromhex('0180C2000003000000000001888e010000050167000501'))
+
+        # check there is a new job in the queue for sending the next id request.
+        # This will keep adding jobs forever.
+        self.assertEqual(len(self.fake_scheduler.jobs), 1)
+        self.assertEqual(self.fake_scheduler.jobs[0].function.__name__,
+                         Chewie.send_preemptive_identity_request_if_no_active_on_port.__name__)
 
     @patch_things
     @setup_generators(sup_replies_logoff, radius_replies_success)
