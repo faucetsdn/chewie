@@ -11,6 +11,7 @@ from chewie.message_parser import SuccessMessage, FailureMessage, EapolStartMess
 from chewie.radius_attributes import SessionTimeout
 from chewie.utils import get_logger, log_method, RadiusQueueMessage, EapQueueMessage
 
+
 class Policy:
     """Fleshed out enough to support passthrough mode."""
 
@@ -738,7 +739,7 @@ class FullEAPStateMachine:
         if self.eap_req:
             if (hasattr(self.eap_req_data, 'code') and self.eap_req_data.code == Eap.REQUEST) \
                     or isinstance(self.eap_req_data, (SuccessMessage, FailureMessage)):
-                self.logger.info('outputting eap, %s %s %s',
+                self.logger.info("outputting eap, '%s', src: '%s' port_id: '%s'",
                                  self.eap_req_data, self.src_mac, self.port_id_mac)
                 self.eap_output_messages.put_nowait(
                     EapQueueMessage(self.eap_req_data, self.src_mac, self.port_id_mac))
@@ -861,18 +862,18 @@ class FullEAPStateMachine:
         """Process radius message (set and extract radius specific variables)"""
         self.eap_resp_data = None
         self.eap_resp = False
-        self.logger.info('radius attributes %s', event.attributes)
+        self.logger.debug('radius attributes %s', event.attributes)
         self.radius_state_attribute = event.state
         self.aaa_eap_req = True
         self.aaa_eap_req_data = event.message
-        self.logger.info('sm ev.msg: %s', self.aaa_eap_req_data)
+        self.logger.debug('sm ev.msg: %s', self.aaa_eap_req_data)
         if isinstance(self.aaa_eap_req_data, SuccessMessage):
-            self.logger.info("aaaSuccess")
+            self.logger.debug("aaaSuccess")
             self.aaa_success = True
         if isinstance(self.aaa_eap_req_data, FailureMessage):
-            self.logger.info("aaaFail")
+            self.logger.debug("aaaFail")
             self.aaa_fail = True
-        self.logger.info('radius event %s', event.__dict__)
+        self.logger.debug('radius event %s', event.__dict__)
         self.set_vars_from_radius(event.attributes)
 
     def set_vars_from_radius(self, attributes):

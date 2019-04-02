@@ -61,7 +61,7 @@ class TimerScheduler:
         """
         if not args:
             args = []
-        self.logger.warning("submitted job %s %s", func.__name__, args)
+        self.logger.debug("submitted job %s expire in %d, args: %s", func.__name__, timeout, args)
         expiry_time = time.time() + timeout
 
         job = TimerJob(expiry_time, func, args)
@@ -79,7 +79,7 @@ class TimerScheduler:
                             self.logger.info('running job %s %s', job.func.__name__, job.args)
                             job.func(*job.args)
                         else:
-                            self.logger.info('job %s has been cancelled', job.func.__name__)
+                            self.logger.debug('job %s has been cancelled', job.func.__name__)
                     else:
                         self.sleep(1)
                 else:
