@@ -21,7 +21,7 @@ class EapMessage:
 
     def __str__(self):
         _id = self.message_id
-        if not _id:
+        if _id is None:
             _id = -1
         return "'%s': src_mac: '%s', id: '%d'" % (self.__class__.__name__, self.src_mac, _id)
 
