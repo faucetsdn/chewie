@@ -27,17 +27,6 @@ def get_random_id():
     return random.randint(0, 200)
 
 
-def log_exception(func):
-    def decorator_log(*args, **kwargs):
-        logger = args[0].logger
-        try:
-            func(*args, **kwargs)
-        except Exception as e:
-            logger.exception(e)
-
-    return decorator_log
-
-
 class Chewie:
     """Facilitates EAP supplicant and RADIUS server communication"""
     RADIUS_UDP_PORT = 1812
@@ -265,7 +254,6 @@ class Chewie:
         self.logger.info("Radius Listening on %s:%d" % (self.radius_listen_ip,
                                                         self.radius_listen_port))
 
-    @log_exception
     def send_eap_messages(self):
         """send eap messages to supplicant forever."""
         while self.running():
@@ -278,7 +266,6 @@ class Chewie:
                                                              eap_queue_message.port_mac,
                                                              eap_queue_message.src_mac))
 
-    @log_exception
     def receive_eap_messages(self):
         """receive eap messages from supplicant forever."""
         while self.running():
@@ -307,7 +294,6 @@ class Chewie:
         event = EventMessageReceived(eap, dst_mac)
         state_machine.event(event)
 
-    @log_exception
     def send_radius_messages(self):
         """send RADIUS messages to RADIUS Server forever."""
         while self.running():
@@ -317,7 +303,6 @@ class Chewie:
             self.radius_socket.send(packed_message)
             self.logger.info("sent radius message.")
 
-    @log_exception
     def receive_radius_messages(self):
         """receive RADIUS messages from RADIUS server forever."""
         while self.running():
