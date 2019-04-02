@@ -357,8 +357,7 @@ class FullEAPStateMachine:
         # and self.m is the one currently in use.
         # if we want to deal with each method locally.
         self.m = MPassthrough()  # pylint: disable=invalid-name
-        logname = ".SM - %s" % self.src_mac
-        self.logger = get_logger(log_prefix + logname)
+        self.logger = get_logger(log_prefix)
 
     def is_eap_restart(self):
         return self.eap_restart

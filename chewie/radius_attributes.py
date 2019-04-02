@@ -76,6 +76,14 @@ class UserName(Attribute):
 
 
 @register_attribute_type
+class NASIPAddress(Attribute):
+    """Service-Type https://tools.ietf.org/html/rfc2865#section-5.4"""
+    TYPE = 4
+    DATA_TYPE = String
+    DESCRIPTION = "NAS-IP-Address"
+
+
+@register_attribute_type
 class NASPort(Attribute):
     """Service-Type https://tools.ietf.org/html/rfc2865#section-5.5"""
     TYPE = 5
@@ -89,6 +97,14 @@ class ServiceType(Attribute):
     TYPE = 6
     DATA_TYPE = Enum
     DESCRIPTION = "Service-Type"
+
+
+@register_attribute_type
+class FilterId(Attribute):
+    """Framed-MTU https://tools.ietf.org/html/rfc2865#section-5.11"""
+    TYPE = 11
+    DATA_TYPE = Text
+    DESCRIPTION = "Filter-Id"
 
 
 @register_attribute_type
@@ -174,6 +190,22 @@ class NASPortType(Attribute):
 
 
 @register_attribute_type
+class TunnelType(Attribute):
+    """NAS-Port-Type https://tools.ietf.org/html/rfc2868#section-3.1"""
+    TYPE = 64
+    DATA_TYPE = Enum
+    DESCRIPTION = "Tunnel-Type"
+
+
+@register_attribute_type
+class TunnelMediumType(Attribute):
+    """NAS-Port-Type https://tools.ietf.org/html/rfc2868#section-3.2"""
+    TYPE = 65
+    DATA_TYPE = Enum
+    DESCRIPTION = "Tunnel-Medium-Type"
+
+
+@register_attribute_type
 class ConnectInfo(Attribute):
     """ConnectInfo (RADIUS Extensions) https://tools.ietf.org/html/rfc2869#section-5.11"""
     TYPE = 77
@@ -200,3 +232,11 @@ class MessageAuthenticator(Attribute):
     TYPE = 80
     DATA_TYPE = String
     DESCRIPTION = "Message-Authenticator"
+
+
+@register_attribute_type
+class TunnelPrivateGroupID(Attribute):
+    """NAS-Port-Type https://tools.ietf.org/html/rfc2868#section-3.6"""
+    TYPE = 81
+    DATA_TYPE = String
+    DESCRIPTION = "Tunnel-Private-Group-ID"
