@@ -8,7 +8,7 @@ from chewie.event import EventMessageReceived, EventRadiusMessageReceived, Event
     EventPortStatusChange, EventSessionTimeout
 from chewie.message_parser import SuccessMessage, FailureMessage, EapolStartMessage, \
     IdentityMessage, EapolLogoffMessage, EapMessage
-from chewie.radius_attributes import SessionTimeout
+from chewie.radius_attributes import SessionTimeout, TunnelPrivateGroupID
 from chewie.utils import get_logger, log_method, RadiusQueueMessage, EapQueueMessage
 
 
@@ -115,6 +115,7 @@ class FullEAPStateMachine:
     session_timeout_job = None
 
     session_timeout = DEFAULT_SESSION_TIMEOUT
+    radius_tunnel_private_group_id = None
 
     machine = None
 
@@ -785,8 +786,8 @@ class FullEAPStateMachine:
         """Notify the success callback and sets a timer event to expire this session"""
         self.logger.info('Yay authentication successful %s %s',
                          self.src_mac, self.aaa_identity.identity)
-        self.auth_handler(self.src_mac, str(self.port_id_mac), self.session_timeout)
-
+        self.auth_handler(self.src_mac, str(self.port_id_mac),
+                          self.session_timeout, self.radius_tunnel_private_group_id)
         self.aaa_eap_resp_data = None
 
         # new authentication so cancel the old session timeout event
@@ -883,10 +884,15 @@ class FullEAPStateMachine:
             attributes (dict):  attributes to be set.
         """
         self.session_timeout = self.DEFAULT_SESSION_TIMEOUT
+        self.radius_tunnel_private_group_id = None
 
         if attributes:
             self.session_timeout = attributes.get(SessionTimeout.DESCRIPTION,
                                                   self.DEFAULT_SESSION_TIMEOUT)
+            self.radius_tunnel_private_group_id = attributes.get(TunnelPrivateGroupID.DESCRIPTION,
+                                                                 None)
+            if self.radius_tunnel_private_group_id:
+                self.radius_tunnel_private_group_id = self.radius_tunnel_private_group_id.decode('utf-8')
         # TODO could also set filter-id/vlans/acls here.
 
     def set_timer(self):
