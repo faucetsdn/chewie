@@ -110,14 +110,14 @@ class Chewie:
 
         self.pool.waitall()
 
-    def auth_success(self, src_mac, port_id, period, vlan_name):
+    def auth_success(self, src_mac, port_id, period, vlan_name, filter_id):
         """authentication shim between faucet and chewie
         Args:
             src_mac (MacAddress): the mac of the successful supplicant
             port_id (MacAddress): the 'mac' identifier of what switch port the success is on
             period (int): time (seconds) until the session times out."""
         if self.auth_handler:
-            self.auth_handler(src_mac, port_id, vlan_name)
+            self.auth_handler(src_mac, port_id, vlan_name, filter_id)
 
         self.port_to_identity_job[port_id] = self.timer_scheduler.call_later(
             period,

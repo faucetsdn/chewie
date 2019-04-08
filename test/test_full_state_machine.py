@@ -82,7 +82,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
             self.assertNotIn('aaaEapResp is true. but data is false. This should never happen',
                              log.read())
 
-    def auth_handler(self, client_mac, port_id_mac, timer, vlan_name):  # pylint: disable=unused-argument
+    def auth_handler(self, client_mac, port_id_mac, timer, vlan_name, filter_id):  # pylint: disable=unused-argument
         self.auth_counter += 1
         print('Successful auth from MAC %s' % str(client_mac))
 
