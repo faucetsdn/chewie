@@ -8,7 +8,7 @@ from chewie.event import EventMessageReceived, EventRadiusMessageReceived, Event
     EventPortStatusChange, EventSessionTimeout
 from chewie.message_parser import SuccessMessage, FailureMessage, EapolStartMessage, \
     IdentityMessage, EapolLogoffMessage, EapMessage
-from chewie.radius_attributes import SessionTimeout, TunnelPrivateGroupID
+from chewie.radius_attributes import FilterId, SessionTimeout, TunnelPrivateGroupID
 from chewie.utils import get_logger, log_method, RadiusQueueMessage, EapQueueMessage
 
 
@@ -116,6 +116,7 @@ class FullEAPStateMachine:
 
     session_timeout = DEFAULT_SESSION_TIMEOUT
     radius_tunnel_private_group_id = None
+    filter_id = None
 
     machine = None
 
@@ -787,7 +788,7 @@ class FullEAPStateMachine:
         self.logger.info('Yay authentication successful %s %s',
                          self.src_mac, self.aaa_identity.identity)
         self.auth_handler(self.src_mac, str(self.port_id_mac),
-                          self.session_timeout, self.radius_tunnel_private_group_id)
+                          self.session_timeout, self.radius_tunnel_private_group_id, self.filter_id)
         self.aaa_eap_resp_data = None
 
         # new authentication so cancel the old session timeout event
@@ -885,11 +886,14 @@ class FullEAPStateMachine:
         """
         self.session_timeout = self.DEFAULT_SESSION_TIMEOUT
         self.radius_tunnel_private_group_id = None
+        self.filter_id = None
 
         if attributes:
             self.session_timeout = attributes.get(SessionTimeout.DESCRIPTION,
                                                   self.DEFAULT_SESSION_TIMEOUT)
             self.radius_tunnel_private_group_id = attributes.get(TunnelPrivateGroupID.DESCRIPTION,
+                                                                 None)
+            self.filter_id = attributes.get(FilterId.DESCRIPTION,
                                                                  None)
             if self.radius_tunnel_private_group_id:
                 self.radius_tunnel_private_group_id = self.radius_tunnel_private_group_id.decode('utf-8')
