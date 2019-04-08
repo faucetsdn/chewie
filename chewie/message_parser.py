@@ -19,6 +19,12 @@ class EapMessage:
         self.src_mac = src_mac
         self.message_id = message_id
 
+    def __str__(self):
+        _id = self.message_id
+        if _id is None:
+            _id = -1
+        return "'%s': src_mac: '%s', id: '%d'" % (self.__class__.__name__, self.src_mac, _id)
+
 
 class SuccessMessage(EapMessage):
 
@@ -40,6 +46,9 @@ class IdentityMessage(EapMessage):
         self.code = code
         self.identity = identity
 
+    def __str__(self):
+        return "%s, code: '%d', identity: '%s'" % (super().__str__(), self.code, self.identity)
+
     @classmethod
     def build(cls, src_mac, eap):
         return cls(src_mac, eap.packet_id, eap.code, eap.identity)
@@ -50,6 +59,10 @@ class LegacyNakMessage(EapMessage):
         super().__init__(src_mac, message_id)
         self.code = code
         self.desired_auth_types = desired_auth_types
+
+    def __str__(self):
+        return "%s, code: '%d', desired_auth_types: '%s'" \
+               % (super().__str__(), self.code, self.desired_auth_types)
 
     @classmethod
     def build(cls, src_mac, eap):
@@ -63,6 +76,10 @@ class Md5ChallengeMessage(EapMessage):
         self.challenge = challenge
         self.extra_data = extra_data
 
+    def __str__(self):
+        return "%s, code: '%d', challenge: '%s', extra_data: '%s'" \
+               % (super().__str__(), self.code, self.challenge, self.extra_data)
+
     @classmethod
     def build(cls, src_mac, eap):
         return cls(src_mac, eap.packet_id, eap.code, eap.challenge, eap.extra_data)
@@ -75,6 +92,10 @@ class TlsMessageBase(EapMessage):
         self.code = code
         self.flags = flags
         self.extra_data = extra_data
+
+    def __str__(self):
+        return "%s, code: '%d', flags: '%s', extra_data: '%s'" \
+               % (super().__str__(), self.code, self.flags, self.extra_data)
 
     @classmethod
     def build(cls, src_mac, eap):

@@ -11,6 +11,7 @@ from chewie.message_parser import SuccessMessage, FailureMessage, EapolStartMess
 from chewie.radius_attributes import SessionTimeout
 from chewie.utils import get_logger, log_method, RadiusQueueMessage, EapQueueMessage
 
+
 class Policy:
     """Fleshed out enough to support passthrough mode."""
 
@@ -295,6 +296,8 @@ class FullEAPStateMachine:
     last_req_data = None      # EAP packet
     method_timeout = None    # integer
     logoff = None           # bool
+    # Non RFC 4137
+    override_current_id = None
 
     # Lower Later  to Stand-Alone Authenticator
     eap_resp = None      # bool
@@ -516,6 +519,9 @@ class FullEAPStateMachine:
     def initialize_state(self):
         """Initializes variables when the state machine is activated"""
         self.current_id = None
+        if self.override_current_id:
+            self.current_id = self.override_current_id
+        self.override_current_id = None
         self.eap_success = False
         self.eap_fail = False
         self.eap_timeout = False
@@ -732,7 +738,7 @@ class FullEAPStateMachine:
         if self.eap_req:
             if (hasattr(self.eap_req_data, 'code') and self.eap_req_data.code == Eap.REQUEST) \
                     or isinstance(self.eap_req_data, (SuccessMessage, FailureMessage)):
-                self.logger.info('outputting eap, %s %s %s',
+                self.logger.info("outputting eap, '%s', src: '%s' port_id: '%s'",
                                  self.eap_req_data, self.src_mac, self.port_id_mac)
                 self.eap_output_messages.put_nowait(
                     EapQueueMessage(self.eap_req_data, self.src_mac, self.port_id_mac))
@@ -779,7 +785,10 @@ class FullEAPStateMachine:
         """Notify the success callback and sets a timer event to expire this session"""
         self.logger.info('Yay authentication successful %s %s',
                          self.src_mac, self.aaa_identity.identity)
-        self.auth_handler(self.src_mac, str(self.port_id_mac))
+        self.auth_handler(self.src_mac, str(self.port_id_mac), self.session_timeout)
+
+        self.aaa_eap_resp_data = None
+
         # new authentication so cancel the old session timeout event
         if self.session_timeout_job:
             self.session_timeout_job.cancel()
@@ -852,18 +861,18 @@ class FullEAPStateMachine:
         """Process radius message (set and extract radius specific variables)"""
         self.eap_resp_data = None
         self.eap_resp = False
-        self.logger.info('radius attributes %s', event.attributes)
+        self.logger.debug('radius attributes %s', event.attributes)
         self.radius_state_attribute = event.state
         self.aaa_eap_req = True
         self.aaa_eap_req_data = event.message
-        self.logger.info('sm ev.msg: %s', self.aaa_eap_req_data)
+        self.logger.debug('sm ev.msg: %s', self.aaa_eap_req_data)
         if isinstance(self.aaa_eap_req_data, SuccessMessage):
-            self.logger.info("aaaSuccess")
+            self.logger.debug("aaaSuccess")
             self.aaa_success = True
         if isinstance(self.aaa_eap_req_data, FailureMessage):
-            self.logger.info("aaaFail")
+            self.logger.debug("aaaFail")
             self.aaa_fail = True
-        self.logger.info('radius event %s', event.__dict__)
+        self.logger.debug('radius event %s', event.__dict__)
         self.set_vars_from_radius(event.attributes)
 
     def set_vars_from_radius(self, attributes):
@@ -893,3 +902,14 @@ class FullEAPStateMachine:
                                             EventTimerExpired(self, self.sent_count))
             # TODO could cancel the scheduled events when
             # they're no longer needed (i.e. response received)
+
+    def is_in_progress(self):
+        return self.state not in [FullEAPStateMachine.LOGOFF, FullEAPStateMachine.LOGOFF2,
+                                  FullEAPStateMachine.DISABLED, FullEAPStateMachine.NO_STATE,
+                                  FullEAPStateMachine.FAILURE, FullEAPStateMachine.FAILURE2,
+                                  FullEAPStateMachine.TIMEOUT_FAILURE,
+                                  FullEAPStateMachine.TIMEOUT_FAILURE2,]
+                                  # FullEAPStateMachine.SUCCESS, FullEAPStateMachine.SUCCESS2]
+
+    def is_success(self):
+        return self.state in [FullEAPStateMachine.SUCCESS, FullEAPStateMachine.SUCCESS2]

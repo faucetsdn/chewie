@@ -24,6 +24,7 @@ TO_RADIUS = Queue()
 
 def patch_things(func):
     """decorator to mock patch socket operations and random number generators"""
+    @patch('chewie.chewie.get_random_id', get_random_id_helper)
     @patch('chewie.chewie.EapSocket', FakeEapSocket)
     @patch('chewie.chewie.RadiusSocket', FakeRadiusSocket)
     @patch('chewie.chewie.RadiusLifecycle.generate_request_authenticator', urandom_helper)
@@ -41,13 +42,28 @@ def setup_generators(_supplicant_replies=None, _radius_replies=None):
             global SUPPLICANT_REPLY_GENERATOR  # pylint: disable=global-statement
             global RADIUS_REPLY_GENERATOR  # pylint: disable=global-statement
             global URANDOM_GENERATOR  # pylint: disable=global-statement
+            global GET_RANDOM_ID_GENERATOR
 
             SUPPLICANT_REPLY_GENERATOR = supplicant_replies_gen(_supplicant_replies)
             RADIUS_REPLY_GENERATOR = radius_replies_gen(_radius_replies)
             URANDOM_GENERATOR = urandom()
+            GET_RANDOM_ID_GENERATOR = fake_get_random_id()
             func(self)
         return wrapper_setup_gen
     return decorator_setup_gen
+
+
+def fake_get_random_id():
+    for i in [103, 0x99]:
+        yield i
+
+
+GET_RANDOM_ID_GENERATOR = None
+
+
+def get_random_id_helper():  # pylint: disable=unused-argument
+    """helper for urandom_generator"""
+    return next(GET_RANDOM_ID_GENERATOR)
 
 
 def supplicant_replies_gen(replies):
@@ -274,7 +290,7 @@ class ChewieTestCase(unittest.TestCase):
     def test_success_dot1x(self):
         """Test success api"""
         FROM_SUPPLICANT.put_nowait(bytes.fromhex("0000000000010242ac17006f888e01010000"))
-        
+
         pool = eventlet.GreenPool()
         pool.spawn(self.chewie.run)
 
@@ -285,18 +301,31 @@ class ChewieTestCase(unittest.TestCase):
                                           '00:00:00:00:00:01').state,
             FullEAPStateMachine.SUCCESS2)
 
+    @patch_things
     def test_port_status_changes(self):
-        """test port status api"""
-        # TODO what can actually be checked here?
-        # the state machine tests already check the statemachine
-        # could check that the preemptive identity request packet is sent. (once implemented)
-        # for now just check api works under python version.
+        """test port status api and that identity request is sent after port up"""
 
+        global TO_SUPPLICANT
+        pool = eventlet.GreenPool()
+        pool.spawn(self.chewie.run)
+        eventlet.sleep(1)
         self.chewie.port_down("00:00:00:00:00:01")
 
         self.chewie.port_up("00:00:00:00:00:01")
 
-        self.chewie.port_down("00:00:00:00:00:01")
+        while not self.fake_scheduler.jobs:
+            eventlet.sleep(0.1)
+        self.fake_scheduler.run_jobs(num_jobs=1)
+        # check preemptive sent directly after port up
+        out_packet = TO_SUPPLICANT.get()
+        self.assertEqual(out_packet,
+                         bytes.fromhex('0180C2000003000000000001888e010000050167000501'))
+
+        # check there is a new job in the queue for sending the next id request.
+        # This will keep adding jobs forever.
+        self.assertEqual(len(self.fake_scheduler.jobs), 1)
+        self.assertEqual(self.fake_scheduler.jobs[0].function.__name__,
+                         Chewie.send_preemptive_identity_request_if_no_active_on_port.__name__)
 
     @patch_things
     @setup_generators(sup_replies_logoff, radius_replies_success)

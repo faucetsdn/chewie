@@ -1,6 +1,7 @@
 """Mock TimerScheduler
 """
 
+
 class FakeTimerJob:
     """Behaves like TimerJob"""
     def __init__(self, function, args, timeout):
@@ -22,6 +23,7 @@ class FakeTimerJob:
         if not self.is_cancelled:
             self.function(*self.args)
 
+
 class FakeTimerScheduler:
     """Behaves like TimerScheduler"""
     def __init__(self):
@@ -38,12 +40,22 @@ class FakeTimerScheduler:
 
         return job
 
-    def run_jobs(self):
+    def run_jobs(self, num_jobs=None):
         """Runs jobs in order of timeout"""
-        while self.jobs:
-            self.jobs.sort(key=lambda x: x.timeout)
-            job = self.jobs.pop(0)
-            job.run()
+        if not num_jobs:
+            while self.jobs:
+                self.jobs.sort(key=lambda x: x.timeout)
+                job = self.jobs.pop(0)
+                job.run()
+                print("ddddddddd")
+        else:
+            for _ in range(num_jobs):
+                if not self.jobs:
+                    break
+                self.jobs.sort(key=lambda x: x.timeout)
+                job = self.jobs.pop(0)
+                job.run()
+                print("eeeeeeeeez")
 
     def run(self):
         """Clones TimerScheduler.run()"""

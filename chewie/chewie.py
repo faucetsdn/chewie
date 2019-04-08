@@ -1,6 +1,10 @@
 """Entry point for 802.1X speaker.
 """
+import random
 
+from chewie.eap import Eap
+
+from chewie.mac_address import MacAddress
 from eventlet import sleep, GreenPool
 from eventlet.queue import Queue
 
@@ -9,9 +13,9 @@ from chewie.eap_socket import EapSocket
 from chewie.radius_socket import RadiusSocket
 from chewie.eap_state_machine import FullEAPStateMachine
 from chewie.radius_lifecycle import RadiusLifecycle
-from chewie.message_parser import MessageParser, MessagePacker
+from chewie.message_parser import MessageParser, MessagePacker, IdentityMessage
 from chewie.event import EventMessageReceived, EventPortStatusChange
-from chewie.utils import get_logger, MessageParseError
+from chewie.utils import get_logger, MessageParseError, EapQueueMessage
 
 
 def unpack_byte_string(byte_string):
@@ -19,16 +23,25 @@ def unpack_byte_string(byte_string):
     return "".join("%02x" % x for x in byte_string)
 
 
+def get_random_id():
+    return random.randint(0, 200)
+
+
 class Chewie:
     """Facilitates EAP supplicant and RADIUS server communication"""
     RADIUS_UDP_PORT = 1812
+    PAE_GROUP_ADDRESS = MacAddress.from_string("01:80:C2:00:00:03")
+
+    DEFAULT_PORT_UP_IDENTITY_REQUEST_WAIT_PERIOD = 20
+    DEFAULT_PREEMPTIVE_IDENTITY_REQUEST_INTERVAL = 60
 
     def __init__(self, interface_name, logger=None,
                  auth_handler=None, failure_handler=None, logoff_handler=None,
                  radius_server_ip=None, radius_server_port=None, radius_server_secret=None,
                  chewie_id=None):
         self.interface_name = interface_name
-        self.logger = get_logger(logger.name + "." + Chewie.__name__)
+        self.log_name = logger.name + "." + Chewie.__name__
+        self.logger = get_logger(self.log_name)
         self.auth_handler = auth_handler
         self.failure_handler = failure_handler
         self.logoff_handler = logoff_handler
@@ -46,7 +59,12 @@ class Chewie:
         if chewie_id:
             self.chewie_id = chewie_id
 
-        self.state_machines = {}  # mac: state_machine
+        self.state_machines = {}  # port_id_str: { mac : state_machine}
+        self.port_to_eapol_id = {}  # port_id: last ID used in preemptive identity request.
+        # TODO for port_to_eapol_id - may want to set ID to null (-1...) if sent from the
+        #  state machine.
+        self.port_status = {}  # port_id: status (true=up, false=down)
+        self.port_to_identity_job = {}  # port_id: timerJob
 
         self.eap_output_messages = Queue()
         self.radius_output_messages = Queue()
@@ -92,13 +110,19 @@ class Chewie:
 
         self.pool.waitall()
 
-    def auth_success(self, src_mac, port_id):
+    def auth_success(self, src_mac, port_id, period):
         """authentication shim between faucet and chewie
         Args:
             src_mac (MacAddress): the mac of the successful supplicant
-            port_id (MacAddress): the 'mac' identifier of what switch port the success is on"""
+            port_id (MacAddress): the 'mac' identifier of what switch port the success is on
+            period (int): time (seconds) until the session times out."""
         if self.auth_handler:
             self.auth_handler(src_mac, port_id)
+
+        self.port_to_identity_job[port_id] = self.timer_scheduler.call_later(
+            period,
+            self.reauth_port, src_mac,
+            port_id)
 
     def auth_failure(self, src_mac, port_id):
         """failure shim between faucet and chewie
@@ -128,17 +152,88 @@ class Chewie:
         # faucet will remove the acls by itself.
         self.set_port_status(port_id, False)
 
+        job = self.port_to_identity_job.get(port_id, None)
+        if job:
+            job.cancel()
+        self.port_to_eapol_id.pop(port_id, None)
+
     def port_up(self, port_id):
         """
         should be called by faucet when port has come up
         Args:
             port_id (str): id of port.
         """
+        self.logger.info("port %s up", port_id)
         self.set_port_status(port_id, True)
-        # TODO send preemptive identity request.
+
+        self.port_to_identity_job[port_id] = self.timer_scheduler.call_later(
+            self.DEFAULT_PORT_UP_IDENTITY_REQUEST_WAIT_PERIOD,
+            self.send_preemptive_identity_request_if_no_active_on_port,
+            port_id)
+
+    def send_preemptive_identity_request_if_no_active_on_port(self, port_id):
+        """
+        If there is no active (in progress, or in state success(2)) supplicant send out the
+        preemptive identity request message.
+        Args:
+            port_id (str):
+        """
+        self.logger.debug("thinking about executing timer preemptive on port %s", port_id)
+        # schedule next request.
+        self.port_to_identity_job[port_id] = self.timer_scheduler.call_later(
+            self.DEFAULT_PREEMPTIVE_IDENTITY_REQUEST_INTERVAL,
+            self.send_preemptive_identity_request_if_no_active_on_port,
+            port_id)
+        if not self.port_status.get(port_id, False):
+            self.logger.debug('cant send output on port %s is down', port_id)
+            return
+
+        state_machines = self.state_machines.get(port_id, {})
+        for sm in state_machines.values():
+            if sm.is_in_progress() or sm.is_success():
+                self.logger.debug('port is active not sending on port %s', port_id)
+                break
+        else:
+            self.logger.debug("executing timer premptive on port %s", port_id)
+            self.send_preemptive_identity_request(port_id)
+
+    def send_preemptive_identity_request(self, port_id):
+        """
+        Message (EAP Identity Request) that notifies supplicant that port is using 802.1X
+        Args:
+            port_id (str):
+
+        """
+        _id = get_random_id()
+        data = IdentityMessage(self.PAE_GROUP_ADDRESS, _id, Eap.REQUEST, "")
+        self.port_to_eapol_id[port_id] = _id
+        self.eap_output_messages.put_nowait(
+            EapQueueMessage(data, self.PAE_GROUP_ADDRESS, MacAddress.from_string(port_id)))
+        self.logger.info("sending premptive on port %s", port_id)
+
+    def reauth_port(self, src_mac, port_id):
+        """
+        Send an Identity Request to src_mac, on port_id. prompting the supplicant to re authenticate.
+        Args:
+            src_mac (MacAddress):
+            port_id (str):
+        """
+        state_machine = self.state_machines.get(port_id, {}).get(str(src_mac), None)
+
+        if state_machine and state_machine.is_success():
+            self.logger.info('reauthenticating src_mac: %s on port: %s', src_mac, port_id)
+            self.send_preemptive_identity_request(port_id)
+        elif state_machine is None:
+            self.logger.debug('not reauthing. state machine on port: %s, mac: %s is none', port_id, src_mac)
+        else:
+            self.logger.debug("not reauthing, authentication is not in success(2) (state: %s)'",
+                             state_machine.state)
 
     def set_port_status(self, port_id, status):
         port_id_str = str(port_id)
+
+        self.port_status[port_id] = status
+
         if port_id_str not in self.state_machines:
             self.state_machines[port_id_str] = {}
 
@@ -181,19 +276,21 @@ class Chewie:
             try:
                 eap, dst_mac = MessageParser.ethernet_parse(packed_message)
             except MessageParseError as exception:
-                self.logger.info(
+                self.logger.warning(
                     "MessageParser.ethernet_parse threw exception.\n"
                     " packed_message: '%s'.\n"
                     " exception: '%s'.",
                     packed_message,
                     exception)
                 continue
+            self.logger.info("Received eap message: %s", str(eap))
             self.send_eap_to_state_machine(eap, dst_mac)
 
     def send_eap_to_state_machine(self, eap, dst_mac):
         """sends an eap message to the state machine"""
         self.logger.info("eap EAP(): %s", eap)
-        state_machine = self.get_state_machine(eap.src_mac, dst_mac)
+        message_id = getattr(eap, 'message_id', -1)
+        state_machine = self.get_state_machine(eap.src_mac, dst_mac, message_id)
         event = EventMessageReceived(eap, dst_mac)
         state_machine.event(event)
 
@@ -216,15 +313,15 @@ class Chewie:
                 radius = MessageParser.radius_parse(packed_message, self.radius_secret,
                                                     self.radius_lifecycle)
             except MessageParseError as exception:
-                self.logger.info(
+                self.logger.warning(
                     "MessageParser.radius_parse threw exception.\n"
                     " packed_message: '%s'.\n"
                     " exception: '%s'.",
                     packed_message,
                     exception)
                 continue
+            self.logger.info("Received RADIUS message: %s", str(radius))
             self.send_radius_to_state_machine(radius)
-            self.logger.info("Received RADIUS message: %s", radius)
 
     def send_radius_to_state_machine(self, radius):
         """sends a radius message to the state machine"""
@@ -241,9 +338,10 @@ class Chewie:
         """
         return self.get_state_machine(**self.radius_lifecycle.packet_id_to_mac[packet_id])
 
-    def get_state_machine(self, src_mac, port_id):
+    def get_state_machine(self, src_mac, port_id, message_id=-1):
         """Gets or creates if it does not already exist an FullEAPStateMachine for the src_mac.
         Args:
+            message_id (int): eap message id, -1 means none found.
             src_mac (MacAddress): who's to get.
             port_id (MacAddress): ID of the port where the src_mac is.
 
@@ -261,9 +359,19 @@ class Chewie:
             state_machine = FullEAPStateMachine(self.eap_output_messages,
                                                 self.radius_output_messages, src_mac,
                                                 self.timer_scheduler, self.auth_success,
-                                                self.auth_failure, self.auth_logoff, log_prefix)
+                                                self.auth_failure, self.auth_logoff,
+                                                log_prefix)
             state_machine.eap_restart = True
             # TODO what if port is not actually enabled, but then how did they auth?
             state_machine.port_enabled = True
             self.state_machines[port_id_str][src_mac_str] = state_machine
+            self.logger.debug("created new state machine for '%s' on port '%s'",
+                              src_mac_str, port_id_str)
+
+        if message_id != -1 \
+                and (message_id != state_machine.current_id
+                     and message_id == self.port_to_eapol_id.get(port_id_str, -2)):
+            self.logger.debug('eap packet is response to chewie initiated authentication')
+            state_machine.eap_restart = True
+            state_machine.override_current_id = message_id
         return state_machine
