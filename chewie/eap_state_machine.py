@@ -596,6 +596,8 @@ class FullEAPStateMachine:
     @log_method
     def initialize_passthrough_state(self):
         self.aaa_eap_resp = None
+        # non rfc behaviour. if
+        self.rx_resp, self.resp_id, self.resp_method = self.parse_eap_resp()
 
     @log_method
     def idle2_state(self):
