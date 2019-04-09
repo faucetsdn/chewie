@@ -105,6 +105,8 @@ class FullEAPStateMachine:
     DEFAULT_TIMEOUT = 5  # Number of Seconds
     DEFAULT_SESSION_TIMEOUT = 3600  # Number of Seconds
 
+    RADIUS_RETRANSMIT_TIMEOUT = 5
+
     state = None
     eap_output_messages = None
     src_mac = None
@@ -747,7 +749,7 @@ class FullEAPStateMachine:
                 self.eap_output_messages.put_nowait(
                     EapQueueMessage(self.eap_req_data, self.src_mac, self.port_id_mac))
                 self.sent_count += 1
-                self.set_timer()
+                self.set_timer(self.retrans_while)
             # not tested
             else:
                 self.logger.error('cant find code --- %s', self.eap_req_data)
@@ -762,7 +764,7 @@ class FullEAPStateMachine:
                                        self.radius_state_attribute, self.port_id_mac))
 
                 self.sent_count += 1
-                self.set_timer()
+                self.set_timer(self.RADIUS_RETRANSMIT_TIMEOUT)
             self.aaa_eap_resp = False
         # not tested
         elif self.aaa_eap_resp:
@@ -901,14 +903,13 @@ class FullEAPStateMachine:
                 self.radius_tunnel_private_group_id = self.radius_tunnel_private_group_id.decode('utf-8')
         # TODO could also set filter-id/vlans/acls here.
 
-    def set_timer(self):
+    def set_timer(self, timeout):
         """Sets a timer to trigger a retransmit if no packet received.
         """
         # These messages should not expect a reply, so set the timer.
         if self.state not in [self.SUCCESS, self.SUCCESS2,
                               self.FAILURE, self.FAILURE2,
                               self.TIMEOUT_FAILURE, self.TIMEOUT_FAILURE2]:
-            timeout = self.retrans_while
             self.timer_scheduler.call_later(timeout,
                                             self.event,
                                             EventTimerExpired(self, self.sent_count))
