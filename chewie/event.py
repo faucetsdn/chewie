@@ -59,6 +59,20 @@ class EventMessageReceived(Event):
         return "%s(\"%s\", \"%s\")" % (self.__class__.__name__, self.message, self.port_id)
 
 
+class EventPreemptiveEAPResponseMessageReceived(EventMessageReceived):
+    """Radius Message Received."""
+
+    def __init__(self, message, port_id, preemptive_eap_id):
+        """
+        Args:
+            message:
+            port_id:
+            preemptive_eap_id:
+        """
+        super().__init__(message, port_id)
+        self.preemptive_eap_id = preemptive_eap_id
+
+
 class EventPortStatusChange(Event):
     """Port status has changed (up/down)"""
 
@@ -86,6 +100,7 @@ class EventRadiusMessageReceived(EventMessageReceived):
         super().__init__(message, None)
         self.state = state
         self.attributes = attributes
+
 
 
 class EventShutdown(Event):

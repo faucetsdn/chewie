@@ -5,12 +5,14 @@ from transitions import Machine, State
 
 from chewie.eap import Eap
 from chewie.event import EventMessageReceived, EventRadiusMessageReceived, EventTimerExpired, \
-    EventPortStatusChange, EventSessionTimeout
+    EventPortStatusChange, EventSessionTimeout, EventPreemptiveEAPResponseMessageReceived
 from chewie.message_parser import SuccessMessage, FailureMessage, EapolStartMessage, \
     IdentityMessage, EapolLogoffMessage, EapMessage
-from chewie.radius_attributes import FilterId, SessionTimeout, TunnelPrivateGroupID
-from chewie.utils import get_logger, log_method, RadiusQueueMessage, EapQueueMessage
 
+# To create a difference between transitions.State and messageparser.EapMessage
+import chewie.radius_attributes as radius_attributes
+from chewie.utils import get_logger, log_method, RadiusQueueMessage, EapQueueMessage
+from chewie.radius import RadiusPacket
 
 class Policy:
     """Fleshed out enough to support passthrough mode."""
@@ -362,6 +364,9 @@ class FullEAPStateMachine:
         # if we want to deal with each method locally.
         self.m = MPassthrough()  # pylint: disable=invalid-name
         self.logger = get_logger(log_prefix)
+
+        self.eap_restart = True
+        self.port_enabled = True
 
     def is_eap_restart(self):
         return self.eap_restart
@@ -716,6 +721,14 @@ class FullEAPStateMachine:
         self.aaa_eap_resp = False
         self.aaa_timeout = False
 
+    def strip_eap_from_radius_packet(self, radius):
+        """Build a EventRadiusMessageReceived from a radius message"""
+        eap_msg_attribute = radius.attributes.find(radius_attributes.EAPMessage.DESCRIPTION)
+        eap_msg = eap_msg_attribute.data_type.data()
+        state = radius.attributes.find(radius_attributes.State.DESCRIPTION)
+        self.logger.info("radius EAP: %s", eap_msg)
+        return EventRadiusMessageReceived(eap_msg, state, radius.attributes.to_dict())
+
     def event(self, event):
         """Processes an event.
         Output is via the eap/radius queue. and again will be of type ***Message.
@@ -723,6 +736,17 @@ class FullEAPStateMachine:
             event: should have message attribute which is of the ***Message types
             (e.g. SuccessMessage, IdentityMessage,...)
         """
+
+        # TODO remove and refactor code - Just placing here to separate main pipeline for internals of SM
+        if (isinstance(event, EventPreemptiveEAPResponseMessageReceived)
+                and event.preemptive_eap_id != self.current_id):
+            self.logget.info("Resetting eap due to recieved response to preemtive request")
+            self.eap_restart = True
+            self.override_current_id = event.preemptive_eap_id
+
+        if isinstance(event, EventRadiusMessageReceived) and isinstance(event.message, RadiusPacket):
+            event = self.strip_eap_from_radius_packet(event.message)
+
         self.lower_layer_reset()
         self.logger.info("full state machine received event: %s", event)
         # 'Lower Layer' shim
@@ -893,11 +917,11 @@ class FullEAPStateMachine:
         self.filter_id = None
 
         if attributes:
-            self.session_timeout = attributes.get(SessionTimeout.DESCRIPTION,
+            self.session_timeout = attributes.get(radius_attributes.SessionTimeout.DESCRIPTION,
                                                   self.DEFAULT_SESSION_TIMEOUT)
-            self.radius_tunnel_private_group_id = attributes.get(TunnelPrivateGroupID.DESCRIPTION,
+            self.radius_tunnel_private_group_id = attributes.get(radius_attributes.TunnelPrivateGroupID.DESCRIPTION,
                                                                  None)
-            self.filter_id = attributes.get(FilterId.DESCRIPTION,
+            self.filter_id = attributes.get(radius_attributes.FilterId.DESCRIPTION,
                                                                  None)
             if self.radius_tunnel_private_group_id:
                 self.radius_tunnel_private_group_id = self.radius_tunnel_private_group_id.decode('utf-8')

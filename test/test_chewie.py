@@ -11,7 +11,7 @@ import eventlet
 from eventlet.queue import Queue
 
 from chewie.chewie import Chewie
-from chewie.eap_state_machine import FullEAPStateMachine
+from chewie.state_machines.eap_state_machine import FullEAPStateMachine
 from chewie.mac_address import MacAddress
 from helpers import FakeTimerScheduler
 
@@ -20,6 +20,10 @@ FROM_SUPPLICANT = Queue()
 TO_SUPPLICANT = Queue()
 FROM_RADIUS = Queue()
 TO_RADIUS = Queue()
+
+# NOTE: Added due to tests failing because SM is not in the state
+# this appears to be because of checking too early.
+SHORT_SLEEP = 0.2
 
 
 def patch_things(func):
@@ -175,7 +179,6 @@ def next_id(eap_state_machine):  # pylint: disable=invalid-name
         return random.randint(0, 200)
     return _id
 
-
 def auth_handler(client_mac, port_id_mac):  # pylint: disable=unused-argument
     """dummy handler for successful authentications"""
     print('Successful auth from MAC %s on port: %s' % (str(client_mac), str(port_id_mac)))
@@ -314,7 +317,7 @@ class ChewieTestCase(unittest.TestCase):
         self.chewie.port_up("00:00:00:00:00:01")
 
         while not self.fake_scheduler.jobs:
-            eventlet.sleep(0.1)
+            eventlet.sleep(SHORT_SLEEP)
         self.fake_scheduler.run_jobs(num_jobs=1)
         # check preemptive sent directly after port up
         out_packet = TO_SUPPLICANT.get()
@@ -338,7 +341,7 @@ class ChewieTestCase(unittest.TestCase):
         pool = eventlet.GreenPool()
         pool.spawn(self.chewie.run)
 
-        eventlet.sleep(0.1)
+        eventlet.sleep(SHORT_SLEEP)
 
         self.assertEqual(
             self.chewie.get_state_machine('02:42:ac:17:00:6f',
@@ -362,7 +365,7 @@ class ChewieTestCase(unittest.TestCase):
         pool.spawn(self.chewie.run)
 
         while not self.fake_scheduler.jobs:
-            eventlet.sleep(0.1)
+            eventlet.sleep(SHORT_SLEEP)
         self.fake_scheduler.run_jobs()
 
         self.assertEqual(
@@ -386,7 +389,7 @@ class ChewieTestCase(unittest.TestCase):
         pool.spawn(self.chewie.run)
 
         while not self.fake_scheduler.jobs:
-            eventlet.sleep(0.1)
+            eventlet.sleep(SHORT_SLEEP)
         self.fake_scheduler.run_jobs()
 
         self.assertEqual(

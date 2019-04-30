@@ -6,7 +6,7 @@ import struct
 from chewie.message_parser import MessagePacker
 from chewie.radius_attributes import EAPMessage, State, CalledStationId, NASIdentifier, NASPortType
 from chewie.event import EventRadiusMessageReceived
-
+from chewie.mac_address import MacAddress
 
 def port_id_to_int(port_id):
     """"Convert a port_id str '00:00:00:aa:00:01 to integer'"""
@@ -30,25 +30,30 @@ class RadiusLifecycle:
 
     def process_outbound(self, radius_output_bits):
         """Placeholder method extracted from Chewie.send_radius_messages()"""
-        eap_message = radius_output_bits.message
+        radius_payload = radius_output_bits.message
         src_mac = radius_output_bits.src_mac
         username = radius_output_bits.identity
         state = radius_output_bits.state
         port_id = radius_output_bits.port_mac
+        self.logger.info("Sending Radius Packet. Mac %s %s, Username: %s ", type(src_mac), src_mac, username)
 
-        self.logger.info("got eap to send to radius.. mac: %s %s, username: %s",
-                         type(src_mac), src_mac, username)
+        if isinstance(radius_payload, MacAddress) and radius_payload == src_mac == username:
+            print("Enterting outbound mab request")
+            return self.process_outbound_mab_request(radius_output_bits)
+
         state_dict = None
         if state:
             state_dict = state.__dict__
-        self.logger.info("Sending to RADIUS eap message %s with state %s",
-                         eap_message.__dict__, state_dict)
+        self.logger.info("Sending to RADIUS payload %s with state %s",
+                         radius_payload.__dict__, state_dict)
+
         radius_packet_id = self.get_next_radius_packet_id()
         self.packet_id_to_mac[radius_packet_id] = {'src_mac': src_mac, 'port_id': port_id}
-        # message is eap. needs to be wrapped into a radius packet.
+
         request_authenticator = self.generate_request_authenticator()
         self.packet_id_to_request_authenticator[radius_packet_id] = request_authenticator
-        return MessagePacker.radius_pack(eap_message, src_mac, username,
+
+        return MessagePacker.radius_pack(radius_payload, src_mac, username,
                                          radius_packet_id, request_authenticator, state,
                                          self.radius_secret,
                                          port_id_to_int(port_id),
@@ -56,11 +61,24 @@ class RadiusLifecycle:
 
     def build_event_radius_message_received(self, radius):
         """Build a EventRadiusMessageReceived from a radius message"""
-        eap_msg_attribute = radius.attributes.find(EAPMessage.DESCRIPTION)
-        eap_msg = eap_msg_attribute.data_type.data()
+        self.logger.info("Radius packet event being built: %s", radius)
         state = radius.attributes.find(State.DESCRIPTION)
-        self.logger.info("radius EAP: %s", eap_msg)
-        return EventRadiusMessageReceived(eap_msg, state, radius.attributes.to_dict())
+        return EventRadiusMessageReceived(radius, state, radius.attributes.to_dict())
+
+    def process_outbound_mab_request(self, radius_output_bits):
+        """Placeholder method extracted from Chewie.send_radius_messages()"""
+        src_mac = radius_output_bits.src_mac
+        port_id = radius_output_bits.port_mac
+        self.logger.info("Sending MAB to RADIUS: %s", src_mac)
+
+        radius_packet_id = self.get_next_radius_packet_id()
+        self.packet_id_to_mac[radius_packet_id] = {'src_mac': src_mac, 'port_id': port_id}
+        request_authenticator = self.generate_request_authenticator()
+        self.packet_id_to_request_authenticator[radius_packet_id] = request_authenticator
+        return MessagePacker.radius_mab_pack(src_mac, radius_packet_id,
+                                                request_authenticator, self.radius_secret,
+                                                port_id_to_int(port_id))
+
 
     def generate_request_authenticator(self):
         """Workaround until we get this extracted for easy mocking"""

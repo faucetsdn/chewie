@@ -77,7 +77,7 @@ class Radius:
                                                      code=code)
             except (InvalidMessageAuthenticatorError,
                     InvalidResponseAuthenticatorError) as exception:
-                raise MessageParseError("Unable to parse Radius packet") \
+                raise MessageParseError("Unable to validate Radius packet") \
                     from exception
         raise MessageParseError("Unable to parse radius code: %d" % code)
 

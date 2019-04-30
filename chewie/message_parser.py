@@ -3,7 +3,7 @@
 
 from chewie.radius import RadiusAttributesList, RadiusAccessRequest, Radius
 from chewie.radius_attributes import CallingStationId, UserName, MessageAuthenticator, EAPMessage, \
-    NASPort
+    NASPort, UserPassword
 from chewie.ethernet_packet import EthernetPacket
 from chewie.auth_8021x import Auth8021x
 from chewie.eap import Eap, EapIdentity, EapMd5Challenge, EapSuccess, EapFailure, EapLegacyNak, \
@@ -230,6 +230,31 @@ class MessagePacker:
                                          ethertype=0x888e, data=data)
         return ethernet_packet.pack()
 
+    @staticmethod
+    def radius_mab_pack(src_mac, radius_packet_id, request_authenticator, secret, nas_port):
+        """"""
+
+        attr_list = []
+        no_dots_mac = str(src_mac).replace(':', "")
+        attr_list.append(UserName.create(no_dots_mac))
+        attr_list.append(CallingStationId.create(str(src_mac).replace(':', '-')))
+
+        if nas_port:
+            attr_list.append(NASPort.create(nas_port))
+
+        # Get Password
+        #TODO will be an issue with types here
+        ciphertext = UserPassword.encrypt(secret, request_authenticator, no_dots_mac)
+        attr_list.append(UserPassword.create(ciphertext))
+
+        attr_list.append(MessageAuthenticator.create(
+                bytes.fromhex("00000000000000000000000000000000")))
+
+        attributes = RadiusAttributesList(attr_list)
+        access_request = RadiusAccessRequest(radius_packet_id, request_authenticator, attributes)
+        return access_request.build(secret)
+
+    # TODO Remove dependency on EAP
     @staticmethod
     def radius_pack(eap_message, src_mac, username, radius_packet_id,
                     request_authenticator, state, secret, nas_port=None, extra_attributes=None):

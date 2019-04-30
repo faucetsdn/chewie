@@ -2,21 +2,24 @@
 """
 import random
 
-from chewie.eap import Eap
 
-from chewie.mac_address import MacAddress
 from eventlet import sleep, GreenPool
 from eventlet.queue import Queue
 
 from chewie import timer_scheduler
+from chewie.eap import Eap
+from chewie.mac_address import MacAddress
 from chewie.eap_socket import EapSocket
 from chewie.radius_socket import RadiusSocket
-from chewie.eap_state_machine import FullEAPStateMachine
+from chewie.activity_socket import IPActivitySocket
+from chewie.state_machines.eap_state_machine import FullEAPStateMachine
+from chewie.state_machines.mab_state_machine import MacAuthenticationBypassStateMachine
 from chewie.radius_lifecycle import RadiusLifecycle
 from chewie.message_parser import MessageParser, MessagePacker, IdentityMessage
-from chewie.event import EventMessageReceived, EventPortStatusChange
+from chewie.event import EventMessageReceived, EventRadiusMessageReceived, EventPortStatusChange, \
+    EventPreemptiveEAPResponseMessageReceived
 from chewie.utils import get_logger, MessageParseError, EapQueueMessage
-
+from chewie.ethernet_packet import EthernetPacket
 
 def unpack_byte_string(byte_string):
     """unpacks a byte string"""
@@ -73,6 +76,7 @@ class Chewie:
         self.timer_scheduler = timer_scheduler.TimerScheduler(self.logger)
 
         self.eap_socket = None
+        self.ip_activity_socket = None
         self.pool = None
         self.eventlets = None
         self.radius_socket = None
@@ -84,6 +88,7 @@ class Chewie:
         """setup chewie and start socket eventlet threads"""
         self.logger.info("Starting")
         self.setup_eap_socket()
+        # self.setup_ip_activity_socket()
         self.setup_radius_socket()
         self.start_threads_and_wait()
 
@@ -102,6 +107,7 @@ class Chewie:
 
         self.eventlets.append(self.pool.spawn(self.send_eap_messages))
         self.eventlets.append(self.pool.spawn(self.receive_eap_messages))
+        # self.eventlets.append(self.pool.spawn(self.receive_ip_activity_messages))
 
         self.eventlets.append(self.pool.spawn(self.send_radius_messages))
         self.eventlets.append(self.pool.spawn(self.receive_radius_messages))
@@ -110,6 +116,7 @@ class Chewie:
 
         self.pool.waitall()
 
+    # TODO replace with KWARGS to allow for filter_id or ACL rule adding
     def auth_success(self, src_mac, port_id, period, vlan_name, filter_id):
         """authentication shim between faucet and chewie
         Args:
@@ -245,6 +252,10 @@ class Chewie:
         self.eap_socket = EapSocket(self.interface_name)
         self.eap_socket.setup()
 
+    def setup_ip_activity_socket(self):
+        self.ip_activity_socket = IPActivitySocket(self.interface_name)
+        self.ip_activity_socket.setup()
+
     def setup_radius_socket(self):
         self.radius_socket = RadiusSocket(self.radius_listen_ip,
                                           self.radius_listen_port,
@@ -266,6 +277,22 @@ class Chewie:
                                                              eap_queue_message.port_mac,
                                                              eap_queue_message.src_mac))
 
+    def check_for_mab(self):
+        # TODO this should really do something
+        return True
+
+    def send_eth_to_state_machine(self, packed_message):
+        ethernet_packet = EthernetPacket.parse(packed_message)
+        port_id = ethernet_packet.dst_mac
+        src_mac = ethernet_packet.src_mac
+
+        self.logger.info("Sending MAC to MAB State Machine: %s", src_mac)
+        message_id = -2
+        state_machine = self.get_state_machine(src_mac, port_id, message_id)
+        event = EventMessageReceived(ethernet_packet, port_id)
+        state_machine.event(event)
+        # TODO Tell Faucet to make this bad boy slow down if triggered too much.
+
     def receive_eap_messages(self):
         """receive eap messages from supplicant forever."""
         while self.running():
@@ -283,15 +310,36 @@ class Chewie:
                     packed_message,
                     exception)
                 continue
+
             self.logger.info("Received eap message: %s", str(eap))
             self.send_eap_to_state_machine(eap, dst_mac)
+
+    def receive_ip_activity_messages(self):
+        """Receive IP activity over the 'eap interface' allowing for MAB."""
+        while self.running():
+            sleep(0)
+            self.logger.info("waiting for ip activity.")
+            packed_message = self.ip_activity_socket.receive()
+            self.logger.info("Received ip activity packed_message: %s", str(packed_message))
+            # TODO could strip the type of internal packet and drop payload
+            if self.check_for_mab():
+                self.send_eth_to_state_machine(packed_message)
+            continue
 
     def send_eap_to_state_machine(self, eap, dst_mac):
         """sends an eap message to the state machine"""
         self.logger.info("eap EAP(): %s", eap)
         message_id = getattr(eap, 'message_id', -1)
         state_machine = self.get_state_machine(eap.src_mac, dst_mac, message_id)
-        event = EventMessageReceived(eap, dst_mac)
+
+        # Check for response to preemptive_eap
+        preemptive_eap_message_id = self.port_to_eapol_id.get(str(dst_mac), -2)
+        if message_id != -1 and message_id == preemptive_eap_message_id:
+            self.logger.debug('eap packet is response to chewie initiated authentication')
+            event = EventPreemptiveEAPResponseMessageReceived(eap, dst_mac, preemptive_eap_message_id)
+        else:
+            event = EventMessageReceived(eap, dst_mac)
+
         state_machine.event(event)
 
     def send_radius_messages(self):
@@ -338,6 +386,7 @@ class Chewie:
         """
         return self.get_state_machine(**self.radius_lifecycle.packet_id_to_mac[packet_id])
 
+    #TODO change message_id functionality
     def get_state_machine(self, src_mac, port_id, message_id=-1):
         """Gets or creates if it does not already exist an FullEAPStateMachine for the src_mac.
         Args:
@@ -353,25 +402,32 @@ class Chewie:
         port_state_machines = self.state_machines.get(port_id_str, None)
         if port_state_machines is None:
             self.state_machines[port_id_str] = {}
+
+        self.logger.info("Port based state machines are as follows: %s", self.state_machines[port_id_str])
         state_machine = self.state_machines[port_id_str].get(src_mac_str, None)
+
+        if not state_machine and message_id == -2:
+            # Do MAB
+            self.logger.info("Creating MAB State Machine")
+            log_prefix = "%s.SM - port: %s, client: %s" % (self.logger.name, src_mac, port_id_str)
+            state_machine = MacAuthenticationBypassStateMachine(self.eap_output_messages,
+                                                self.radius_output_messages, src_mac,
+                                                self.timer_scheduler, self.auth_success,
+                                                self.auth_failure, self.auth_logoff,
+                                                log_prefix)
+            self.state_machines[port_id_str][src_mac_str] = state_machine
+            return state_machine
+
         if not state_machine:
+            self.logger.info("Creating EAP FULL State Machine")
             log_prefix = "%s.SM - port: %s, client: %s" % (self.logger.name, src_mac, port_id_str)
             state_machine = FullEAPStateMachine(self.eap_output_messages,
                                                 self.radius_output_messages, src_mac,
                                                 self.timer_scheduler, self.auth_success,
                                                 self.auth_failure, self.auth_logoff,
                                                 log_prefix)
-            state_machine.eap_restart = True
-            # TODO what if port is not actually enabled, but then how did they auth?
-            state_machine.port_enabled = True
             self.state_machines[port_id_str][src_mac_str] = state_machine
             self.logger.debug("created new state machine for '%s' on port '%s'",
                               src_mac_str, port_id_str)
 
-        if message_id != -1 \
-                and (message_id != state_machine.current_id
-                     and message_id == self.port_to_eapol_id.get(port_id_str, -2)):
-            self.logger.debug('eap packet is response to chewie initiated authentication')
-            state_machine.eap_restart = True
-            state_machine.override_current_id = message_id
         return state_machine

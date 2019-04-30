@@ -7,7 +7,7 @@ import tempfile
 import unittest
 
 from chewie.eap import Eap
-from chewie.eap_state_machine import FullEAPStateMachine
+from chewie.state_machines.eap_state_machine import FullEAPStateMachine
 from chewie.event import EventMessageReceived, EventRadiusMessageReceived, EventPortStatusChange
 from chewie.mac_address import MacAddress
 from chewie.message_parser import EapolStartMessage, IdentityMessage, Md5ChallengeMessage, \

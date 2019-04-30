@@ -12,7 +12,6 @@ from chewie.eap import Eap
 from chewie.radius_attributes import State, CalledStationId, NASPortType
 from chewie.utils import MessageParseError
 
-
 class MessageParserTestCase(unittest.TestCase):
     def test_identity_request_message_parses(self):  # pylint: disable=invalid-name
         packed_message = bytes.fromhex("0180c2000003001906eab88c888e010000050101000501000000")
@@ -332,3 +331,21 @@ class MessageParserTestCase(unittest.TestCase):
         self.assertRaises(MessageParseError,
                           MessageParser.eap_parse,
                           data, MacAddress.from_string("00:00:00:12:34:56"))
+
+
+    # TODO
+    # def test_radius_mab_packs_basic(self):
+    #     """without extra_attributes or nas-port"""
+    #
+    #     packed_message = bytes.fromhex("01630047c7835a254dc85f1e82ec0702956c6d09010e61616262636364646565666602128502bedd390c0020bf4a13966324d99c1e1361612d62622d63632d64642d65652d6666")  # pylint: disable=line-too-long
+    #
+    #     src_mac = MacAddress.from_string("aa:bb:cc:dd:ee:ff")
+    #     radius_packet_id = 99
+    #     request_authenticator = bytes.fromhex("c7835a254dc85f1e82ec0702956c6d09")
+    #     state = None
+    #     secret = "SECRET"
+    #
+    #     packed_radius = MessagePacker.radius_mab_pack(src_mac, radius_packet_id, request_authenticator, secret, None)
+    #     self.assertEqual(packed_message, packed_radius,
+    #                      "Did not match\nActual: {}\nExpected: {}".format(
+    #                          binascii.hexlify(packed_radius), binascii.hexlify(packed_message)))

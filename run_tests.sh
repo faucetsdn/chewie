@@ -9,7 +9,7 @@ fi
 
 echo "=============== Running UnitTests ================="
 
-PYTHONPATH=./ pytest --cov=chewie --cov-report term --cov-report=xml:coverage.xml test/test_*.py || exit 1
+PYTHONPATH=./ pytest -v --cov=chewie --cov-report term --cov-report=xml:coverage.xml test/test_*.py || exit 1
 
 echo "=============== Running PyType ===================="
 pytype -V$PYTYPE_TARGET_VERSION chewie/*py || exit 1
