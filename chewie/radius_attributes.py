@@ -5,10 +5,12 @@
 import struct
 
 from chewie.radius_datatypes import Concat, Enum, Integer, String, Text, Vsa
-
+import math
+from hashlib import md5
 
 ATTRIBUTE_TYPES = {}
 
+# TODO Fix Class Docstrings
 
 class Attribute():
     """Parent class for the Attributes."""
@@ -75,13 +77,75 @@ class UserName(Attribute):
     DESCRIPTION = "User-Name"
 
 
+# Experimental
+@register_attribute_type
+class UserPassword(Attribute):
+    """User-Password https://tools.ietf.org/html/rfc2865#section-5.2"""
+    TYPE = 2
+    DATA_TYPE = String
+    DESCRIPTION = "User-Password"
+
+    # TODO Move encryption / decryption to the appropriate place -
+    # cannot be in pack / unpack due to RA / secret requirements
+    @staticmethod
+    def encrypt(secret, req_authenticator, password):
+        def string_pop(s, length):
+            return s[:length], s[length:]
+
+        if type(secret) is str:
+            secret = secret.encode()
+
+        if type(req_authenticator) is int:
+            req_authenticator = req_authenticator.to_bytes(16, 'big')
+
+        BASE = 16
+        ciphertext = bytes()
+
+        padded_width = math.ceil(len(password) / BASE) * BASE
+        padded_password = password.ljust(padded_width, chr(0)).encode()
+        b_sec = md5(secret + req_authenticator).digest()
+
+        while len(padded_password) > 0:
+            p_sec, padded_password = string_pop(padded_password, BASE)
+            cipher_array = [x ^ y for x, y in zip(b_sec, p_sec)]
+            c_sec = bytes(cipher_array)
+            ciphertext += c_sec
+
+            b_sec = md5(secret + c_sec).digest()
+
+        return ciphertext
+
+    @staticmethod
+    def decrypt(secret, req_authenticator, ciphertext):
+        def string_pop(s, length):
+            return s[:length], s[length:]
+
+        if type(secret) is str:
+            secret = secret.encode()
+
+        if type(req_authenticator) is int:
+            req_authenticator = req_authenticator.to_bytes(16, 'big')
+
+        BASE = 16
+        cleartext = ""
+        b_sec = md5(secret + req_authenticator).digest()
+
+        while len(ciphertext) > 0:
+            c_sec,  ciphertext = string_pop(ciphertext, BASE)
+            pass_array = [x ^ y for x, y in zip(b_sec, c_sec)]
+            p_sec = bytes(pass_array)
+            cleartext += p_sec.decode('ascii')
+
+            b_sec = md5(secret + c_sec).digest()
+        return cleartext.strip('\0')
+
+
 @register_attribute_type
 class NASIPAddress(Attribute):
     """Service-Type https://tools.ietf.org/html/rfc2865#section-5.4"""
     TYPE = 4
     DATA_TYPE = String
     DESCRIPTION = "NAS-IP-Address"
-
 
 @register_attribute_type
 class NASPort(Attribute):
@@ -240,3 +304,11 @@ class TunnelPrivateGroupID(Attribute):
     TYPE = 81
     DATA_TYPE = String
     DESCRIPTION = "Tunnel-Private-Group-ID"
+
+# Experimental
+@register_attribute_type
+class NASFilterRule(Attribute):
+    """NAS-Fitler-Rule https://freeradius.org/rfc/rfc4849.html"""
+    TYPE = 92
+    DATA_TYPE = String
+    DESCRIPTION = "NAS-Filter-Rule"
