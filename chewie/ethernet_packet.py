@@ -1,4 +1,6 @@
+"""This module is used to allow parsing and packing of Ethernet Packets"""
 import struct
+
 from chewie.mac_address import MacAddress
 from chewie.utils import MessageParseError
 
@@ -7,6 +9,7 @@ ETHERNET_HEADER_LENGTH = 6 + 6 + 2
 
 class EthernetPacket:
     """Packet/parsers for an IEEE 802.3 Ethernet frame"""
+
     def __init__(self, dst_mac, src_mac, ethertype, data):
         self.dst_mac = dst_mac
         self.src_mac = src_mac
@@ -41,4 +44,4 @@ class EthernetPacket:
 
     def __repr__(self):
         return "%s(dst_mac=%s, src_mac=%s, ethertype=0x%04X)" % \
-            (self.__class__.__name__, self.dst_mac, self.src_mac, self.ethertype)
+               (self.__class__.__name__, self.dst_mac, self.src_mac, self.ethertype)

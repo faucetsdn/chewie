@@ -1,8 +1,8 @@
 """Homebrew Event scheduler, as sched.scheduler was not working outside of unittests"""
 import heapq
-import time
 
 import eventlet
+import time
 
 
 class TimerJob:

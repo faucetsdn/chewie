@@ -2,23 +2,20 @@
 
 """Run AFL repeatedly with externally supplied generated packet from STDIN."""
 
-
-import sys
 from collections import namedtuple
 
 import afl  # pylint: disable=import-error
-
-from chewie.utils import MessageParseError
-
+import sys
 from chewie.mac_address import MacAddress
 from chewie.message_parser import MessageParser
-
+from chewie.utils import MessageParseError
 
 ROUNDS = 1
 
 
 class NoneDict(dict):
     """Dictionary that will always return None"""
+
     def __getitem__(self, key):
         return None  # pylint: disable=useless-return
 

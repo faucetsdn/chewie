@@ -1,8 +1,7 @@
 """Various Events used by Chewie"""
 
+
 # pylint: disable=too-few-public-methods
-
-
 class Event:
     """Base event class"""
     TIMER_EXPIRED = 1
@@ -14,6 +13,7 @@ class Event:
 
 class EventTimerExpired(Event):
     """Used when a timer has expired."""
+
     def __init__(self, state_machine=None, sent_count=None):
         """
         Args:
@@ -28,6 +28,7 @@ class EventTimerExpired(Event):
 
 class EventSessionTimeout(Event):
     """User's session should be terminated."""
+
     def __init__(self, state_machine=None):
         """
         Args:
@@ -39,6 +40,7 @@ class EventSessionTimeout(Event):
 
 class EventMessageReceived(Event):
     """Message (EAP) Received. Radius Message event is a child"""
+
     def __init__(self, message, port_id):
         """
         Args:
@@ -52,8 +54,8 @@ class EventMessageReceived(Event):
 
     def __eq__(self, other):
         return self.type == other.type and \
-            self.message == other.message and \
-            self.port_id == other.port_id
+               self.message == other.message and \
+               self.port_id == other.port_id
 
     def __repr__(self):
         return "%s(\"%s\", \"%s\")" % (self.__class__.__name__, self.message, self.port_id)
@@ -102,9 +104,9 @@ class EventRadiusMessageReceived(EventMessageReceived):
         self.attributes = attributes
 
 
-
 class EventShutdown(Event):
     """Shutdown has been signaled (is this even used?)"""
+
     def __init__(self):
         # will work but please do this properly
         self.type = self.SHUTDOWN

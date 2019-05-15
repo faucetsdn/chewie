@@ -4,12 +4,12 @@ import re
 
 # pylint: disable=too-few-public-methods
 
-
 _MAC_REGEX = re.compile(r'(?:[0-9a-f]{1,2}:){5}[0-9a-f]{1,2}\Z', re.IGNORECASE)
 
 
 class MacAddress:
     """Class for comparing mac addresses"""
+
     def __init__(self, address):
         self.address = address
 

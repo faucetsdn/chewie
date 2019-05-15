@@ -2,21 +2,22 @@
 
 import logging
 import random
-import sys
 import tempfile
 import unittest
 from unittest.mock import patch
 
 import eventlet
+import sys
+from chewie.chewie import Chewie
+from chewie.mac_address import MacAddress
+from chewie.state_machines.eap_state_machine import FullEAPStateMachine
+from chewie.state_machines.mab_state_machine import MacAuthenticationBypassStateMachine
 from eventlet.queue import Queue
 
-from chewie.chewie import Chewie
-from chewie.state_machines.eap_state_machine import FullEAPStateMachine
-from chewie.mac_address import MacAddress
 from helpers import FakeTimerScheduler
 
-
 FROM_SUPPLICANT = Queue()
+FROM_SUPPLICANT_ACTIVITY = Queue()
 TO_SUPPLICANT = Queue()
 FROM_RADIUS = Queue()
 TO_RADIUS = Queue()
@@ -28,9 +29,11 @@ SHORT_SLEEP = 0.2
 
 def patch_things(func):
     """decorator to mock patch socket operations and random number generators"""
+
     @patch('chewie.chewie.get_random_id', get_random_id_helper)
     @patch('chewie.chewie.EapSocket', FakeEapSocket)
     @patch('chewie.chewie.RadiusSocket', FakeRadiusSocket)
+    @patch('chewie.chewie.ActivitySocket', FakeActivitySocket)
     @patch('chewie.chewie.RadiusLifecycle.generate_request_authenticator', urandom_helper)
     @patch('chewie.chewie.FullEAPStateMachine.next_id', next_id)
     def wrapper_patch(self):
@@ -41,6 +44,7 @@ def patch_things(func):
 
 def setup_generators(_supplicant_replies=None, _radius_replies=None):
     """decorator to setup the packets for the mocked socket (queues) to send"""
+
     def decorator_setup_gen(func):
         def wrapper_setup_gen(self):
             global SUPPLICANT_REPLY_GENERATOR  # pylint: disable=global-statement
@@ -53,7 +57,9 @@ def setup_generators(_supplicant_replies=None, _radius_replies=None):
             URANDOM_GENERATOR = urandom()
             GET_RANDOM_ID_GENERATOR = fake_get_random_id()
             func(self)
+
         return wrapper_setup_gen
+
     return decorator_setup_gen
 
 
@@ -133,6 +139,25 @@ class FakeEapSocket:
             FROM_SUPPLICANT.put_nowait(next_reply)
 
 
+class FakeActivitySocket:
+    def __init__(self, _interface_name):
+        # TODO inject queues in constructor instead of using globals
+        pass
+
+    def setup(self):
+        pass
+
+    def receive(self):  # pylint: disable=unused-argument
+        global FROM_SUPPLICANT_ACTIVITY
+
+        print('mocked activity_recevied from activity socket')
+        got = FROM_SUPPLICANT_ACTIVITY.get()
+        return got
+
+    def send(self, data=None):  # pylint: disable=unused-argument
+        raise NotImplementedError("Attempted to send data on activity watching socket")
+
+
 class FakeRadiusSocket:
     def __init__(self, _listen_ip, _listen_port, _server_ip, _server_port):
         # TODO inject queues in constructor instead of using globals
@@ -179,6 +204,7 @@ def next_id(eap_state_machine):  # pylint: disable=invalid-name
         return random.randint(0, 200)
     return _id
 
+
 def auth_handler(client_mac, port_id_mac):  # pylint: disable=unused-argument
     """dummy handler for successful authentications"""
     print('Successful auth from MAC %s on port: %s' % (str(client_mac), str(port_id_mac)))
@@ -205,9 +231,18 @@ class ChewieTestCase(unittest.TestCase):
                                header + "010000160275001604103abcadc86714b2d75d09dd7ff53edf6b")]
 
     radius_replies_success = [bytes.fromhex(
-        "0b000050066300262c8ee8a33f43ad4e837e63c54f180175001604101a16a3baa37a0238f33384f6c11067425012a3bf83bea0eeb69645088527dc491eed18126aa866456add628e3a55a4737872cad6"),
-                              bytes.fromhex(
-                                  "02010032ec22830bb2fbde37f635e91690410b334f060375000450129a08d246ec3da2f371ec4ff16eed9310010675736572")]
+        "0b000050066300262c8ee8a33f43ad4e837e63c54f180175001604101a16a3baa37a0238f33384f6c"
+        "11067425012a3bf83bea0eeb69645088527dc491eed18126aa866456add628e3a55a4737872cad6"),
+        bytes.fromhex(
+            "02010032ec22830bb2fbde37f635e91690410b334"
+            "f060375000450129a08d246ec3da2f371ec4ff16eed9310010675736572")]
+
+    radius_replies_success_mab = [bytes.fromhex(
+        "02000034187d6f5dc540a24efa738d2ba242ac5c50128f4b859e01a85b919b848421d0d369"
+        "ad010e303234326163313730303666")]
+
+    radius_replies_failure_mab = [bytes.fromhex(
+        "030000340b0a0f4ec71ebd0573180eb45161c2b7010e303234326163313730303666")]
 
     sup_replies_logoff = [bytes.fromhex(header + "01000009027400090175736572"),
                           bytes.fromhex(
@@ -243,8 +278,10 @@ class ChewieTestCase(unittest.TestCase):
         global TO_SUPPLICANT  # pylint: disable=global-statement
         global FROM_RADIUS  # pylint: disable=global-statement
         global TO_RADIUS  # pylint: disable=global-statement
+        global FROM_SUPPLICANT_ACTIVITY  # pylint: disable=global-statement
 
         FROM_SUPPLICANT = Queue()
+        FROM_SUPPLICANT_ACTIVITY = Queue()
         TO_SUPPLICANT = Queue()
         FROM_RADIUS = Queue()
         TO_RADIUS = Queue()
@@ -256,7 +293,8 @@ class ChewieTestCase(unittest.TestCase):
         """Tests Chewie.get_state_machine()"""
         self.assertEqual(len(self.chewie.state_machines), 0)
         # creates the state_machine if it doesn't exist
-        state_machine = self.chewie.get_state_machine('12:34:56:78:9a:bc',  # pylint: disable=invalid-name
+        state_machine = self.chewie.get_state_machine('12:34:56:78:9a:bc',
+                                                      # pylint: disable=invalid-name
                                                       '00:00:00:00:00:01')
 
         self.assertEqual(len(self.chewie.state_machines), 1)
@@ -280,7 +318,8 @@ class ChewieTestCase(unittest.TestCase):
         """Tests Chewie.get_state_machine_by_packet_id()"""
         self.chewie.radius_lifecycle.packet_id_to_mac[56] = {'src_mac': '12:34:56:78:9a:bc',
                                                              'port_id': '00:00:00:00:00:01'}
-        state_machine = self.chewie.get_state_machine('12:34:56:78:9a:bc',  # pylint: disable=invalid-name
+        state_machine = self.chewie.get_state_machine('12:34:56:78:9a:bc',
+                                                      # pylint: disable=invalid-name
                                                       '00:00:00:00:00:01')
 
         self.assertIs(self.chewie.get_state_machine_from_radius_packet_id(56),
@@ -354,7 +393,8 @@ class ChewieTestCase(unittest.TestCase):
         """Test incorrect message id results in timeout_failure"""
         # TODO not convinced this is transitioning through the correct states.
         # (should be discarding all packets)
-        # But end result is correct (both packets sent/received, and end state)self.chewie.get_state_machine(MacAddress.from_string('02:42:ac:17:00:6f'),
+        # But end result is correct (both packets sent/received, and end state)
+        # self.chewie.get_state_machine(MacAddress.from_string('02:42:ac:17:00:6f'),
         self.chewie.get_state_machine(MacAddress.from_string('02:42:ac:17:00:6f'),
                                       MacAddress.from_string(
                                           '00:00:00:00:00:01')).DEFAULT_TIMEOUT = 0.5
@@ -372,7 +412,6 @@ class ChewieTestCase(unittest.TestCase):
             self.chewie.get_state_machine('02:42:ac:17:00:6f',
                                           '00:00:00:00:00:01').state,
             FullEAPStateMachine.TIMEOUT_FAILURE)
-
 
     @patch_things
     @setup_generators(sup_replies_failure2_response_code, no_radius_replies)
@@ -396,3 +435,68 @@ class ChewieTestCase(unittest.TestCase):
             self.chewie.get_state_machine('02:42:ac:17:00:6f',
                                           '00:00:00:00:00:01').state,
             FullEAPStateMachine.TIMEOUT_FAILURE2)
+
+    @patch_things
+    def test_mab_receive(self):
+        """Test ETH Receive Ability of MAB Functionality"""
+        mab_sm = self.chewie.get_state_machine(MacAddress.from_string('02:42:ac:17:00:6f'),
+                                               MacAddress.from_string('00:00:00:00:00:01'),
+                                               -2)
+        mab_sm.DEFAULT_TIMEOUT = 0.5
+
+        FROM_SUPPLICANT_ACTIVITY.put_nowait(bytes.fromhex(
+            "0000000000010242ac17006f08004500001c0001000040117cce7f0000017f0000010044004300080155"))
+
+        pool = eventlet.GreenPool()
+        pool.spawn(self.chewie.run)
+
+        eventlet.sleep(SHORT_SLEEP)
+
+        self.assertEqual(
+            self.chewie.get_state_machine('02:42:ac:17:00:6f',
+                                          '00:00:00:00:00:01').state,
+            MacAuthenticationBypassStateMachine.AAA_IDLE)
+
+    @patch_things
+    @setup_generators(None, radius_replies_success_mab)
+    def test_mab_success_auth(self):
+        """Test Successful MAB Attempt"""
+        mab_sm = self.chewie.get_state_machine(MacAddress.from_string('02:42:ac:17:00:6f'),
+                                               MacAddress.from_string('00:00:00:00:00:01'),
+                                               -2)
+        mab_sm.DEFAULT_TIMEOUT = 0.5
+
+        FROM_SUPPLICANT_ACTIVITY.put_nowait(bytes.fromhex(
+            "0000000000010242ac17006f08004500001c0001000040117cce7f0000017f0000010044004300080155"))
+
+        pool = eventlet.GreenPool()
+        pool.spawn(self.chewie.run)
+
+        eventlet.sleep(SHORT_SLEEP)
+
+        self.assertEqual(
+            self.chewie.get_state_machine('02:42:ac:17:00:6f',
+                                          '00:00:00:00:00:01').state,
+            MacAuthenticationBypassStateMachine.AAA_SUCCESS)
+
+    @patch_things
+    @setup_generators(None, radius_replies_failure_mab)
+    def test_mab_failure_auth(self):
+        """Test unsuccessful MAB Attempt"""
+        mab_sm = self.chewie.get_state_machine(MacAddress.from_string('02:42:ac:17:00:6f'),
+                                               MacAddress.from_string('00:00:00:00:00:01'),
+                                               -2)
+        mab_sm.DEFAULT_TIMEOUT = 0.5
+
+        FROM_SUPPLICANT_ACTIVITY.put_nowait(bytes.fromhex(
+            "0000000000010242ac17006f08004500001c0001000040117cce7f0000017f0000010044004300080155"))
+
+        pool = eventlet.GreenPool()
+        pool.spawn(self.chewie.run)
+
+        eventlet.sleep(SHORT_SLEEP)
+
+        self.assertEqual(
+            self.chewie.get_state_machine('02:42:ac:17:00:6f',
+                                          '00:00:00:00:00:01').state,
+            MacAuthenticationBypassStateMachine.AAA_FAILURE)

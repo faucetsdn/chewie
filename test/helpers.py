@@ -4,6 +4,7 @@
 
 class FakeTimerJob:
     """Behaves like TimerJob"""
+
     def __init__(self, function, args, timeout):
         self.function = function
         self.args = args
@@ -26,6 +27,7 @@ class FakeTimerJob:
 
 class FakeTimerScheduler:
     """Behaves like TimerScheduler"""
+
     def __init__(self):
         self.jobs = []
 

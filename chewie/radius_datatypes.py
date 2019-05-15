@@ -1,8 +1,8 @@
 """Radius Attribute Datatypes"""
-import math
 import struct
 
 import chewie.message_parser
+import math
 from chewie.utils import MessageParseError
 
 
@@ -71,7 +71,7 @@ class Integer(DataType):
                 bytes_data = raw_data.to_bytes(self.MAX_DATA_LENGTH, "big")
             except OverflowError as exception:
                 raise ValueError("Integer must be >= 0  and <= 2^32-1, was %d" %
-                                                raw_data)
+                                 raw_data)
         self.bytes_data = bytes_data
 
     @classmethod
@@ -87,7 +87,7 @@ class Integer(DataType):
         return struct.pack("!4s", self.bytes_data)
 
     def data(self):
-        return int.from_bytes(self.bytes_data, 'big') # pytype: disable=attribute-error
+        return int.from_bytes(self.bytes_data, 'big')  # pytype: disable=attribute-error
 
     def data_length(self):
         return 4
@@ -118,7 +118,7 @@ class Enum(DataType):
         return struct.pack("!4s", self.bytes_data)
 
     def data(self):
-        return int.from_bytes(self.bytes_data, 'big') # pytype: disable=attribute-error
+        return int.from_bytes(self.bytes_data, 'big')  # pytype: disable=attribute-error
 
     def data_length(self):
         return 4
@@ -232,7 +232,7 @@ class Concat(DataType):
 
     def full_length(self):
         return self.AVP_HEADER_LEN * \
-               (math.ceil(len(self.bytes_data) / self.MAX_DATA_LENGTH + 1))\
+               (math.ceil(len(self.bytes_data) / self.MAX_DATA_LENGTH + 1)) \
                + len(self.bytes_data) - self.AVP_HEADER_LEN
 
     def data_length(self):
@@ -240,7 +240,6 @@ class Concat(DataType):
 
 
 class Vsa(DataType):
-
     DATA_TYPE_VALUE = 14
     VENDOR_ID_LEN = 4
     MIN_DATA_LENGTH = 5

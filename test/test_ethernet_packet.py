@@ -1,7 +1,7 @@
-
 # pylint: disable=missing-docstring
 
 import unittest
+
 from chewie.ethernet_packet import EthernetPacket
 from chewie.mac_address import MacAddress
 

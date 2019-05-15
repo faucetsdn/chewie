@@ -3,12 +3,13 @@
 # TODO could we auto generate this from the radius-types-2.csv available from iana.org?
 
 import struct
-import math
 from hashlib import md5
 
+import math
 from chewie.radius_datatypes import Concat, Enum, Integer, String, Text, Vsa
 
 ATTRIBUTE_TYPES = {}
+
 
 # TODO Fix Class Docstrings
 
@@ -131,7 +132,7 @@ class UserPassword(Attribute):
         b_sec = md5(secret + req_authenticator).digest()
 
         while len(ciphertext) > 0:
-            c_sec,  ciphertext = string_pop(ciphertext, BASE)
+            c_sec, ciphertext = string_pop(ciphertext, BASE)
             pass_array = [x ^ y for x, y in zip(b_sec, c_sec)]
             p_sec = bytes(pass_array)
             cleartext += p_sec.decode('ascii')
@@ -146,6 +147,7 @@ class NASIPAddress(Attribute):
     TYPE = 4
     DATA_TYPE = String
     DESCRIPTION = "NAS-IP-Address"
+
 
 @register_attribute_type
 class NASPort(Attribute):
@@ -304,6 +306,7 @@ class TunnelPrivateGroupID(Attribute):
     TYPE = 81
     DATA_TYPE = String
     DESCRIPTION = "Tunnel-Private-Group-ID"
+
 
 # Experimental
 @register_attribute_type

@@ -2,17 +2,18 @@
 # pylint: disable=missing-docstring
 
 import logging
-from queue import Queue
 import tempfile
 import unittest
+from queue import Queue
 
 from chewie.eap import Eap
-from chewie.state_machines.eap_state_machine import FullEAPStateMachine
 from chewie.event import EventMessageReceived, EventRadiusMessageReceived, EventPortStatusChange
 from chewie.mac_address import MacAddress
 from chewie.message_parser import EapolStartMessage, IdentityMessage, Md5ChallengeMessage, \
     SuccessMessage, LegacyNakMessage, TtlsMessage, FailureMessage, EapolLogoffMessage
 from chewie.radius_attributes import State
+from chewie.state_machines.eap_state_machine import FullEAPStateMachine
+
 from helpers import FakeTimerScheduler
 
 
@@ -20,9 +21,9 @@ def check_counters(_func=None, *,
                    expected_auth_counter=0, expected_failure_counter=0, expected_logoff_counter=0):
     """Decorator to check the handlers have been called the
      correct number of times at the end of each test"""
+
     def decorator_check_counters(func):
         def wrapper(self):
-
             start_auth_counter = self.auth_counter
             start_failure_counter = self.failure_counter
             start_logoff_counter = self.logoff_counter
@@ -36,6 +37,7 @@ def check_counters(_func=None, *,
             return ret
 
         return wrapper
+
     if _func is None:
         return decorator_check_counters
     else:
@@ -82,7 +84,8 @@ class FullStateMachineStartTestCase(unittest.TestCase):
             self.assertNotIn('aaaEapResp is true. but data is false. This should never happen',
                              log.read())
 
-    def auth_handler(self, client_mac, port_id_mac, timer, vlan_name, filter_id):  # pylint: disable=unused-argument
+    def auth_handler(self, client_mac, port_id_mac, timer, vlan_name,
+                     filter_id):  # pylint: disable=unused-argument
         self.auth_counter += 1
         print('Successful auth from MAC %s' % str(client_mac))
 
@@ -184,7 +187,6 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.assertEqual(self.eap_output_queue.qsize(), start_eap_q_size + 0)
         self.assertEqual(self.radius_output_queue.qsize(), start_radius_q_size + 1)
         self.assertIsInstance(self.radius_output_queue.get_nowait()[0], IdentityMessage)
-
 
     @check_counters
     def test_timeout_failure2_from_aaa_timeout(self):
@@ -398,7 +400,8 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         self.assertEqual(self.radius_output_queue.qsize(), 1)
 
         message = TtlsMessage(self.src_mac, 3, Eap.RESPONSE, 0x00,
-                              bytes.fromhex('16030101280100012403032c36dbf8ee16b94b28efdb8c5603e07823f9b716557b5ef2624b026daea115760000aac030c02cc028c024c014c00a00a500a300a1009f006b006a0069006800390038003700360088008700860085c032c02ec02ac026c00fc005009d003d00350084c02fc02bc027c023c013c00900a400a200a0009e00670040003f003e0033003200310030009a0099009800970045004400430042c031c02dc029c025c00ec004009c003c002f00960041c011c007c00cc00200050004c012c008001600130010000dc00dc003000a00ff01000051000b000403000102000a001c001a00170019001c001b0018001a0016000e000d000b000c0009000a000d0020001e060106020603050105020503040104020403030103020303020102020203000f000101'))
+                              bytes.fromhex(
+                                  '16030101280100012403032c36dbf8ee16b94b28efdb8c5603e07823f9b716557b5ef2624b026daea115760000aac030c02cc028c024c014c00a00a500a300a1009f006b006a0069006800390038003700360088008700860085c032c02ec02ac026c00fc005009d003d00350084c02fc02bc027c023c013c00900a400a200a0009e00670040003f003e0033003200310030009a0099009800970045004400430042c031c02dc029c025c00ec004009c003c002f00960041c011c007c00cc00200050004c012c008001600130010000dc00dc003000a00ff01000051000b000403000102000a001c001a00170019001c001b0018001a0016000e000d000b000c0009000a000d0020001e060106020603050105020503040104020403030103020303020102020203000f000101'))
         self.sm.event(EventMessageReceived(message, self.PORT_ID_MAC))
         self.assertEqual(self.sm.state, self.sm.AAA_IDLE)
         self.assertEqual(self.eap_output_queue.qsize(), 1)

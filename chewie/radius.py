@@ -1,10 +1,10 @@
 """RADIUS Packets"""
 import copy
-import binascii
 import hashlib
 import hmac
 import struct
 
+import binascii
 from chewie.radius_attributes import ATTRIBUTE_TYPES, Attribute, MessageAuthenticator
 from chewie.radius_datatypes import Concat
 from chewie.utils import MessageParseError
@@ -53,7 +53,8 @@ class Radius:
         """
         try:
             code, packet_id, length, authenticator = struct.unpack("!BBH16s",
-                                                                   packed_message[:RADIUS_HEADER_LENGTH])
+                                                                   packed_message[
+                                                                   :RADIUS_HEADER_LENGTH])
         except struct.error as exception:
             raise MessageParseError('Unable to unpack first 20 bytes of RADIUS header') \
                 from exception

@@ -2,8 +2,10 @@
 """
 from eventlet.green import socket
 
+
 class RadiusSocket:
     """Handle the RADIUS socket"""
+
     def __init__(self, listen_ip, listen_port, server_ip, server_port):
         self.socket = None
         self.listen_ip = listen_ip

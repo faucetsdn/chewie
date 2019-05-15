@@ -1,9 +1,10 @@
-import struct
+"""This module provides a way to parse and pack and EAPOL Packet using Auth8021x"""
 
+import struct
 from chewie.utils import MessageParseError
 
 
-def hwaddr_to_string(hwaddr):
+def hwaddr_to_string(hwaddr):  # pylint: disable=missing-docstring
     return ":".join(["%02x" % x for x in hwaddr])
 
 
@@ -12,6 +13,7 @@ AUTH_8021X_HEADER_LENGTH = 1 + 1 + 2
 
 class Auth8021x:
     """basically a EAPOL packet"""
+
     def __init__(self, version, packet_type, data):
         self.version = version
         self.packet_type = packet_type
@@ -32,7 +34,7 @@ class Auth8021x:
                                                          packed_message[:AUTH_8021X_HEADER_LENGTH])
         except struct.error as exception:
             raise MessageParseError("Auth8021x unable to parse first 4 bytes") from exception
-        data = packed_message[AUTH_8021X_HEADER_LENGTH:AUTH_8021X_HEADER_LENGTH+length]
+        data = packed_message[AUTH_8021X_HEADER_LENGTH:AUTH_8021X_HEADER_LENGTH + length]
         return cls(version, packet_type, data)
 
     def pack(self):
@@ -45,8 +47,8 @@ class Auth8021x:
 
     def __repr__(self):
         return "%s(version=%s, packet_type=%s, data=%s)" % \
-            (self.__class__.__name__, self.version, self.packet_type, self.data)
+               (self.__class__.__name__, self.version, self.packet_type, self.data)
 
     def __str__(self):
         return "%s<packet_type=%d, data=%s>" % \
-            (self.__class__.__name__, self.packet_type, self.data)
+               (self.__class__.__name__, self.packet_type, self.data)

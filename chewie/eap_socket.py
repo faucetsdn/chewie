@@ -1,10 +1,11 @@
-"""Handle the EAP socket
-"""
-from fcntl import ioctl
-import struct
+"""Handle the EAP socket"""
 
+import struct
+from fcntl import ioctl
 from eventlet.green import socket
+
 from chewie.mac_address import MacAddress
+
 
 class EapSocket:
     """Handle the EAP socket"""
@@ -36,7 +37,9 @@ class EapSocket:
 
     def open(self):
         """Setup EAP socket"""
-        self.socket = socket.socket(socket.PF_PACKET, socket.SOCK_RAW, socket.htons(0x888e)) # pylint: disable=no-member
+
+        self.socket = socket.socket(socket.PF_PACKET, socket.SOCK_RAW,  # pylint: disable=no-member
+                                    socket.htons(0x888e))               # pylint: disable=no-member
         self.socket.bind((self.interface_name, 0))
 
     def get_interface_index(self):
