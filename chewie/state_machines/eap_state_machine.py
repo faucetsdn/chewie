@@ -815,8 +815,18 @@ class FullEAPStateMachine:
         """Notify the success callback and sets a timer event to expire this session"""
         self.logger.info('Yay authentication successful %s %s',
                          self.src_mac, self.aaa_identity.identity)
+
+        kwargs = {}
+        if self.radius_tunnel_private_group_id:
+            kwargs['vlan_name'] = self.radius_tunnel_private_group_id
+
+        if self.filter_id:
+            kwargs['filter_id'] = self.filter_id
+
         self.auth_handler(self.src_mac, str(self.port_id_mac),
-                          self.session_timeout, self.radius_tunnel_private_group_id, self.filter_id)
+                          self.session_timeout,
+                          **kwargs)
+
         self.aaa_eap_resp_data = None
 
         # new authentication so cancel the old session timeout event

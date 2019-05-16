@@ -241,6 +241,8 @@ class MessagePacker:
         if nas_port:
             attr_list.append(NASPort.create(nas_port))
 
+        # Get Password
+        # TODO Could add an 'EAP Request' option
         ciphertext = UserPassword.encrypt(secret, request_authenticator, no_dots_mac)
         attr_list.append(UserPassword.create(ciphertext))
 
