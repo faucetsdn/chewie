@@ -44,7 +44,10 @@ class Chewie:
                  radius_server_ip=None, radius_server_port=None, radius_server_secret=None,
                  chewie_id=None):
         self.interface_name = interface_name
-        self.log_name = logger.name + "." + Chewie.__name__
+        self.log_name = Chewie.__name__
+        if logger:
+            self.log_name = logger.name + "." + Chewie.__name__
+
         self.logger = get_logger(self.log_name)
         self.auth_handler = auth_handler
         self.failure_handler = failure_handler
@@ -117,15 +120,17 @@ class Chewie:
 
         self.pool.waitall()
 
-    def auth_success(self, src_mac, port_id, period, vlan_name, filter_id):
+    def auth_success(self, src_mac, port_id, period,
+                     *args, **kwargs):  # pylint: disable=unused-variable
         """authentication shim between faucet and chewie
         Args:
             src_mac (MacAddress): the mac of the successful supplicant
             port_id (MacAddress): the 'mac' identifier of what switch port the success is on
             period (int): time (seconds) until the session times out.
             """
+
         if self.auth_handler:
-            self.auth_handler(src_mac, port_id, vlan_name, filter_id)
+            self.auth_handler(src_mac, port_id, *args, **kwargs)
 
         self.port_to_identity_job[port_id] = self.timer_scheduler.call_later(
             period,
