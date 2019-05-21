@@ -11,7 +11,7 @@ from chewie.radius import Radius, RadiusAccessAccept, RadiusAttributesList, \
     InvalidResponseAuthenticatorError, RadiusAccessChallenge, RadiusAccessRequest
 from chewie.radius_attributes import UserName, ServiceType, FramedMTU, CalledStationId,\
     AcctSessionId, NASPortType, ConnectInfo, EAPMessage, MessageAuthenticator, State,\
-    VendorSpecific, CallingStationId
+    VendorSpecific, CallingStationId, UserPassword
 from chewie.radius_datatypes import Vsa, String, Enum, Text, Integer, Concat
 from chewie.utils import MessageParseError
 
@@ -333,3 +333,30 @@ class RadiusTestCase(unittest.TestCase):
         concat = Concat(bytes_data=big_concat_bytes)
         packed = concat.pack(EAPMessage.TYPE)
         self.assertEqual(expected_packed, packed)
+
+    def radius_user_password_encrypt(self, expected_password, secret, req_authenticator, expected_ciphertext):
+        ciphertext = UserPassword.encrypt(secret, req_authenticator, expected_password)
+        self.assertEqual(binascii.hexlify(expected_ciphertext), binascii.hexlify(ciphertext),
+                         "RADIUS User-Password encryption not equal %s : %s".format(
+                             binascii.hexlify(expected_ciphertext),
+                             binascii.hexlify(ciphertext)))
+
+        password = UserPassword.decrypt(secret, req_authenticator, ciphertext)
+        self.assertEqual(expected_password, password,
+                         "RADIUS User-Password decryption not equal %s : %s".format(
+                             expected_password, password))
+
+    def test_radius_user_password_short_encrypt(self):
+        expected_password = "microphone"
+        secret = "SECRET"
+        req_authenticator = 0x2761e938199248222da4e9c3af5927dd
+        expected_ciphertext = bytes.fromhex("3279631f3622ec5249304c5e48bd5cae")
+        return self.radius_user_password_encrypt(expected_password, secret, req_authenticator, expected_ciphertext)
+
+    def test_radius_user_password_long_encrypt_decrypt(self):
+        expected_password = "microphoneislongerthan16"
+        secret = "SECRET"
+        req_authenticator = 0x8e929a5727d9cc425cbcb4f24ee2e046
+        expected_ciphertext = bytes.fromhex("7654d755dffbb0d50ef7768e071ab01b5a371ee79883f81209ff482b6556d1fa")
+
+        return self.radius_user_password_encrypt(expected_password, secret, req_authenticator, expected_ciphertext)

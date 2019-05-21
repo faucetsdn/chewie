@@ -1,8 +1,7 @@
 """Unittests for chewie/chewie.py"""
 
-from collections import namedtuple
-
 import unittest
+from collections import namedtuple
 from unittest.mock import patch, Mock
 
 from chewie.chewie import Chewie
@@ -12,6 +11,7 @@ from chewie.utils import EapQueueMessage
 
 def return_if(expected, return_value):
     """allows us to do expect-this-return-that style mocking"""
+
     def inner_function(*args):
         """workaround to effectively give us an anonymous function"""
         if args == expected:
@@ -20,8 +20,10 @@ def return_if(expected, return_value):
 
     return inner_function
 
-FakeLogger = namedtuple('FakeLogger', ('name',)) # pylint: disable=invalid-name
-FakeEapMessage = namedtuple('FakeEapMessage', ('src_mac',)) # pylint: disable=invalid-name
+
+FakeLogger = namedtuple('FakeLogger', ('name',))  # pylint: disable=invalid-name
+FakeEapMessage = namedtuple('FakeEapMessage', ('src_mac',))  # pylint: disable=invalid-name
+
 
 class ChewieWithMocksTestCase(unittest.TestCase):
     """Main chewie.py test class"""
@@ -36,22 +38,24 @@ class ChewieWithMocksTestCase(unittest.TestCase):
     @patch("chewie.chewie.MessageParser.ethernet_parse")
     @patch("chewie.chewie.FullEAPStateMachine")
     @patch("chewie.chewie.sleep", Mock())
-    def test_eap_packet_in_goes_to_new_state_machine(self, state_machine, ethernet_parse): #pylint: disable=invalid-name
+    def test_eap_packet_in_goes_to_new_state_machine(self, state_machine,
+                                                     ethernet_parse):  # pylint: disable=invalid-name
         """test EAP packet creates a new state machine and is sent on"""
         self.chewie.eap_socket = Mock(**{'receive.return_value': 'message from socket'})
         ethernet_parse.side_effect = return_if(
             ('message from socket',),
             (FakeEapMessage('fake src mac'), 'fake dst mac')
-            )
+        )
         self.chewie.receive_eap_messages()
         state_machine().event.assert_called_with(
             EventMessageReceived(FakeEapMessage('fake src mac'), 'fake dst mac')
-            )
+        )
 
     @patch("chewie.chewie.Chewie.running", Mock(side_effect=[True, False]))
     @patch("chewie.chewie.MessagePacker.ethernet_pack")
     @patch("chewie.chewie.sleep", Mock())
-    def test_eap_output_packet_gets_packed_and_sent(self, ethernet_pack): #pylint: disable=invalid-name
+    def test_eap_output_packet_gets_packed_and_sent(self,
+                                                    ethernet_pack):  # pylint: disable=invalid-name
         """test EAP packet creates a new state machine and is sent on"""
         self.chewie.eap_socket = Mock()
         ethernet_pack.return_value = "packed ethernet"
@@ -64,7 +68,8 @@ class ChewieWithMocksTestCase(unittest.TestCase):
     @patch("chewie.chewie.MessageParser.radius_parse")
     @patch("chewie.chewie.Chewie.get_state_machine_from_radius_packet_id")
     @patch("chewie.chewie.sleep", Mock())
-    def test_radius_packet_in_goes_to_state_machine(self, state_machine, radius_parse): #pylint: disable=invalid-name
+    def test_radius_packet_in_goes_to_state_machine(self, state_machine,
+                                                    radius_parse):  # pylint: disable=invalid-name
         """test radius packet goes to a state machine"""
         # note that the state machine has to exist already - if not then we blow up
         fake_radius = namedtuple('Radius', ('packet_id',))('fake packet id')
@@ -77,16 +82,16 @@ class ChewieWithMocksTestCase(unittest.TestCase):
         radius_parse.side_effect = return_if(
             ('message from socket', 'SECRET', self.chewie.radius_lifecycle),
             fake_radius
-            )
+        )
         # not checking args as we can't mock the callback
         self.chewie.receive_radius_messages()
         state_machine().event.assert_called_with(
             'fake event'
-            )
+        )
 
     @patch("chewie.chewie.Chewie.running", Mock(side_effect=[True, False]))
     @patch("chewie.chewie.sleep", Mock())
-    def test_radius_output_packet_gets_packed_and_sent(self): #pylint: disable=invalid-name
+    def test_radius_output_packet_gets_packed_and_sent(self):  # pylint: disable=invalid-name
         """test EAP packet creates a new state machine and is sent on"""
         self.chewie.radius_socket = Mock()
 

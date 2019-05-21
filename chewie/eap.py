@@ -1,7 +1,9 @@
 """Module for parsing & packing EAP"""
 
-import struct
+# Ignore arguments differ on overridden functions due to changing inheritance hierarchies
+# pylint: disable=arguments-differ
 
+import struct
 from chewie.utils import MessageParseError
 
 EAP_HEADER_LENGTH = 1 + 1 + 2
@@ -12,6 +14,7 @@ PARSERS_TYPES = {}
 
 
 class Eap:
+    """Class for parsing & packing EAP messages"""
     REQUEST = 1
     RESPONSE = 2
     SUCCESS = 3
@@ -47,13 +50,13 @@ class Eap:
         if code in (Eap.REQUEST, Eap.RESPONSE):
             try:
                 packet_type, = struct.unpack("!B",
-                                             packed_message[EAP_HEADER_LENGTH :
+                                             packed_message[EAP_HEADER_LENGTH:
                                                             EAP_HEADER_LENGTH + EAP_TYPE_LENGTH])
             except struct.error as exception:
                 raise MessageParseError("EAP unable to unpack packet_type byte") \
                     from exception
 
-            data = packed_message[EAP_HEADER_LENGTH+EAP_TYPE_LENGTH:length]
+            data = packed_message[EAP_HEADER_LENGTH + EAP_TYPE_LENGTH:length]
             try:
                 return PARSERS[packet_type](code, packet_id, data)
             except KeyError as exception:
@@ -66,6 +69,7 @@ class Eap:
         raise MessageParseError("Got Eap packet with bad code: %s" % packed_message)
 
     def pack(self, packed_body):
+        """Pack an EAP Message"""
         header = struct.pack("!BBHB", self.code, self.packet_id,
                              EAP_HEADER_LENGTH + EAP_TYPE_LENGTH + len(packed_body),
                              self.PACKET_TYPE)
@@ -73,12 +77,12 @@ class Eap:
 
 
 def register_parser(cls):
+    """Register a packet type to the parser"""
     PARSERS[cls.PACKET_TYPE] = cls.parse
     PARSERS_TYPES[cls.PACKET_TYPE] = cls
     return cls
 
-
-
+# pylint: disable=missing-docstring
 @register_parser
 class EapIdentity(Eap):
     PACKET_TYPE = Eap.IDENTITY
@@ -108,11 +112,13 @@ class EapIdentity(Eap):
 
     def __repr__(self):
         return "%s(identity=%s)" % \
-            (self.__class__.__name__, self.identity)
+               (self.__class__.__name__, self.identity)
 
 
 @register_parser
 class EapMd5Challenge(Eap):
+    """EAP MD5-Challenge Packet"""
+
     PACKET_TYPE = Eap.MD5_CHALLENGE
 
     def __init__(self, code, packet_id, challenge, extra_data):
@@ -134,8 +140,8 @@ class EapMd5Challenge(Eap):
         except struct.error as exception:
             raise MessageParseError("%s unable to unpack first byte" % cls.__name__) \
                 from exception
-        challenge = packed_message[1:1+value_length]
-        extra_data = packed_message[1+value_length:]
+        challenge = packed_message[1:1 + value_length]
+        extra_data = packed_message[1 + value_length:]
         return cls(code, packet_id, challenge, extra_data)
 
     def pack(self):
@@ -145,10 +151,11 @@ class EapMd5Challenge(Eap):
 
     def __repr__(self):
         return "%s(challenge=%s, extra_data=%s)" % \
-            (self.__class__.__name__, self.challenge, self.extra_data)
+               (self.__class__.__name__, self.challenge, self.extra_data)
 
 
 class EapSuccess(Eap):
+    """EAP Success Packet"""
     def __init__(self, packet_id):
         self.packet_id = packet_id
 
@@ -161,10 +168,11 @@ class EapSuccess(Eap):
 
     def __repr__(self):
         return "%s(packet_id=%s)" % \
-            (self.__class__.__name__, self.packet_id)
+               (self.__class__.__name__, self.packet_id)
 
 
 class EapFailure(Eap):
+    """EAP Failure Packet"""
     def __init__(self, packet_id):
         self.packet_id = packet_id
 
@@ -177,11 +185,12 @@ class EapFailure(Eap):
 
     def __repr__(self):
         return "%s(packet_id=%s)" % \
-            (self.__class__.__name__, self.packet_id)
+               (self.__class__.__name__, self.packet_id)
 
 
 @register_parser
 class EapLegacyNak(Eap):
+    """EAP Legacy-NAK Packet"""
     PACKET_TYPE = Eap.LEGACY_NAK
 
     def __init__(self, code, packet_id, desired_auth_types):
@@ -211,7 +220,7 @@ class EapLegacyNak(Eap):
 
     def __repr__(self):
         return "%s(packet_id=%s, desired_auth_types=%s)" % \
-            (self.__class__.__name__, self.packet_id, self.desired_auth_types)
+               (self.__class__.__name__, self.packet_id, self.desired_auth_types)
 
 
 class EapTLSBase(Eap):
@@ -256,19 +265,22 @@ class EapTLSBase(Eap):
 
     def __repr__(self):
         return "%s(packet_id=%s, flags=%s, extra_data=%s)" % \
-            (self.__class__.__name__, self.packet_id, self.flags, self.extra_data)
+               (self.__class__.__name__, self.packet_id, self.flags, self.extra_data)
 
 
 @register_parser
 class EapTLS(EapTLSBase):
+    """EAP TLS Packet"""
     PACKET_TYPE = Eap.TLS
 
 
 @register_parser
 class EapTTLS(EapTLSBase):
+    """EAP TTLS Packet"""
     PACKET_TYPE = Eap.TTLS
 
 
 @register_parser
 class EapPEAP(EapTLSBase):
+    """PEAP Packet"""
     PACKET_TYPE = Eap.PEAP

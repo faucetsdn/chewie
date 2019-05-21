@@ -1,7 +1,7 @@
-
 # pylint: disable=missing-docstring
 
 import unittest
+
 from chewie.auth_8021x import Auth8021x
 
 

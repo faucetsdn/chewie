@@ -1,14 +1,14 @@
-
 # pylint: disable=missing-docstring
 import struct
 import unittest
+
+from chewie.eap import Eap
+from chewie.mac_address import MacAddress
+from chewie.message_parser import EapolStartMessage, EapolLogoffMessage, \
+    SuccessMessage, FailureMessage
 from chewie.message_parser import MessageParser, MessagePacker, IdentityMessage, \
     Md5ChallengeMessage, TtlsMessage, \
     LegacyNakMessage, TlsMessage, PeapMessage
-from chewie.message_parser import EapolStartMessage, EapolLogoffMessage,\
-    SuccessMessage, FailureMessage
-from chewie.mac_address import MacAddress
-from chewie.eap import Eap
 from chewie.radius_attributes import State, CalledStationId, NASPortType
 from chewie.utils import MessageParseError
 
@@ -192,7 +192,8 @@ class MessageParserTestCase(unittest.TestCase):
                                                 "010000b2026900b20d0016030100a7010000a303038c8007fa4ffe8f11fbe62debce4a1385e70be51efe77b105d205d2dc9ae815a5000038c02cc030009fcca9cca8ccaac02bc02f009ec024c028006bc023c0270067c00ac0140039c009c0130033009d009c003d003c0035002f00ff01000042000b000403000102000a000a0008001d0017001900180016000000170000000d0020001e060106020603050105020503040104020403030103020303020102020203")  # pylint: disable=line-too-long
         message = TlsMessage(src_mac=MacAddress.from_string("44:44:44:44:44:44"),
                              message_id=105, code=Eap.RESPONSE,
-                             flags=0x00, extra_data=bytes.fromhex('16030100a7010000a303038c8007fa4ffe8f11fbe62debce4a1385e70be51efe77b105d205d2dc9ae815a5000038c02cc030009fcca9cca8ccaac02bc02f009ec024c028006bc023c0270067c00ac0140039c009c0130033009d009c003d003c0035002f00ff01000042000b000403000102000a000a0008001d0017001900180016000000170000000d0020001e060106020603050105020503040104020403030103020303020102020203'))  # pylint: disable=line-too-long
+                             flags=0x00, extra_data=bytes.fromhex(
+                '16030100a7010000a303038c8007fa4ffe8f11fbe62debce4a1385e70be51efe77b105d205d2dc9ae815a5000038c02cc030009fcca9cca8ccaac02bc02f009ec024c028006bc023c0270067c00ac0140039c009c0130033009d009c003d003c0035002f00ff01000042000b000403000102000a000a0008001d0017001900180016000000170000000d0020001e060106020603050105020503040104020403030103020303020102020203'))  # pylint: disable=line-too-long
         packed_message = MessagePacker.ethernet_pack(message,
                                                      MacAddress.from_string("44:44:44:44:44:44"),
                                                      MacAddress.from_string("00:00:00:11:11:01"))
@@ -213,12 +214,12 @@ class MessageParserTestCase(unittest.TestCase):
         message = PeapMessage(src_mac=MacAddress.from_string("44:44:44:44:44:44"),
                               message_id=105, code=Eap.RESPONSE,
                               flags=0x00,
-                              extra_data=bytes.fromhex('16030100a7010000a303038c8007fa4ffe8f11fbe62debce4a1385e70be51efe77b105d205d2dc9ae815a5000038c02cc030009fcca9cca8ccaac02bc02f009ec024c028006bc023c0270067c00ac0140039c009c0130033009d009c003d003c0035002f00ff01000042000b000403000102000a000a0008001d0017001900180016000000170000000d0020001e060106020603050105020503040104020403030103020303020102020203'))  # pylint: disable=line-too-long
+                              extra_data=bytes.fromhex(
+                                  '16030100a7010000a303038c8007fa4ffe8f11fbe62debce4a1385e70be51efe77b105d205d2dc9ae815a5000038c02cc030009fcca9cca8ccaac02bc02f009ec024c028006bc023c0270067c00ac0140039c009c0130033009d009c003d003c0035002f00ff01000042000b000403000102000a000a0008001d0017001900180016000000170000000d0020001e060106020603050105020503040104020403030103020303020102020203'))  # pylint: disable=line-too-long
         packed_message = MessagePacker.ethernet_pack(message,
                                                      MacAddress.from_string("44:44:44:44:44:44"),
                                                      MacAddress.from_string("00:00:00:11:11:01"))
         self.assertEqual(expected_packed_message, packed_message)
-
 
     def test_legacy_nak_message_parses(self):
         packed_message = bytes.fromhex("0180c2000003000000111101888e"
@@ -271,7 +272,8 @@ class MessageParserTestCase(unittest.TestCase):
 
     def test_radius_packs_with_nas_port(self):
 
-        packed_message = bytes.fromhex("01bf00610123456789abcdeffedcba9876543210010a62656e62757274741f1361613a62623a63633a64643a65653a66660506000002a14f18021500160410824788d693e2adac6ce15641418228cf50121139bd192c46fe6d2a937d9573311b70")  # pylint: disable=line-too-long
+        packed_message = bytes.fromhex(
+            "01bf00610123456789abcdeffedcba9876543210010a62656e62757274741f1361613a62623a63633a64643a65653a66660506000002a14f18021500160410824788d693e2adac6ce15641418228cf50121139bd192c46fe6d2a937d9573311b70")  # pylint: disable=line-too-long
 
         src_mac = MacAddress.from_string("aa:bb:cc:dd:ee:ff")
         username = "benburtt"
@@ -289,7 +291,8 @@ class MessageParserTestCase(unittest.TestCase):
     def test_radius_packs_basic(self):
         """without extra_attributes or nas-port"""
 
-        packed_message = bytes.fromhex("01bf005b0123456789abcdeffedcba9876543210010a62656e62757274741f1361613a62623a63633a64643a65653a66664f18021500160410824788d693e2adac6ce15641418228cf5012caadc1c7a3be07fe63fdf83a59ed18c2")  # pylint: disable=line-too-long
+        packed_message = bytes.fromhex(
+            "01bf005b0123456789abcdeffedcba9876543210010a62656e62757274741f1361613a62623a63633a64643a65653a66664f18021500160410824788d693e2adac6ce15641418228cf5012caadc1c7a3be07fe63fdf83a59ed18c2")  # pylint: disable=line-too-long
 
         src_mac = MacAddress.from_string("aa:bb:cc:dd:ee:ff")
         username = "benburtt"
@@ -303,7 +306,8 @@ class MessageParserTestCase(unittest.TestCase):
                                                   request_authenticator, state, secret)
         self.assertEqual(packed_message, packed_radius)
 
-    def test_unicode_decode_error_converts_to_message_parse_error(self):  # pylint: disable=invalid-name
+    def test_unicode_decode_error_converts_to_message_parse_error(
+            self):  # pylint: disable=invalid-name
         data = bytes.fromhex("0163bf130103bf1301")
         try:
             MessageParser.eap_parse(data, MacAddress.from_string("00:00:00:12:34:56"))
@@ -312,7 +316,8 @@ class MessageParserTestCase(unittest.TestCase):
             return
         self.fail()
 
-    def test_struct_unpack_error_converts_to_message_parse_error(self):  # pylint: disable=invalid-name
+    def test_struct_unpack_error_converts_to_message_parse_error(
+            self):  # pylint: disable=invalid-name
         data = bytes.fromhex("01001000")
         try:
             MessageParser.eap_parse(data, MacAddress.from_string("00:00:00:12:34:56"))
@@ -332,3 +337,20 @@ class MessageParserTestCase(unittest.TestCase):
         self.assertRaises(MessageParseError,
                           MessageParser.eap_parse,
                           data, MacAddress.from_string("00:00:00:12:34:56"))
+
+    # TODO
+    # def test_radius_mab_packs_basic(self):
+    #     """without extra_attributes or nas-port"""
+    #
+    #     packed_message = bytes.fromhex("01630047c7835a254dc85f1e82ec0702956c6d09010e61616262636364646565666602128502bedd390c0020bf4a13966324d99c1e1361612d62622d63632d64642d65652d6666")  # pylint: disable=line-too-long
+    #
+    #     src_mac = MacAddress.from_string("aa:bb:cc:dd:ee:ff")
+    #     radius_packet_id = 99
+    #     request_authenticator = bytes.fromhex("c7835a254dc85f1e82ec0702956c6d09")
+    #     state = None
+    #     secret = "SECRET"
+    #
+    #     packed_radius = MessagePacker.radius_mab_pack(src_mac, radius_packet_id, request_authenticator, secret, None)
+    #     self.assertEqual(packed_message, packed_radius,
+    #                      "Did not match\nActual: {}\nExpected: {}".format(
+    #                          binascii.hexlify(packed_radius), binascii.hexlify(packed_message)))

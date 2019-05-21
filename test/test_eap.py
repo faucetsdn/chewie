@@ -1,7 +1,7 @@
-
 # pylint: disable=missing-docstring
 
 import unittest
+
 from chewie.eap import Eap, EapIdentity, EapMd5Challenge, EapSuccess, EapFailure
 
 
