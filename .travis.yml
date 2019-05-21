@@ -1,20 +1,17 @@
-dist: trusty
-language: python
-python:
-  - '3.4'
-  - '3.5'
-  - '3.6'
+dist: xenial
+sudo: required
+cache:
+  pip: true
+stages:
+  - test
+  - name: deploy
+    if: repo = faucetsdn/chewie AND tag IS present
 env:
   global:
     - GIT_COMMITTED_AT=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then git log -1 --pretty=format:%ct; else git log -1 --skip 1 --pretty=format:%ct; fi)
     - CC_TEST_REPORTER_ID=4469e75e5dc65ad713a0f9658ffbce390a68c44c0e412d921d257e0cd691e2da
-cache:
-  pip: true
 install:
-  - pip3 install -q -r requirements.txt -r test-requirements.txt
-  - python3 setup.py -q sdist
-  - pip3 install -q dist/*tar.gz
-  - pip3 show chewie
+  - pip3 install -r test-requirements.txt
 before_script:
   - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > /tmp/cc-test-reporter
   - chmod +x /tmp/cc-test-reporter
@@ -23,11 +20,33 @@ script:
   - ./run_tests.sh
 after_script:
   - /tmp/cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT
-deploy:
-  provider: pypi
-  user: faucet
-  password:
-    secure: GJd7A0WGoWmabqcmu+6vAnn9fzG6v6/ux3LFJQPNXM+b2WROP6QuKAIBnA9jBZRAun2rwziR3E0Y6TZZiL24CHLJepLe1CrgtEIxNgNMdcTwPG2j84hyOlVCmRUXRZpkEM/oEt+3GuuQyxMRjRN6juDy1vmflb2MY5IukcYxazm+s4LEDDcBwXU9NLBZhhOrYthBhy1jEAll3wTb83mZngb4a83qvj+uDu+RL9vUBkyzq8YbrJVWzdnn7byJ6WBhps49pxF1rZj5BmH2my50Ql+ZkMHlOcrpUOI0Qe5GrNN/BVNbYNLWf4KqE6klESC0K3eRPbc9g0tsAH6ej1uIYpjisFGc78uBifF+m2oMqBBeM0zKujebZxY6F7uuaWkYtSGhOAoWsY/ppy3UpxkN9wFJoyjkAtU3BGifrPPA9Nrn7MDtf3dUJzU7CMBjfgY2pFpfBwGu9WJ2+gHuaLcjMFH2MiiVJTWScnQ1xQ7GDPsWKvhZj3qrLK+3IrzCTPrjFAkOlgcN8qGcGBXbdg61jD3iF5paOy/TJDRlhw8DmuUkLhl+sbmWYrpnktEZZwf9XkFmYHQZTXbMnfPJd4Ve/6JPHWk3cSsV8sNtdjRrZFPbEI1lohGc1PR7JDELbmXc/Wg/VwEjPQVP91NjYPayCP+PFD0MFV68W/vjbNbqT4c=
-  on:
-    repo: faucetsdn/chewie
-    tags: true
+matrix:
+  include:
+jobs:
+  include:
+    - stage: test
+      language: python
+      python: 3.5
+      env:
+        - PYTYPE=false
+    - stage: test
+      language: python
+      python: 3.6
+      env:
+        - PYTYPE=true
+    - stage: test
+      language: python
+      python: 3.7
+      env:
+        - PYTYPE=false
+    - stage: deploy
+      language: python
+      python: 3.6
+      script: skip
+      deploy:
+        provider: pypi
+        on:
+          tags: true
+        user: faucet
+        password:
+          secure: GJd7A0WGoWmabqcmu+6vAnn9fzG6v6/ux3LFJQPNXM+b2WROP6QuKAIBnA9jBZRAun2rwziR3E0Y6TZZiL24CHLJepLe1CrgtEIxNgNMdcTwPG2j84hyOlVCmRUXRZpkEM/oEt+3GuuQyxMRjRN6juDy1vmflb2MY5IukcYxazm+s4LEDDcBwXU9NLBZhhOrYthBhy1jEAll3wTb83mZngb4a83qvj+uDu+RL9vUBkyzq8YbrJVWzdnn7byJ6WBhps49pxF1rZj5BmH2my50Ql+ZkMHlOcrpUOI0Qe5GrNN/BVNbYNLWf4KqE6klESC0K3eRPbc9g0tsAH6ej1uIYpjisFGc78uBifF+m2oMqBBeM0zKujebZxY6F7uuaWkYtSGhOAoWsY/ppy3UpxkN9wFJoyjkAtU3BGifrPPA9Nrn7MDtf3dUJzU7CMBjfgY2pFpfBwGu9WJ2+gHuaLcjMFH2MiiVJTWScnQ1xQ7GDPsWKvhZj3qrLK+3IrzCTPrjFAkOlgcN8qGcGBXbdg61jD3iF5paOy/TJDRlhw8DmuUkLhl+sbmWYrpnktEZZwf9XkFmYHQZTXbMnfPJd4Ve/6JPHWk3cSsV8sNtdjRrZFPbEI1lohGc1PR7JDELbmXc/Wg/VwEjPQVP91NjYPayCP+PFD0MFV68W/vjbNbqT4c=
