@@ -343,6 +343,42 @@ class ChewieTestCase(unittest.TestCase):
                                           '00:00:00:00:00:01').state,
             FullEAPStateMachine.SUCCESS2)
 
+
+
+
+    @patch_things
+    @setup_generators(sup_replies_success, radius_replies_success)
+    def test_chewie_identity_response_dot1x(self):
+        """test port status api and that identity request is sent after port up"""
+
+        global TO_SUPPLICANT
+        pool = eventlet.GreenPool()
+        pool.spawn(self.chewie.run)
+        eventlet.sleep(1)
+        self.chewie.port_down("00:00:00:00:00:01")
+
+        self.chewie.port_up("00:00:00:00:00:01")
+
+        while not self.fake_scheduler.jobs:
+            eventlet.sleep(SHORT_SLEEP)
+        self.fake_scheduler.run_jobs(num_jobs=1)
+
+        # check preemptive sent directly after port up
+        out_packet = TO_SUPPLICANT.get()
+        self.assertEqual(out_packet,
+                         bytes.fromhex('0180C2000003000000000001888e010000050167000501'))
+
+        # Send a response to the request
+        FROM_SUPPLICANT.put_nowait(bytes.fromhex("0000000000010242ac17006f888e010000050167000501"))
+        eventlet.sleep(2)
+
+        self.assertEqual(
+            self.chewie.get_state_machine('02:42:ac:17:00:6f',
+                                          '00:00:00:00:00:01').state,
+            FullEAPStateMachine.AAA_IDLE)
+
+
+
     @patch_things
     def test_port_status_changes(self):
         """test port status api and that identity request is sent after port up"""
