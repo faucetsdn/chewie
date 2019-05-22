@@ -42,7 +42,10 @@ jobs:
     - stage: deploy
       language: python
       python: 3.6
+      install: skip
+      before_script: skip
       script: skip
+      after_script: skip
       deploy:
         provider: pypi
         on:
