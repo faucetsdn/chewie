@@ -740,7 +740,7 @@ class FullEAPStateMachine:
         # TODO remove and refactor code - Just placing here to separate main pipeline for internals of SM
         if (isinstance(event, EventPreemptiveEAPResponseMessageReceived)
                 and event.preemptive_eap_id != self.current_id):
-            self.logget.info("Resetting eap due to recieved response to preemtive request")
+            self.logger.info("Resetting eap due to received response to preemtive request")
             self.eap_restart = True
             self.override_current_id = event.preemptive_eap_id
 
