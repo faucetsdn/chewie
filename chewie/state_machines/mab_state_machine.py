@@ -6,6 +6,7 @@ from transitions import Machine, State
 from chewie.event import EventMessageReceived, EventRadiusMessageReceived
 from chewie.radius import RadiusAccessAccept, RadiusAccessReject
 from chewie.utils import get_logger, log_method, RadiusQueueMessage
+import chewie.radius_attributes as radius_attributes
 
 
 class MacAuthenticationBypassStateMachine:
@@ -74,6 +75,7 @@ class MacAuthenticationBypassStateMachine:
     eth_message_data = None
 
     radius_state_attribute = None
+    # NOTE: This is not dynamic at this stage. Session timeout Attributes from radius are ignored
     session_timeout = DEFAULT_SESSION_TIMEOUT
     port_id_mac = None
 
@@ -184,7 +186,6 @@ class MacAuthenticationBypassStateMachine:
         self.eth_received = False
         self.eth_message_data = None
         self.aaa_response_attributes = None
-        self.port_id_mac = None
 
     def event(self, event):
         """Processes an event for the state machine"""
@@ -205,7 +206,8 @@ class MacAuthenticationBypassStateMachine:
     def handle_success(self):
         """Handle a AAA_Success event"""
         self.logger.info("Successful MAB Authentication. Running Auth Handler")
-        self.auth_handler(self.src_mac, str(self.port_id_mac), self.session_timeout, None, None)
+        self.auth_handler(self.src_mac, str(self.port_id_mac), self.session_timeout,
+                          self.aaa_response_attributes)
 
     def handle_failure(self):
         """Handle a AAA_Failure event"""
