@@ -1,15 +1,15 @@
 #!/bin/bash
 FILE_NAME=$(readlink -f "$0")
-export CHEWIE_ROOT=$(dirname "$FILE_NAME")
 set -e  # quit on error
 
-LOG_DIR=/tmp/
+export LOG_DIR=/tmp/
+export CHEWIE_ROOT=$(dirname "$FILE_NAME")
+export MIN_LINT_RATING=8.0
 
 UNIT_TEST=1
 CODE_CHECK=1
 INTEGRATION=1
 #MIN_CODE_COVERAGE=85
-MIN_LINT_RATING=8.0
 
 # allow user to skip parts of docker test
 while getopts "inu" o $CHEWIE_TESTS; do
@@ -49,8 +49,7 @@ pip3 install --upgrade -q -r ${CHEWIE_ROOT}/test-requirements.txt -r ${CHEWIE_RO
 # ============================= Unit Tests =============================
 if [ "$UNIT_TEST" == 1 ] ; then
     echo "=============== Running Unit Tests ================="
-    time PYTHONPATH=${CHEWIE_ROOT} pytest -v --cov=chewie --cov-report term \
-        --cov-report=xml:${LOG_DIR}coverage.xml ${CHEWIE_ROOT}/test/test_*.py
+    time ${CHEWIE_ROOT}/test/run_unit_tests.sh
 fi
 
 # ============================= Code Checks =============================
