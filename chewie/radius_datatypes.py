@@ -1,7 +1,6 @@
 """Radius Attribute Datatypes"""
 import struct
 
-import chewie.message_parser
 import math
 from chewie.utils import MessageParseError
 
@@ -185,9 +184,10 @@ class Concat(DataType):
     DATA_TYPE_VALUE = 6
 
     def __init__(self, bytes_data=None, raw_data=None):
+        from chewie.message_parser import EapMessage, MessagePacker
         if raw_data:
-            if isinstance(raw_data, chewie.message_parser.EapMessage):
-                bytes_data = chewie.message_parser.MessagePacker.eap_pack(raw_data)[2]
+            if isinstance(raw_data, EapMessage):
+                bytes_data = MessagePacker.eap_pack(raw_data)[2]
             else:
                 bytes_data = bytes.fromhex(raw_data)
             # self.is_valid_length(data)
@@ -228,7 +228,8 @@ class Concat(DataType):
         return packed
 
     def data(self):
-        return chewie.message_parser.MessageParser.eap_parse(self.bytes_data, None)
+        from chewie.message_parser import MessageParser
+        return MessageParser.eap_parse(self.bytes_data, None)
 
     def full_length(self):
         return self.AVP_HEADER_LEN * \
