@@ -1,4 +1,9 @@
 #!/bin/bash
+
+set -e  # quit on error
+
+echo "src_files"
+
 if [ -z "$CHEWIE_ROOT" ]; then
     CDIR=`dirname $0`
     CHEWIE_ROOT=$(realpath ${CDIR}"/../..")

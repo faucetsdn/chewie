@@ -1,8 +1,10 @@
 #!/bin/bash
-FILE_NAME=$(readlink -f "$0")
 set -e  # quit on error
 
-export LOG_DIR=/tmp/
+bash --version
+
+
+FILE_NAME=$(readlink -f "$0")
 export CHEWIE_ROOT=$(dirname "$FILE_NAME")
 export MIN_LINT_RATING=8.0
 export MIN_CODE_COVERAGE=40
@@ -51,9 +53,9 @@ if [ "$CODE_CHECK" == 1 ] ; then
 
     if [ "${PYTYPE}" != "false" ] ; then
         echo "=============== Running PyType ===================="
-        time pytype -V$PYTYPE_TARGET_VERSION ${CHEWIE_ROOT}/chewie/*py
+        pytype -V$PYTYPE_TARGET_VERSION ${CHEWIE_ROOT}/chewie/*py
     fi
     
     echo "=============== Running Pylint ===================="
-    time ${CHEWIE_ROOT}/test/codecheck/pylint.sh
+    bash ${CHEWIE_ROOT}/test/codecheck/pylint.sh
 fi
