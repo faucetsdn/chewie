@@ -9,7 +9,7 @@ export MIN_CODE_COVERAGE=40
 
 UNIT_TEST=1
 CODE_CHECK=1
-INTEGRATION=1
+INTEGRATION=0
 
 # allow user to skip parts of docker test
 while getopts "inu" o $CHEWIE_TESTS; do
