@@ -9,7 +9,8 @@ export CHEWIE_ROOT=$(dirname "$FILE_NAME")
 export MIN_LINT_RATING=8.0
 export MIN_CODE_COVERAGE=40
 
-UNIT_TEST=1
+#TODO : Set to 1 by default
+UNIT_TEST=0
 CODE_CHECK=1
 
 # allow user to skip parts of the tests
@@ -56,6 +57,7 @@ if [ "$CODE_CHECK" == 1 ] ; then
         pytype -V$PYTYPE_TARGET_VERSION ${CHEWIE_ROOT}/chewie/*py
     fi
     
+    cd test/codecheck
     echo "=============== Running Pylint ===================="
-    bash ${CHEWIE_ROOT}/test/codecheck/pylint.sh
+    ./pylint.sh || exit 1
 fi
