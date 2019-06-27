@@ -1,4 +1,7 @@
 #!/bin/bash
+if [ -z "$CHEWIE_ROOT" ]; then
+    CDIR=`dirname $0`
+    CHEWIE_ROOT=$(realpath ${CDIR}"/../..")
+fi
 
-CHEWIEHOME=`dirname $0`"/../.."
-for i in chewie test ; do find $CHEWIEHOME/$i/ -type f -name [a-z]*.py ; done
+for i in chewie test ; do find $CHEWIE_ROOT/$i/ -type f -name [a-z]*.py ; done
