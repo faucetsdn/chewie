@@ -1,6 +1,9 @@
 #!/bin/sh
 # TODO: must be run from chewie root
-pip3 install .
+
+echo "=============== Installing Pypi Dependencies ================="
+pip3 install --upgrade -q -r ./test-requirements.txt -r ./requirements.txt
+
 if [ -z "${TRAVIS_PYTHON_VERSION}" ]; then
     PYTYPE_TARGET_VERSION=3.6
 else
