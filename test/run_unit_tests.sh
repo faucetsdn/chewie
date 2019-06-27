@@ -1,7 +1,10 @@
 #!/bin/bash
 set -e
 
-MIN_CODE_COVERAGE=92
+if [ -z MIN_CODE_COVERAGE ]; then
+    MIN_CODE_COVERAGE=90
+fi
+
 SCRIPTPATH=$(readlink -f "$0")
 TESTDIR=`dirname ${SCRIPTPATH}`
 

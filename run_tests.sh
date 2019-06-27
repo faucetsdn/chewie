@@ -5,11 +5,11 @@ set -e  # quit on error
 export LOG_DIR=/tmp/
 export CHEWIE_ROOT=$(dirname "$FILE_NAME")
 export MIN_LINT_RATING=8.0
+export MIN_CODE_COVERAGE=40
 
 UNIT_TEST=1
 CODE_CHECK=1
 INTEGRATION=1
-#MIN_CODE_COVERAGE=85
 
 # allow user to skip parts of docker test
 while getopts "inu" o $CHEWIE_TESTS; do
