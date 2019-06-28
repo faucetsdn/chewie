@@ -57,7 +57,6 @@ if [ "$CODE_CHECK" == 1 ] ; then
         pytype -V$PYTYPE_TARGET_VERSION ${CHEWIE_ROOT}/chewie/*py
     fi
     
-    cd test/codecheck
     echo "=============== Running Pylint ===================="
-    ./pylint.sh || exit 1
+    test/codecheck/pylint.sh || exit 1
 fi

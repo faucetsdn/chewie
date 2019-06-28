@@ -2,6 +2,7 @@
 
 CHEWIEHOME=`dirname $0`"/../.."
 PYTHONPATH=$CHEWIEHOME
+echo $CHEWIEHOME
 
 MINRATING=8.0
 
