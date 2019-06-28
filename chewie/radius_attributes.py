@@ -300,6 +300,25 @@ class EAPMessage(Attribute):
         as Concat.pack() may return multiple packed AVP (each with their own length)"""
         return self._data_type.pack(self.TYPE)
 
+    # NOTE: Delayed imports are to avoid circular dependency chain.
+    # Should be refactored out when possible but will need to redesign the message_parser module.
+    @classmethod
+    def create(cls, data):
+        """Factory method.
+        Args:
+            data: object of python type (int, str, bytes, ...)
+        Returns:
+            Attribute subclass.
+        """
+        from chewie.message_parser import MessagePacker, EapMessage
+        if isinstance(data, EapMessage):
+            return cls(cls.DATA_TYPE(bytes_data=MessagePacker.eap_pack(data)[2]))  # pylint: disable=not-callable
+        else:
+            return super(EAPMessage, cls).create(data)
+
+    def data(self):
+        from chewie.message_parser import MessageParser
+        return MessageParser.eap_parse(self._data_type.data(), None)
 
 @register_attribute_type
 class MessageAuthenticator(Attribute):
