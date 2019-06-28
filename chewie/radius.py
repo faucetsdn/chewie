@@ -185,9 +185,9 @@ class RadiusPacket(Radius):
 
             radius_packet.authenticator = request_authenticator
 
-            original_ma = message_authenticator.data_type.bytes_data
+            original_ma = message_authenticator.bytes_data
             # Replace the Original Message Authenticator
-            message_authenticator.data_type.bytes_data = bytes.fromhex(
+            message_authenticator.bytes_data = bytes.fromhex(
                 "00000000000000000000000000000000")
 
             radius_packet.pack()
@@ -267,7 +267,7 @@ class RadiusAttributesList:
         for value, list_ in attributes_to_concat.items():
             concatenated_data = b""
             for d, i in list_:
-                concatenated_data += d.data_type.bytes_data
+                concatenated_data += d.bytes_data
             concatenated_attributes.append(tuple((ATTRIBUTE_TYPES[value].parse(concatenated_data),
                                                   i)))
         # Remove old Attributes that were concatenated.
@@ -370,5 +370,5 @@ class RadiusAttributesList:
     def to_dict(self):
         ret = {}
         for a in self.attributes:
-            ret[a.DESCRIPTION] = a.data_type.data()
+            ret[a.DESCRIPTION] = a.data()
         return ret

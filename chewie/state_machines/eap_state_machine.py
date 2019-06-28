@@ -724,7 +724,7 @@ class FullEAPStateMachine:
     def strip_eap_from_radius_packet(self, radius):
         """Build a EventRadiusMessageReceived from a radius message"""
         eap_msg_attribute = radius.attributes.find(radius_attributes.EAPMessage.DESCRIPTION)
-        eap_msg = eap_msg_attribute.data_type.data()
+        eap_msg = eap_msg_attribute.data()
         state = radius.attributes.find(radius_attributes.State.DESCRIPTION)
         self.logger.info("radius EAP: %s", eap_msg)
         return EventRadiusMessageReceived(eap_msg, state, radius.attributes.to_dict())

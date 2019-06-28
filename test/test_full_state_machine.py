@@ -132,7 +132,7 @@ class FullStateMachineStartTestCase(unittest.TestCase):
         Here we restart part way through another."""
         self.test_md5_challenge_request()
 
-        self.assertEqual(self.sm.radius_state_attribute.data_type.data(), b'random state')
+        self.assertEqual(self.sm.radius_state_attribute.data(), b'random state')
 
         self.test_eap_restart()
         self.assertIsNone(self.sm.radius_state_attribute)
