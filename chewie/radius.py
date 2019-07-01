@@ -125,8 +125,8 @@ class RadiusPacket(Radius):
         try:
             position = self.attributes.indexof(MessageAuthenticator.DESCRIPTION) + \
                        RADIUS_HEADER_LENGTH + Attribute.HEADER_SIZE
-        except ValueError as e:
-            print(e.message)
+        except ValueError as err:
+            print(err)
             return self.packed
 
         if secret:
