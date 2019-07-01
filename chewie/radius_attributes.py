@@ -7,9 +7,7 @@ from hashlib import md5
 
 import math
 from chewie.radius_datatypes import Concat, Enum, Integer, String, Text, Vsa
-
 ATTRIBUTE_TYPES = {}
-
 
 # TODO Fix Class Docstrings
 
@@ -23,7 +21,7 @@ class Attribute():
     HEADER_SIZE = 1 + 1
 
     def __init__(self, data_type):
-        self.data_type = data_type
+        self._data_type = data_type
 
     @classmethod
     def create(cls, data):
@@ -53,7 +51,7 @@ class Attribute():
             packed attribute (including header) bytes
         """
         tl = struct.pack("!BB", self.TYPE, self.full_length())
-        v = self.data_type.pack(self.TYPE)
+        v = self._data_type.pack(self.TYPE)
         return tl + v
 
     def full_length(self):
@@ -61,7 +59,18 @@ class Attribute():
         Returns:
             length (including header).
         """
-        return self.data_type.full_length()
+        return self._data_type.full_length()
+
+    def data(self):
+        return self._data_type.data()
+
+    @property
+    def bytes_data(self):
+        return self._data_type.bytes_data
+
+    @bytes_data.setter
+    def bytes_data(self, value):
+        self._data_type.bytes_data = value
 
 
 def register_attribute_type(cls):
@@ -289,8 +298,27 @@ class EAPMessage(Attribute):
     def pack(self):
         """Concat types need to override AttributeType.pack().
         as Concat.pack() may return multiple packed AVP (each with their own length)"""
-        return self.data_type.pack(self.TYPE)
+        return self._data_type.pack(self.TYPE)
 
+    # NOTE: Delayed imports are to avoid circular dependency chain.
+    # Should be refactored out when possible but will need to redesign the message_parser module.
+    @classmethod
+    def create(cls, data):
+        """Factory method.
+        Args:
+            data: object of python type (int, str, bytes, ...)
+        Returns:
+            Attribute subclass.
+        """
+        from chewie.message_parser import MessagePacker, EapMessage
+        if isinstance(data, EapMessage):
+            return cls(cls.DATA_TYPE(bytes_data=MessagePacker.eap_pack(data)[2]))  # pylint: disable=not-callable
+        else:
+            return super(EAPMessage, cls).create(data)
+
+    def data(self):
+        from chewie.message_parser import MessageParser
+        return MessageParser.eap_parse(self._data_type.data(), None)
 
 @register_attribute_type
 class MessageAuthenticator(Attribute):
