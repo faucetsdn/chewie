@@ -9,7 +9,7 @@ User Documentation
 
    intro
    development
-
+   architecture
 
 Indices and tables
 ==================

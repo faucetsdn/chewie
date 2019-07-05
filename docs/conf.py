@@ -29,6 +29,7 @@ author = 'Chewie Developers'
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.graphviz'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -63,9 +64,22 @@ html_static_path = ['_static']
 
 def run_apidoc(_):
     """Call sphinx-apidoc on chewie module"""
-
     from sphinx.ext.apidoc import main as apidoc_main
     apidoc_main(['-e', '-o', 'source/apidoc', '../chewie'])
+
+
+def build_state_machine_diagrams(_):
+    from chewie.state_machines.eap_state_machine import FullEAPStateMachine
+    from chewie.state_machines.mab_state_machine import MacAuthenticationBypassStateMachine \
+        as MABStateMachine
+    from datetime import datetime
+    now = datetime.now().time()
+    FullEAPStateMachine(None, None, None, None, None, None, None, None, True
+                        ).get_graph().draw('eap_state_machine.png', prog='dot')
+
+    MABStateMachine(None, None, None,None, None, None, True).get_graph().draw(
+        'mab_state_machine.png', prog='dot')
+
 
 def setup(app):
     """ Add hooks into Sphinx to change behaviour and autogen documentation """
@@ -74,3 +88,5 @@ def setup(app):
     app.add_css_file("css/responsive-tables.css")
     # Override Sphinx setup to trigger sphinx-apidoc.
     app.connect('builder-inited', run_apidoc)
+    # Build State Machine Graphs
+    app.connect('builder-inited', build_state_machine_diagrams)
