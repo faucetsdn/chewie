@@ -2,12 +2,12 @@
 
 CHEWIEHOME=`dirname $0`"/../.."
 PYTHONPATH=$CHEWIEHOME
-
 MINRATING=8.0
 
 lintfile=`mktemp`.lint
 
 for f in $* ; do
+    f=$(realpath $f)
     PYTHONPATH=$PYTHONPATH pylint --rcfile=/dev/null $f > $lintfile
     rating=`cat $lintfile | grep -ohE "rated at [0-9\.]+" | sed "s/rated at //g"`
     echo pylint $f: $rating
