@@ -50,7 +50,7 @@ fi
 if [ "$UNIT_TEST" == 1 ] ; then
     echo "=============== Running Unit Tests ================="
     time env PYTHONPATH=${CHEWIE_ROOT} pytest -v --cov=chewie --cov-report term \
-        --cov-report=xml:coverage.xml ${CHEWIE_ROOT}/test/test_*.py
+        --cov-report=xml:coverage.xml ${CHEWIE_ROOT}/test/unit/test_*.py
 fi
 
 # ============================= Code Checks =============================
