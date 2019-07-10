@@ -7,9 +7,10 @@ CHEWIE_ROOT=$(dirname "$FILE_NAME")
 PIP_INSTALL=1
 UNIT_TEST=1
 CODE_CHECK=1
+INTEGRATION=1
 
 # allow user to skip parts of docker test
-while getopts "nuz" o $CHEWIE_TESTS; do
+while getopts "nuzi" o $CHEWIE_TESTS; do
   case "${o}" in
         n)
             # skip code check
@@ -20,6 +21,11 @@ while getopts "nuz" o $CHEWIE_TESTS; do
             # skip unit tests
             echo "Skipping Unit Tests."
             UNIT_TEST=0
+            ;;
+        i)
+            # skip pip install
+            echo "Skipping Integration Tests."
+            INTEGRATION=0
             ;;
         z)
             # skip pip install
@@ -40,10 +46,11 @@ else
 fi
 
 
-# ============================= Unit Tests =============================
+# ============================= PIP Install =============================
 if [ "$PIP_INSTALL" == 1 ] ; then
     echo "=============== Installing Pypi Dependencies ================="
-    pip3 install --upgrade -r ${CHEWIE_ROOT}/test-requirements.txt -r ${CHEWIE_ROOT}/requirements.txt
+    pip3 install --upgrade --cache-dir=/var/tmp/pip-cache \
+        -r ${CHEWIE_ROOT}/test-requirements.txt -r ${CHEWIE_ROOT}/requirements.txt
 fi
 
 # ============================= Unit Tests =============================
@@ -63,4 +70,12 @@ if [ "$CODE_CHECK" == 1 ] ; then
 
     echo "=============== Running Pylint ===================="
     time ${CHEWIE_ROOT}/test/codecheck/pylint.sh
+fi
+
+# ============================= Integration Tests =============================
+if [ "$INTEGRATION" == 1 ] ; then
+    echo "=============== Running Integration Tests ===================="
+    time docker run -it --rm --privileged --cap-add NET_ADMIN -e CHEWIE_ROOT="/chewie-src/" \
+        -e PIP_INSTALL=1 -v ${CHEWIE_ROOT}:/chewie-src:ro -v /var/tmp/pip-cache:/var/tmp/pip-cache \
+        faucet/test-base bash /chewie-src/docker/run_integration_tests.sh
 fi
