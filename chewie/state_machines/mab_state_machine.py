@@ -1,7 +1,7 @@
 """This Module provides a Bare-bones Mac Authentication Bypass State Machine provide 802.1x
 MAB Support in Chewie"""
 
-from transitions import Machine, State
+from transitions import State
 
 from chewie.event import EventMessageReceived, EventRadiusMessageReceived
 from chewie.radius import RadiusAccessAccept, RadiusAccessReject
@@ -143,7 +143,7 @@ class MacAuthenticationBypassStateMachine:
 
     # pylint: disable=too-many-arguments
     def __init__(self, radius_output_queue, src_mac, timer_scheduler,
-                 auth_handler, failure_handler, log_prefix):
+                 auth_handler, failure_handler, log_prefix, graph_machine=False):
         """
 
         Args:
@@ -154,6 +154,11 @@ class MacAuthenticationBypassStateMachine:
             timer_scheduler (Scheduler): where to put timer events. (useful for Retransmits)
             log_prefix (String): the prefix used when outputting logs
         """
+        if graph_machine:
+            from transitions.extensions import GraphMachine as Machine
+        else:
+            from transitions import Machine
+
         self.radius_output_messages = radius_output_queue
         self.src_mac = src_mac
         self.timer_scheduler = timer_scheduler

@@ -1,7 +1,7 @@
 """Loosely based on RFC4137 'EAP State Machines' with some interpretation"""
 import random
 
-from transitions import Machine, State
+from transitions import State
 
 from chewie.eap import Eap
 from chewie.event import EventMessageReceived, EventRadiusMessageReceived, EventTimerExpired, \
@@ -334,7 +334,7 @@ class FullEAPStateMachine:
     decision = None
 
     def __init__(self, eap_output_queue, radius_output_queue, src_mac, timer_scheduler,
-                 auth_handler, failure_handler, logoff_handler, log_prefix):
+                 auth_handler, failure_handler, logoff_handler, log_prefix, graph_machine=False):
         """
 
         Args:
@@ -353,6 +353,11 @@ class FullEAPStateMachine:
         self.auth_handler = auth_handler
         self.failure_handler = failure_handler
         self.logoff_handler = logoff_handler
+
+        if graph_machine:
+            from transitions.extensions import GraphMachine as Machine
+        else:
+            from transitions import Machine
 
         self.machine = Machine(model=self, states=FullEAPStateMachine.STATES,
                                transitions=FullEAPStateMachine.TRANSITIONS,
