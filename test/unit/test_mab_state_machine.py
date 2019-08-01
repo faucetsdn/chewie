@@ -122,3 +122,10 @@ class MABStateMachineTest(unittest.TestCase):
 
         self.receive_radius_reject()
         self.assertEqual(self.sm.AAA_FAILURE, self.sm.state)
+
+    @check_counters(expected_failure_counter=1, expected_auth_counter=1)
+    def test_fail_first_attempt_then_success(self):
+        """Smoke Test incorrect details sent to RADIUS Server"""
+        self.sm.port_enabled = True
+        self.test_smoke_test_fail_radius()
+        self.test_smoke_test_success_radius()
