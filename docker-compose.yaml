@@ -6,7 +6,7 @@ services:
             context: .
             dockerfile: Dockerfile.wpasupplicant
         image: 'chewie/wpasupplicant:latest'
-        depends_on: chewie
+        depends_on: [chewie]
         command: bash -c "wpa_supplicant -dd -c/tmp/wpasupplicant/wired-peap.conf -ieth0 -Dwired;"
         networks:
             wpasupplicant-net:
