@@ -39,13 +39,6 @@ while getopts "nuzi" o $CHEWIE_TESTS; do
     esac
 done
 
-if [ -z "${TRAVIS_PYTHON_VERSION}" ]; then
-    PYTYPE_TARGET_VERSION=3.7
-else
-    PYTYPE_TARGET_VERSION=$TRAVIS_PYTHON_VERSION
-fi
-
-
 # ============================= PIP Install =============================
 if [ "$PIP_INSTALL" == 1 ] ; then
     echo "=============== Installing Pypi Dependencies ================="
@@ -65,7 +58,8 @@ if [ "$CODE_CHECK" == 1 ] ; then
 
     if [ "${PYTYPE}" != "false" ] ; then
         echo "=============== Running PyType ===================="
-        time PYTHONPATH=${CHEWIE_ROOT} pytype -V$PYTYPE_TARGET_VERSION ${CHEWIE_ROOT}/chewie/*py
+        time PYTHONPATH=${CHEWIE_ROOT} pytype --config ${CHEWIE_ROOT}/setup.cfg \
+            ${CHEWIE_ROOT}/chewie/*py
     fi
 
     echo "=============== Running Pylint ===================="
