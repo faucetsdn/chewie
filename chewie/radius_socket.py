@@ -3,11 +3,14 @@
 from eventlet.green import socket
 from chewie.utils import get_logger
 
-
+# TODO Replace constant pylint tag with .pylintrc
+# Disable no-member for use with eventlet.green.socket
+# pylint: disable=no-member
 class RadiusSocket:
     """Handle the RADIUS socket"""
 
-    def __init__(self, listen_ip, listen_port, server_ip, server_port, log_prefix):
+    def __init__(self, listen_ip, listen_port, server_ip,  # pylint: disable=too-many-arguments
+                 server_port, log_prefix):
         self.socket = None
         self.listen_ip = listen_ip
         self.listen_port = listen_port
@@ -17,10 +20,10 @@ class RadiusSocket:
 
     def setup(self):
         """Setup RADIUS Socket"""
-        self.logger.info("Setting up radius socket on interface: %s", self.interface_name)
+        self.logger.info("Setting up radius socket.")
         try:
             self.socket = socket.socket(socket.AF_INET,
-                                        socket.SOCK_DGRAM)  # pylint: disable=no-member
+                                        socket.SOCK_DGRAM)
             self.socket.bind((self.listen_ip, self.listen_port))
         except socket.error as err:
             self.logger.error("Unable to setup socket: %s", str(err))

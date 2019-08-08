@@ -109,7 +109,7 @@ RADIUS_REPLY_GENERATOR = None  # radius_replies()
 
 
 class FakeEapSocket:
-    def __init__(self, _interface_name):
+    def __init__(self, _interface_name, _log_prefix):
         # TODO inject queues in constructor instead of using globals
         pass
 
@@ -140,7 +140,7 @@ class FakeEapSocket:
 
 
 class FakeMabSocket:
-    def __init__(self, _interface_name):
+    def __init__(self, _interface_name, _log_prefix):
         # TODO inject queues in constructor instead of using globals
         pass
 
@@ -159,7 +159,7 @@ class FakeMabSocket:
 
 
 class FakeRadiusSocket:
-    def __init__(self, _listen_ip, _listen_port, _server_ip, _server_port):
+    def __init__(self, _listen_ip, _listen_port, _server_ip, _server_port, _log_prefix):
         # TODO inject queues in constructor instead of using globals
         pass
 

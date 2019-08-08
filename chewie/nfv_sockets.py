@@ -1,14 +1,15 @@
 """Supplicant-Facing Sockets"""
 
 import struct
+from abc import ABC, abstractmethod
 from fcntl import ioctl
 from eventlet.green import socket
-from abc import ABC, abstractmethod
 
 from chewie.mac_address import MacAddress
 from chewie.utils import get_logger
 
-
+# Disable no-member for use with eventlet.green.socket
+# pylint: disable=no-member
 class PromiscuousSocket(ABC):
     """Abstract Raw Socket in Promiscuous Mode"""
     SIOCGIFINDEX = 0x8933
@@ -18,15 +19,15 @@ class PromiscuousSocket(ABC):
     EAP_ADDRESS = MacAddress.from_string("01:80:c2:00:00:03")
 
     @abstractmethod
-    def send(self, data):
+    def send(self, data):  # pylint: disable=missing-docstring
         pass
 
     @abstractmethod
-    def receive(self):
+    def receive(self):  # pylint: disable=missing-docstring
         pass
 
     @abstractmethod
-    def setup(self):
+    def setup(self):  # pylint: disable=missing-docstring
         pass
 
     def __init__(self, interface_name, log_prefix):
@@ -91,7 +92,7 @@ class MabSocket(PromiscuousSocket):
 
     def setup(self):
         """Set up the socket"""
-        self.setup(socket.htons(self.IP_ETHERTYPE))
+        self._setup(socket.htons(self.IP_ETHERTYPE))
 
     def send(self, data):
         """Not Implemented -- This socket is purely for Listening"""

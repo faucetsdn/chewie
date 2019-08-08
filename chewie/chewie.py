@@ -92,7 +92,7 @@ class Chewie:
         """setup chewie and start socket eventlet threads"""
         self.logger.info("Starting")
         self.setup_eap_socket()
-        self.setup_ip_activity_socket()
+        self.setup_mab_socket()
         self.setup_radius_socket()
         self.start_threads_and_wait()
 
@@ -111,7 +111,7 @@ class Chewie:
 
         self.eventlets.append(self.pool.spawn(self.send_eap_messages))
         self.eventlets.append(self.pool.spawn(self.receive_eap_messages))
-        self.eventlets.append(self.pool.spawn(self.receive_ip_activity_messages))
+        self.eventlets.append(self.pool.spawn(self.receive_mab_messages))
 
         self.eventlets.append(self.pool.spawn(self.send_radius_messages))
         self.eventlets.append(self.pool.spawn(self.receive_radius_messages))
@@ -265,20 +265,24 @@ class Chewie:
 
     def setup_eap_socket(self):
         """Setup EAP socket"""
-        self.eap_socket = EapSocket(self.interface_name)
+        log_prefix = "%s.EapSocket" % self.logger.name
+        self.eap_socket = EapSocket(self.interface_name, log_prefix)
         self.eap_socket.setup()
 
-    def setup_ip_activity_socket(self):
-        """Setup IP Activity socket"""
-        self.mab_socket = MabSocket(self.interface_name)
+    def setup_mab_socket(self):
+        """Setup Mab socket"""
+        log_prefix = "%s.MabSocket" % self.logger.name
+        self.mab_socket = MabSocket(self.interface_name, log_prefix)
         self.mab_socket.setup()
 
     def setup_radius_socket(self):
         """Setup Radius socket"""
+        log_prefix = "%s.RadiusSocket" % self.logger.name
         self.radius_socket = RadiusSocket(self.radius_listen_ip,
                                           self.radius_listen_port,
                                           self.radius_server_ip,
-                                          self.radius_server_port)
+                                          self.radius_server_port,
+                                          log_prefix)
         self.radius_socket.setup()
         self.logger.info("Radius Listening on %s:%d" % (self.radius_listen_ip,
                                                         self.radius_listen_port))
@@ -329,13 +333,14 @@ class Chewie:
             self.logger.info("Received eap message: %s", str(eap))
             self.send_eap_to_state_machine(eap, dst_mac)
 
-    def receive_ip_activity_messages(self):
-        """Receive IP activity over the 'eap interface' allowing for MAB."""
+    def receive_mab_messages(self):
+        """Receive DHCP request for MAB."""
         while self.running():
             sleep(0)
-            self.logger.info("waiting for ip activity.")
+            self.logger.info("waiting for MAB activity.")
             packed_message = self.mab_socket.receive()
-            self.logger.info("Received ip activity packed_message: %s", str(packed_message))
+            self.logger.info("Received DHCP packet for MAB. packed_message: %s",
+                             str(packed_message))
             self.send_eth_to_state_machine(packed_message)
 
     def send_eap_to_state_machine(self, eap, dst_mac):
