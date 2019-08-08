@@ -19,7 +19,7 @@ before_script:
   - chmod +x /tmp/cc-test-reporter
   - /tmp/cc-test-reporter before-build
 script:
-  - ./run_tests.sh
+  - ./travis/runtests.sh
 after_script:
   - /tmp/cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT
 matrix:
@@ -30,17 +30,23 @@ jobs:
       language: python
       python: 3.5
       env:
-        - PYTYPE=false
+        - TRAVIS_SHARD=unittest
     - stage: test
       language: python
       python: 3.6
       env:
-        - PYTYPE=true
+        - TRAVIS_SHARD=unittest
+        - CODE_CHECK=true
+        - CODE_COV=true
     - stage: test
       language: python
       python: 3.7
-      env:
-        - PYTYPE=false
+      env: TRAVIS_SHARD=unittest
+    - stage: test
+      env: TRAVIS_SHARD=integration
+      language: bash
+      services:
+        - docker
     - stage: deploy
       language: python
       python: 3.6

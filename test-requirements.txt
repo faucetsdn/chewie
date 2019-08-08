@@ -2,3 +2,4 @@ coverage
 pylint
 pytest-cov
 pytype==2019.8.9
+codecov
