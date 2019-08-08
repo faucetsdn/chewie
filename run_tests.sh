@@ -56,11 +56,9 @@ fi
 # ============================= Code Checks =============================
 if [ "$CODE_CHECK" == 1 ] ; then
 
-    if [ "${PYTYPE}" != "false" ] ; then
-        echo "=============== Running PyType ===================="
-        time PYTHONPATH=${CHEWIE_ROOT} pytype --config ${CHEWIE_ROOT}/setup.cfg \
-            ${CHEWIE_ROOT}/chewie/*py
-    fi
+    echo "=============== Running PyType ===================="
+    time PYTHONPATH=${CHEWIE_ROOT} pytype --config ${CHEWIE_ROOT}/setup.cfg \
+        ${CHEWIE_ROOT}/chewie/*py
 
     echo "=============== Running Pylint ===================="
     time ${CHEWIE_ROOT}/test/codecheck/pylint.sh

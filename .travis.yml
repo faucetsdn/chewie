@@ -29,8 +29,6 @@ jobs:
     - stage: test
       language: python
       python: 3.5
-      env:
-        - PYTYPE=false
     - stage: test
       language: python
       python: 3.6
@@ -39,8 +37,6 @@ jobs:
     - stage: test
       language: python
       python: 3.7
-      env:
-        - PYTYPE=false
     - stage: deploy
       language: python
       python: 3.6
