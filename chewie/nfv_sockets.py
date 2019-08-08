@@ -6,6 +6,7 @@ from eventlet.green import socket
 from abc import ABC, abstractmethod
 
 from chewie.mac_address import MacAddress
+from chewie.utils import get_logger
 
 
 class PromiscuousSocket(ABC):
@@ -28,16 +29,22 @@ class PromiscuousSocket(ABC):
     def setup(self):
         pass
 
-    def __init__(self, interface_name):
+    def __init__(self, interface_name, log_prefix):
         self.socket = None
         self.interface_index = None
         self.interface_name = interface_name
+        self.logger = get_logger(log_prefix)
 
     def _setup(self, socket_filter):
         """Set up the socket"""
-        self.open(socket_filter)
-        self.get_interface_index()
-        self.set_interface_promiscuous()
+        self.logger.info("Setting up socket on interface: %s", self.interface_name)
+        try:
+            self.open(socket_filter)
+            self.get_interface_index()
+            self.set_interface_promiscuous()
+        except socket.error as err:
+            self.logger.error("Unable to setup socket: %s", str(err))
+            raise err
 
     def open(self, socket_filter):
         """Setup EAP socket"""

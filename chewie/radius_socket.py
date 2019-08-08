@@ -1,22 +1,30 @@
 """Handle the RADIUS socket
 """
 from eventlet.green import socket
+from chewie.utils import get_logger
 
 
 class RadiusSocket:
     """Handle the RADIUS socket"""
 
-    def __init__(self, listen_ip, listen_port, server_ip, server_port):
+    def __init__(self, listen_ip, listen_port, server_ip, server_port, log_prefix):
         self.socket = None
         self.listen_ip = listen_ip
         self.listen_port = listen_port
         self.server_ip = server_ip
         self.server_port = server_port
+        self.logger = get_logger(log_prefix)
 
     def setup(self):
         """Setup RADIUS Socket"""
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # pylint: disable=no-member
-        self.socket.bind((self.listen_ip, self.listen_port))
+        self.logger.info("Setting up radius socket on interface: %s", self.interface_name)
+        try:
+            self.socket = socket.socket(socket.AF_INET,
+                                        socket.SOCK_DGRAM)  # pylint: disable=no-member
+            self.socket.bind((self.listen_ip, self.listen_port))
+        except socket.error as err:
+            self.logger.error("Unable to setup socket: %s", str(err))
+            raise err
 
     def send(self, data):
         """Sends on the radius socket
