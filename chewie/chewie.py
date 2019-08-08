@@ -166,6 +166,10 @@ class Chewie:
         self.set_port_status(port_id, False)
 
         job = self.port_to_identity_job.get(port_id, None)
+
+        if port_id in self.state_machines:
+            del self.state_machines[port_id]
+
         if job:
             job.cancel()
         self.port_to_eapol_id.pop(port_id, None)
