@@ -4,9 +4,8 @@ from eventlet import sleep, GreenPool
 from eventlet.queue import Queue
 
 from chewie import timer_scheduler
-from chewie.activity_socket import ActivitySocket
 from chewie.eap import Eap
-from chewie.eap_socket import EapSocket
+from chewie.nfv_sockets import EapSocket, MabSocket
 from chewie.ethernet_packet import EthernetPacket
 from chewie.event import EventMessageReceived, EventPortStatusChange, \
     EventPreemptiveEAPResponseMessageReceived
@@ -43,6 +42,7 @@ class Chewie:
                  auth_handler=None, failure_handler=None, logoff_handler=None,
                  radius_server_ip=None, radius_server_port=None, radius_server_secret=None,
                  chewie_id=None):
+
         self.interface_name = interface_name
         self.log_name = Chewie.__name__
         if logger:
@@ -80,7 +80,7 @@ class Chewie:
         self.timer_scheduler = timer_scheduler.TimerScheduler(self.logger)
 
         self.eap_socket = None
-        self.ip_activity_socket = None
+        self.mab_socket = None
         self.pool = None
         self.eventlets = None
         self.radius_socket = None
@@ -270,8 +270,8 @@ class Chewie:
 
     def setup_ip_activity_socket(self):
         """Setup IP Activity socket"""
-        self.ip_activity_socket = ActivitySocket(self.interface_name)
-        self.ip_activity_socket.setup()
+        self.mab_socket = MabSocket(self.interface_name)
+        self.mab_socket.setup()
 
     def setup_radius_socket(self):
         """Setup Radius socket"""
@@ -334,7 +334,7 @@ class Chewie:
         while self.running():
             sleep(0)
             self.logger.info("waiting for ip activity.")
-            packed_message = self.ip_activity_socket.receive()
+            packed_message = self.mab_socket.receive()
             self.logger.info("Received ip activity packed_message: %s", str(packed_message))
             self.send_eth_to_state_machine(packed_message)
 
