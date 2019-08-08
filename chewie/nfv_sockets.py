@@ -8,8 +8,7 @@ from eventlet.green import socket
 from chewie.mac_address import MacAddress
 from chewie.utils import get_logger
 
-# Disable no-member for use with eventlet.green.socket
-# pylint: disable=no-member
+
 class PromiscuousSocket(ABC):
     """Abstract Raw Socket in Promiscuous Mode"""
     SIOCGIFINDEX = 0x8933

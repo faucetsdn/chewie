@@ -3,9 +3,7 @@
 from eventlet.green import socket
 from chewie.utils import get_logger
 
-# TODO Replace constant pylint tag with .pylintrc
-# Disable no-member for use with eventlet.green.socket
-# pylint: disable=no-member
+
 class RadiusSocket:
     """Handle the RADIUS socket"""
 
