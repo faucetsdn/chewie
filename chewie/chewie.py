@@ -155,16 +155,7 @@ class Chewie:
         if self.logoff_handler:
             self.logoff_handler(src_mac, port_id)
 
-    def port_down(self, port_id):
-        """
-        should be called by faucet when port has gone down.
-        Args:
-            port_id (str): id of port.
-        """
-        # all chewie needs to do is change its internal state.
-        # faucet will remove the acls by itself.
-        self.set_port_status(port_id, False)
-
+    def stop_identity_requests(self, port_id):
         job = self.port_to_identity_job.get(port_id, None)
 
         if port_id in self.state_machines:
@@ -174,6 +165,23 @@ class Chewie:
             job.cancel()
         self.port_to_eapol_id.pop(port_id, None)
 
+    def start_identity_requests(self, port_id):
+        self.port_to_identity_job[port_id] = self.timer_scheduler.call_later(
+            self.DEFAULT_PORT_UP_IDENTITY_REQUEST_WAIT_PERIOD,
+            self.send_preemptive_identity_request_if_no_active_on_port,
+            port_id)
+
+    def port_down(self, port_id):
+        """
+        should be called by faucet when port has gone down.
+        Args:
+            port_id (str): id of port.
+        """
+        # all chewie needs to do is change its internal state.
+        # faucet will remove the acls by itself.
+        self.set_port_status(port_id, False)
+        self.stop_identity_requests(port_id)
+
     def port_up(self, port_id):
         """
         should be called by faucet when port has come up
@@ -182,11 +190,7 @@ class Chewie:
         """
         self.logger.info("port %s up", port_id)
         self.set_port_status(port_id, True)
-
-        self.port_to_identity_job[port_id] = self.timer_scheduler.call_later(
-            self.DEFAULT_PORT_UP_IDENTITY_REQUEST_WAIT_PERIOD,
-            self.send_preemptive_identity_request_if_no_active_on_port,
-            port_id)
+        self.start_identity_requests(port_id)
 
     def send_preemptive_identity_request_if_no_active_on_port(self, port_id):
         """
