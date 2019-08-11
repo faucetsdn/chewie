@@ -1,9 +1,8 @@
-FROM ubuntu:18.04
+FROM faucet/python3
 
-RUN apt-get update
-RUN apt-get install -y python3 python3-pip
-RUN apt-get install -y vim
+COPY ./ /chewie-src/
 
-COPY ./requirements.txt /tmp/requirements.txt
+RUN apk add -U git gcc python3-dev musl-dev && \
+    pip3 --no-cache-dir install --upgrade /chewie-src/
 
-RUN pip3 install -r /tmp/requirements.txt
+CMD ["chewie"]
