@@ -56,6 +56,11 @@ class MacAuthenticationBypassStateMachine:
          'conditions': ['_is_aaa_fail']},
         {'trigger': 'process', 'source': AAA_RECEIVED, 'dest': AAA_SUCCESS,
          'conditions': ['_is_aaa_success']},
+
+        # On Failure - Restart Authentication
+        {'trigger': 'process', 'source': AAA_FAILURE, 'dest': ETH_RECEIVED,
+         'conditions': ['_is_eth_received']},
+
     ]
 
     state = None
