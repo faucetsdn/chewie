@@ -405,6 +405,15 @@ class ChewieTestCase(unittest.TestCase):
         self.assertEqual(self.fake_scheduler.jobs[0].function.__name__,
                          Chewie.send_preemptive_identity_request_if_no_active_on_port.__name__)
 
+
+    @patch_things
+    def test_delete_state_on_port_down(self):
+        """test port status api and that identity request is sent after port up"""
+        self.test_chewie_identity_response_dot1x()
+        self.chewie.port_down("00:00:00:00:00:01")
+        self.assertIsNone(self.chewie.state_machines.get("00:00:00:00:00:01"),
+                          "Not Removing state machines on port_down")
+
     @patch_things
     @setup_generators(sup_replies_logoff, radius_replies_success)
     def test_logoff_dot1x(self):
