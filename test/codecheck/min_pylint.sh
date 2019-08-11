@@ -8,7 +8,7 @@ lintfile=`mktemp`.lint
 
 for f in $* ; do
     f=$(realpath $f)
-    PYTHONPATH=$PYTHONPATH pylint --rcfile=/dev/null $f > $lintfile
+    PYTHONPATH=$PYTHONPATH pylint --rcfile=$CHEWIEHOME/.pylintrc $f > $lintfile
     rating=`cat $lintfile | grep -ohE "rated at [0-9\.]+" | sed "s/rated at //g"`
     echo pylint $f: $rating
     failing=$(bc <<< "$rating < $MINRATING")

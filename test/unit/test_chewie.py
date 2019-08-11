@@ -33,7 +33,7 @@ def patch_things(func):
     @patch('chewie.chewie.get_random_id', get_random_id_helper)
     @patch('chewie.chewie.EapSocket', FakeEapSocket)
     @patch('chewie.chewie.RadiusSocket', FakeRadiusSocket)
-    @patch('chewie.chewie.ActivitySocket', FakeActivitySocket)
+    @patch('chewie.chewie.MabSocket', FakeMabSocket)
     @patch('chewie.chewie.RadiusLifecycle.generate_request_authenticator', urandom_helper)
     @patch('chewie.chewie.FullEAPStateMachine.next_id', next_id)
     def wrapper_patch(self):
@@ -109,7 +109,7 @@ RADIUS_REPLY_GENERATOR = None  # radius_replies()
 
 
 class FakeEapSocket:
-    def __init__(self, _interface_name):
+    def __init__(self, _interface_name, _log_prefix):
         # TODO inject queues in constructor instead of using globals
         pass
 
@@ -139,8 +139,8 @@ class FakeEapSocket:
             FROM_SUPPLICANT.put_nowait(next_reply)
 
 
-class FakeActivitySocket:
-    def __init__(self, _interface_name):
+class FakeMabSocket:
+    def __init__(self, _interface_name, _log_prefix):
         # TODO inject queues in constructor instead of using globals
         pass
 
@@ -159,7 +159,7 @@ class FakeActivitySocket:
 
 
 class FakeRadiusSocket:
-    def __init__(self, _listen_ip, _listen_port, _server_ip, _server_port):
+    def __init__(self, _listen_ip, _listen_port, _server_ip, _server_port, _log_prefix):
         # TODO inject queues in constructor instead of using globals
         pass
 
