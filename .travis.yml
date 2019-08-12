@@ -6,10 +6,6 @@ stages:
   - test
   - name: deploy
     if: repo = faucetsdn/chewie AND tag IS present
-env:
-  global:
-    - GIT_COMMITTED_AT=$(if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then git log -1 --pretty=format:%ct; else git log -1 --skip 1 --pretty=format:%ct; fi)
-    - CC_TEST_REPORTER_ID=4469e75e5dc65ad713a0f9658ffbce390a68c44c0e412d921d257e0cd691e2da
 services:
   - docker
 script:
