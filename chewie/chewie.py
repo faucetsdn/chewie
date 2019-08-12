@@ -214,9 +214,9 @@ class Chewie:
                 break
         else:
             self.logger.debug("executing timer premptive on port %s", port_id)
-            self._send_preemptive_identity_request(port_id)
+            self._send_identity_request(port_id)
 
-    def _send_preemptive_identity_request(self, port_id):
+    def _send_identity_request(self, port_id):
         """
         Message (EAP Identity Request) that notifies supplicant that port is using 802.1X
         Args:
@@ -242,7 +242,7 @@ class Chewie:
 
         if state_machine and state_machine.is_success():
             self.logger.info('reauthenticating src_mac: %s on port: %s', src_mac, port_id)
-            self._send_preemptive_identity_request(port_id)
+            self._send_identity_request(port_id)
         elif state_machine is None:
             self.logger.debug('not reauthing. state machine on port: %s, mac: %s is none', port_id,
                               src_mac)
