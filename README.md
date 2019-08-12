@@ -1,8 +1,6 @@
 # Chewie
 
 [![Build Status](https://travis-ci.com/faucetsdn/chewie.svg?branch=master)](https://travis-ci.com/faucetsdn/chewie)
-[![Maintainability](https://api.codeclimate.com/v1/badges/66b6e93ba93b6ac56d17/maintainability)](https://codeclimate.com/github/faucetsdn/chewie/maintainability)
-[![Test Coverage](https://api.codeclimate.com/v1/badges/66b6e93ba93b6ac56d17/test_coverage)](https://codeclimate.com/github/faucetsdn/chewie/test_coverage)
 [![Codecov](https://codecov.io/gh/faucetsdn/chewie/branch/master/graph/badge.svg)](https://codecov.io/gh/faucetsdn/faucet)
 
 
