@@ -4,33 +4,25 @@ set -e  # quit on error
 
 CHEWIE_ROOT=$(dirname "$FILE_NAME")
 
-PIP_INSTALL=1
-UNIT_TEST=1
-CODE_CHECK=1
-INTEGRATION=1
+PIP_INSTALL=0
+UNIT_TEST=0
+CODE_CHECK=0
+INTEGRATION=0
 
 # allow user to skip parts of docker test
 while getopts "nuzi" o $CHEWIE_TESTS; do
   case "${o}" in
         n)
-            # skip code check
-            echo "Skipping Code Checks."
-            CODE_CHECK=0
+            CODE_CHECK=1
             ;;
         u)
-            # skip unit tests
-            echo "Skipping Unit Tests."
-            UNIT_TEST=0
+            UNIT_TEST=1
             ;;
         i)
-            # skip pip install
-            echo "Skipping Integration Tests."
-            INTEGRATION=0
+            INTEGRATION=1
             ;;
         z)
-            # skip pip install
-            echo "Skipping PIP Install."
-            PIP_INSTALL=0
+            PIP_INSTALL=1
             ;;
         *)
             echo "Provided unsupported option. Exiting with code 1"
@@ -49,8 +41,8 @@ fi
 # ============================= Unit Tests =============================
 if [ "$UNIT_TEST" == 1 ] ; then
     echo "=============== Running Unit Tests ================="
-    time env PYTHONPATH=${CHEWIE_ROOT} pytest -v --cov=chewie --cov-report term \
-        --cov-report=xml:coverage.xml ${CHEWIE_ROOT}/test/unit/test_*.py
+    time env PYTHONPATH=${CHEWIE_ROOT} pytest -v --cov=chewie \
+        ${CHEWIE_ROOT}/test/unit/test_*.py
 fi
 
 # ============================= Code Checks =============================
