@@ -26,6 +26,7 @@ class MacAuthenticationBypassStateMachine(AbstractStateMachine):
     AAA_SUCCESS = "AAA_SUCCESS"
     AAA_FAILURE = "AAA_FAILURE"
 
+    INITIAL_STATE = DISABLED
     PROGRESS_STATES = [
         State(DISABLED, 'mab_disabled_state'),
         State(ETH_RECEIVED, 'eth_received_state'),
@@ -136,16 +137,18 @@ class MacAuthenticationBypassStateMachine(AbstractStateMachine):
 
     @log_method
     def aaa_success_state(self):  # pylint: disable=missing-docstring
-        self.logger.info('Authentication Passed: MAC is approved for MAB %s', self.src_mac)
+        self.logger.info(
+            'Authentication Passed: MAC is approved for MAB %s', self.src_mac)
         self.handle_success()
 
     @log_method
     def aaa_failure_state(self):  # pylint: disable=missing-docstring
-        self.logger.info('Authentication Failed: MAC is not approved for MAB %s', self.src_mac)
+        self.logger.info(
+            'Authentication Failed: MAC is not approved for MAB %s', self.src_mac)
         self.handle_failure()
 
-
     # pylint: disable=too-many-arguments
+
     def __init__(self, radius_output_queue, src_mac, timer_scheduler,
                  auth_handler, failure_handler, log_prefix):
         """
@@ -193,7 +196,8 @@ class MacAuthenticationBypassStateMachine(AbstractStateMachine):
 
     def event(self, event):
         """Processes an event for the state machine"""
-        self.logger.info("Received event: %s with starting state: %s", event.__class__, self.state)
+        self.logger.info(
+            "Received event: %s with starting state: %s", event.__class__, self.state)
 
         self.reset_variables()
 

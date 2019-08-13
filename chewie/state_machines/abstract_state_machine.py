@@ -1,5 +1,5 @@
 """This Module provides the Abstract Design Requirements for a State Machine in Chewie"""
-from transitions.extensions import GraphMachine as GraphMachine
+from transitions.extensions import GraphMachine
 
 
 class AbstractStateMachine:
@@ -10,7 +10,7 @@ class AbstractStateMachine:
     SUCCESS_STATES = []
     FAILURE_STATES = []
     COMPLETION_STATES = FAILURE_STATES + SUCCESS_STATES
-
+    INITIAL_STATE = None
     STATES = COMPLETION_STATES + PROGRESS_STATES
 
     ERROR_TRANSTIONS = []
@@ -34,11 +34,11 @@ class AbstractStateMachine:
 
     @classmethod
     def build_state_graph(cls, filename):
-
+        "Build a graphc representation of the state machine and store in 'filename'.png"
         model = type('model', (object,), {})()
         GraphMachine(model=model, states=cls.STATES,
                      title=cls.__name__,
                      transitions=cls.CORE_TRANSITIONS,
                      queued=True,
-                     initial=cls.DISABLED)
-        model.get_graph().draw(filename, prog='dot')
+                     initial=cls.INITIAL_STATE)
+        model.get_graph().draw(filename, prog='dot')  # pylint: disable=no-member
