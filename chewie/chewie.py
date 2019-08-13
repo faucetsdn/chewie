@@ -232,7 +232,8 @@ class Chewie:
 
     def reauth_port(self, src_mac, port_id):
         """
-        Send an Identity Request to src_mac, on port_id. prompting the supplicant to re authenticate.
+        Send an Identity Request to src_mac, on port_id. prompting
+        the supplicant to re authenticate.
         Args:
             src_mac (MacAddress):
             port_id (str):
@@ -288,17 +289,19 @@ class Chewie:
                                           self.radius_server_port,
                                           log_prefix)
         self.radius_socket.setup()
-        self.logger.info("Radius Listening on %s:%d" % (self.radius_listen_ip,
-                                                        self.radius_listen_port))
+        self.logger.info("Radius Listening on %s:%d",
+                         self.radius_listen_ip,
+                         self.radius_listen_port)
 
     def send_eap_messages(self):
         """Send EAP messages to Supplicant forever."""
         while self.running():
             sleep(0)
             eap_queue_message = self.eap_output_messages.get()
-            self.logger.info("Sending message %s from %s to %s" %
-                             (eap_queue_message.message, str(eap_queue_message.port_mac),
-                              str(eap_queue_message.src_mac)))
+            self.logger.info("Sending message %s from %s to %s",
+                             eap_queue_message.message,
+                             str(eap_queue_message.port_mac),
+                             str(eap_queue_message.src_mac))
             self.eap_socket.send(MessagePacker.ethernet_pack(eap_queue_message.message,
                                                              eap_queue_message.port_mac,
                                                              eap_queue_message.src_mac))

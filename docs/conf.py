@@ -72,13 +72,9 @@ def build_state_machine_diagrams(_):
     from chewie.state_machines.eap_state_machine import FullEAPStateMachine
     from chewie.state_machines.mab_state_machine import MacAuthenticationBypassStateMachine \
         as MABStateMachine
-    from datetime import datetime
-    now = datetime.now().time()
-    FullEAPStateMachine(None, None, None, None, None, None, None, None, True
-                        ).get_graph().draw('eap_state_machine.png', prog='dot')
 
-    MABStateMachine(None, None, None,None, None, None, True).get_graph().draw(
-        'mab_state_machine.png', prog='dot')
+    FullEAPStateMachine.build_state_graph('eap_state_machine.png')
+    MABStateMachine.build_state_graph('mab_state_machine.png')
 
 
 def setup(app):

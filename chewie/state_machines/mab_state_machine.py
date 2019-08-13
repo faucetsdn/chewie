@@ -1,15 +1,15 @@
 """This Module provides a Bare-bones Mac Authentication Bypass State Machine provide 802.1x
 MAB Support in Chewie"""
 
-from transitions import State
+from transitions import State, Machine
 
 from chewie.event import EventMessageReceived, EventRadiusMessageReceived
 from chewie.radius import RadiusAccessAccept, RadiusAccessReject
 from chewie.utils import get_logger, log_method, RadiusQueueMessage
-import chewie.radius_attributes as radius_attributes
+from chewie.state_machines.abstract_state_machine import AbstractStateMachine
 
 
-class MacAuthenticationBypassStateMachine:
+class MacAuthenticationBypassStateMachine(AbstractStateMachine):
     """This Class provides a Bare-bones Mac Authentication Bypass State Machine provide 802.1x
     MAB Support in Chewie"""
 
@@ -26,22 +26,29 @@ class MacAuthenticationBypassStateMachine:
     AAA_SUCCESS = "AAA_SUCCESS"
     AAA_FAILURE = "AAA_FAILURE"
 
-    STATES = [
+    INITIAL_STATE = DISABLED
+    PROGRESS_STATES = [
         State(DISABLED, 'mab_disabled_state'),
         State(ETH_RECEIVED, 'eth_received_state'),
         State(AAA_REQUEST, 'aaa_request_state'),
         State(AAA_IDLE, 'aaa_idle_state'),
         State(AAA_RECEIVED, 'aaa_received_state'),
-        State(AAA_SUCCESS, 'aaa_success_state'),
-        State(AAA_FAILURE, 'aaa_failure_state'),
     ]
 
-    TRANSITIONS = [
+    SUCCESS_STATES = [State(AAA_SUCCESS, 'aaa_success_state'), ]
+    FAILURE_STATES = [State(AAA_FAILURE, 'aaa_failure_state'), ]
+    COMPLETION_STATES = FAILURE_STATES + SUCCESS_STATES
+
+    STATES = COMPLETION_STATES + PROGRESS_STATES
+
+    ERROR_TRANSTIONS = [
         {'trigger': 'process', 'source': '*', 'dest': DISABLED,
          'unless': ['_is_port_enabled']},
         {'trigger': 'process', 'source': '*', 'dest': DISABLED,
          'conditions': ['_is_mab_restart']},
+    ]
 
+    CORE_TRANSITIONS = [
         {'trigger': 'process', 'source': DISABLED, 'dest': ETH_RECEIVED,
          'conditions': ['_is_eth_received']},
 
@@ -60,8 +67,8 @@ class MacAuthenticationBypassStateMachine:
         # On Failure - Restart Authentication
         {'trigger': 'process', 'source': AAA_FAILURE, 'dest': ETH_RECEIVED,
          'conditions': ['_is_eth_received']},
-
     ]
+    TRANSITIONS = CORE_TRANSITIONS + ERROR_TRANSTIONS
 
     state = None
 
@@ -83,13 +90,6 @@ class MacAuthenticationBypassStateMachine:
     # NOTE: This is not dynamic at this stage. Session timeout Attributes from radius are ignored
     session_timeout = DEFAULT_SESSION_TIMEOUT
     port_id_mac = None
-
-    def is_in_progress(self):  # pylint: disable=missing-docstring
-        return self.port_enabled and self.state != self.AAA_SUCCESS \
-               and self.state != self.AAA_FAILURE
-
-    def is_success(self):  # pylint: disable=missing-docstring
-        return self.aaa_success
 
     #
     # State Transition Helpers
@@ -137,18 +137,20 @@ class MacAuthenticationBypassStateMachine:
 
     @log_method
     def aaa_success_state(self):  # pylint: disable=missing-docstring
-        self.logger.info('Authentication Passed: MAC is approved for MAB %s', self.src_mac)
+        self.logger.info(
+            'Authentication Passed: MAC is approved for MAB %s', self.src_mac)
         self.handle_success()
 
     @log_method
     def aaa_failure_state(self):  # pylint: disable=missing-docstring
-        self.logger.info('Authentication Failed: MAC is not approved for MAB %s', self.src_mac)
+        self.logger.info(
+            'Authentication Failed: MAC is not approved for MAB %s', self.src_mac)
         self.handle_failure()
 
-
     # pylint: disable=too-many-arguments
+
     def __init__(self, radius_output_queue, src_mac, timer_scheduler,
-                 auth_handler, failure_handler, log_prefix, graph_machine=False):
+                 auth_handler, failure_handler, log_prefix):
         """
 
         Args:
@@ -159,11 +161,6 @@ class MacAuthenticationBypassStateMachine:
             timer_scheduler (Scheduler): where to put timer events. (useful for Retransmits)
             log_prefix (String): the prefix used when outputting logs
         """
-        if graph_machine:
-            from transitions.extensions import GraphMachine as Machine
-        else:
-            from transitions import Machine
-
         self.radius_output_messages = radius_output_queue
         self.src_mac = src_mac
         self.timer_scheduler = timer_scheduler
@@ -199,7 +196,8 @@ class MacAuthenticationBypassStateMachine:
 
     def event(self, event):
         """Processes an event for the state machine"""
-        self.logger.info("Received event: %s with starting state: %s", event.__class__, self.state)
+        self.logger.info(
+            "Received event: %s with starting state: %s", event.__class__, self.state)
 
         self.reset_variables()
 
