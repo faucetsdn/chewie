@@ -12,20 +12,19 @@ class ManagedPort:
     DEFAULT_PREEMPTIVE_IDENTITY_REQUEST_INTERVAL = 60
     PAE_GROUP_ADDRESS = MacAddress.from_string("01:80:C2:00:00:03")
 
-    def __init__(self, port_id, log_prefix, chewie, eap_output_messages, radius_output_messages):
+    def __init__(self, port_id, log_prefix, timer_scheduler, eap_output_messages,
+                 radius_output_messages):
         self.port_id = port_id
         self.logger = get_logger(log_prefix)
-        self.chewie = chewie
         self.supplicant_output_messages = eap_output_messages
         self.radius_output_messages = radius_output_messages
 
         self.state_machines = {}  # mac : state_machine
-        # port_id: last ID used in preemptive identity request.
         self.current_preemtive_eapol_id = {}
-        self.port_status = None  # port_id: status (true=up, false=down)
+        self.port_status = False  # port_id: status (true=up, false=down)
         self.identity_job = {}  # port_id: timerJob
         self.session_job = {}
-        self.timer_scheduler = chewie.timer_scheduler
+        self.timer_scheduler = timer_scheduler
 
     @property
     def status(self):
@@ -109,10 +108,6 @@ class ManagedPort:
         self.session_job = self.timer_scheduler.call_later(
             period,
             self._reauth_port, src_mac)
-
-    def stop_port_session(self, src_mac):
-        """Stop a port session"""
-        raise NotImplementedError("Unable to stop sessions.")
 
     def _reauth_port(self, src_mac):
         """

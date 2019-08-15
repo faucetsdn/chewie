@@ -121,9 +121,7 @@ class Chewie:
              the failure is on"""
         if self.failure_handler:
             self.failure_handler(src_mac, port_id)
-
         # TODO Need to stop sessions on Failure
-        # self.stop_port_session(port_id, src_mac)
 
     def _auth_logoff(self, src_mac, port_id):
         """logoff shim between faucet and chewie
@@ -133,16 +131,14 @@ class Chewie:
              the logoff is on"""
         if self.logoff_handler:
             self.logoff_handler(src_mac, port_id)
-
         # TODO Need to stop sessions on Logoff
-        # self.stop_port_session(port_id, src_mac)
 
     def _get_managed_port(self, port_id):
         port_id = str(port_id)
         if port_id in self._managed_ports:
             return self._managed_ports[port_id]
 
-        managed_port = ManagedPort(port_id, self.logger.name, self,
+        managed_port = ManagedPort(port_id, self.logger.name, self.timer_scheduler,
                                    self.eap_output_messages,
                                    self.radius_output_messages)
         self._managed_ports[port_id] = managed_port
