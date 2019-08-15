@@ -345,9 +345,6 @@ class ChewieTestCase(unittest.TestCase):
                                           '00:00:00:00:00:01').state,
             FullEAPStateMachine.SUCCESS2)
 
-
-
-
     @patch_things
     @setup_generators(sup_replies_success, radius_replies_success)
     def test_chewie_identity_response_dot1x(self):
@@ -547,3 +544,16 @@ class ChewieTestCase(unittest.TestCase):
             self.chewie.get_state_machine('02:42:ac:17:00:6f',
                                           '00:00:00:00:00:01').state,
             MacAuthenticationBypassStateMachine.AAA_FAILURE)
+
+    @patch_things
+    @setup_generators(sup_replies_success, radius_replies_success)
+    def test_smoke_test_clients(self):
+        """Test success api"""
+        FROM_SUPPLICANT.put_nowait(bytes.fromhex("0000000000010242ac17006f888e01010000"))
+
+        pool = eventlet.GreenPool()
+        pool.spawn(self.chewie.run)
+
+        eventlet.sleep(1)
+        self.assertIsNotNone(self.chewie.clients)
+        self.assertEqual(len(self.chewie.clients), 1)
