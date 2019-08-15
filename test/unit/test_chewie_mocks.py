@@ -56,8 +56,6 @@ class ChewieWithMocksTestCase(unittest.TestCase):
                 'fake src mac'), 'fake dst mac')
         )
 
-    # Rewrite test to no touch internal interface
-    @unittest.skip
     @patch("chewie.chewie.Chewie.running", Mock(side_effect=[True, False]))
     @patch("chewie.chewie.MessagePacker.ethernet_pack")
     @patch("chewie.chewie.sleep", Mock())
@@ -71,8 +69,6 @@ class ChewieWithMocksTestCase(unittest.TestCase):
         self.chewie._send_eap_messages()
         self.chewie._eap_socket.send.assert_called_with("packed ethernet")
 
-    # TODO Stop Test from touching internal state
-    @unittest.skip
     @patch("chewie.chewie.Chewie.running", Mock(side_effect=[True, False]))
     @patch("chewie.chewie.MessageParser.radius_parse")
     @patch("chewie.chewie.Chewie._get_state_machine_from_radius_packet_id")
@@ -99,8 +95,6 @@ class ChewieWithMocksTestCase(unittest.TestCase):
             'fake event'
         )
 
-    # TODO Stop Test from touching internal state
-    @unittest.skip
     @patch("chewie.chewie.Chewie.running", Mock(side_effect=[True, False]))
     @patch("chewie.chewie.sleep", Mock())
     def test_radius_output_packet_gets_packed_and_sent(self):  # pylint: disable=invalid-name
