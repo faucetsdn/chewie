@@ -1,15 +1,16 @@
-
 import unittest
 import logging
 import tempfile
-from eventlet.queue import Queue
 import sys
+
+from eventlet.queue import Queue
 
 from chewie.mac_address import MacAddress
 from chewie.managed_port import ManagedPort
 from helpers import FakeTimerScheduler
 
 
+# pylint: disable=missing-docstring,
 class ManagedPortTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -22,7 +23,7 @@ class ManagedPortTestCase(unittest.TestCase):
 
         self.fake_scheduler = FakeTimerScheduler()
         self.timer_scheduler = self.fake_scheduler
-
+        self.managed_port = None
         self.eap_output_messages = Queue()  # pylint: disable=global-statement
         self.radius_output_messages = Queue()  # pylint: disable=global-statement
 
@@ -45,3 +46,6 @@ class ManagedPortTestCase(unittest.TestCase):
     #  test_successful_managed_port_change_status_calls_state_machine
     #  test_successful_managed_port_start_identity_requests
     #  test_successful_managed_port_stop_identity_requests
+
+# Test chewie_send_preemptive_identity_requests when port is down
+# test reauth_port

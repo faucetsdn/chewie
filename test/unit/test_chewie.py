@@ -314,8 +314,7 @@ class ChewieTestCase(unittest.TestCase):
         # port 2 has 1 mac
         self.assertEqual(len(self.chewie.state_machines['00:00:00:00:00:02']), 1)
 
-    # TODO Stop Test from touching internal get_state_machine_from_radius_paclket
-    @unittest.skip
+    # TODO Stop Test from touching internal get_state_machine_from_radius_packet
     def test_get_state_machine_by_packet_id(self):
         """Tests Chewie.get_state_machine_by_packet_id()"""
         self.chewie.radius_lifecycle.packet_id_to_mac[56] = {'src_mac': '12:34:56:78:9a:bc',

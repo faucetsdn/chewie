@@ -20,10 +20,10 @@ class ManagedPort:
         self.radius_output_messages = radius_output_messages
 
         self.state_machines = {}  # mac : state_machine
-        self.current_preemtive_eapol_id = {}
+        self.current_preemtive_eapol_id = None
         self.port_status = False  # port_id: status (true=up, false=down)
-        self.identity_job = {}  # port_id: timerJob
-        self.session_job = {}
+        self.identity_job = None  # timerJob
+        self.session_job = None   # timerJob
         self.timer_scheduler = timer_scheduler
 
     @property
