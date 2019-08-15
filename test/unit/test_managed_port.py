@@ -45,5 +45,3 @@ class ManagedPortTestCase(unittest.TestCase):
     #  test_successful_managed_port_change_status_calls_state_machine
     #  test_successful_managed_port_start_identity_requests
     #  test_successful_managed_port_stop_identity_requests
-
-
