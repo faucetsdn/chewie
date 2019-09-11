@@ -9,7 +9,7 @@ services:
         depends_on: [chewie]
         command: bash -c "wpa_supplicant -dd -c/tmp/wpasupplicant/wired-peap.conf -ieth0 -Dwired;"
         networks:
-            wpasupplicant-net:
+            00wpasupplicant-net:
                 ipv4_address: 172.23.0.111
         cap_add:
             - ALL
@@ -22,32 +22,18 @@ services:
             context: .
             dockerfile: Dockerfile.chewie
         image: 'chewie/chewie:latest'
-        command: bash -c "python3 /chewie-src/run.py"
+        command: 'chewie --interface eth0 --radius_ip 172.24.0.113'
         networks:
-            wpasupplicant-net:
+            00wpasupplicant-net:
                 ipv4_address: 172.23.0.112
-            radius-net:
+                priority: 200
+            01radius-net:
                 ipv4_address: 172.24.0.112
+                priority: 100
         cap_add:
             - ALL
         volumes:
             - ./:/chewie-src/
-
-#    hostapd:
-#        build:
-#            context: .
-#            dockerfile: Dockerfile.hostapd
-#        image: 'chewie/chewie:latest'
-#        command: bash -c "ls /sys/class/net/ ; hostapd -i eth1 /tmp/hostapd.conf"
-#        networks:
-#            wpasupplicant-net:
-#                ipv4_address: 172.23.0.112
-#            radius-net:
-#                ipv4_address: 172.24.0.112
-#        cap_add:
-#        - ALL
-#        volumes:
-#        - ./etc/hostapd/hostapd.conf:/tmp/hostapd.conf
 
     freeradius:
         build:
@@ -55,20 +41,21 @@ services:
             dockerfile: Dockerfile.freeradius
         image: 'chewie/freeradius:latest'
         networks:
-            radius-net:
+            01radius-net:
                 ipv4_address: 172.24.0.113
         volumes:
-            - "./etc/freeradius/clients.conf:/etc/freeradius/clients.conf:ro"
-            - "./etc/freeradius/users:/etc/freeradius/users:ro"
-            - "./etc/freeradius/certs:/etc/freeradius/certs"
+            - "./etc/freeradius/users:/etc/freeradius/3.0/users:ro"
+            - "./etc/freeradius/certs:/etc/freeradius/3.0/certs"
+            - "./etc/freeradius/default/eap:/etc/freeradius/3.0/mods-enabled/eap:ro"
+            - "./etc/freeradius/clients.conf:/etc/freeradius/3.0/clients.conf:ro"
 
 networks:
-    wpasupplicant-net:
+    00wpasupplicant-net:
         driver: macvlan
         ipam:
             config:
                 - subnet: 172.23.0.0/16
-    radius-net:
+    01radius-net:
         ipam:
             config:
                 - subnet: 172.24.0.0/16
