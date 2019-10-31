@@ -6,7 +6,5 @@ linters:
   pep8:
     python: 3
     max-line-length: 120
-#  py3k:
-#    ignore: 'W1618'
-# Cannot include Py3k until Pylint issue is resolved.
-# https://github.com/PyCQA/pylint/issues/3223
+  py3k:
+    ignore: 'W1618'
