@@ -1,6 +1,7 @@
 """Utility Functions"""
 import logging
 from collections import namedtuple  # pytype: disable=pyi-error
+import random
 
 
 def get_logger(logname):
@@ -18,6 +19,10 @@ def log_method(method):
         return method(self, *args, **kwargs)
 
     return wrapped
+
+
+def get_random_id():  # pylint: disable=missing-docstring
+    return random.randint(0, 200)
 
 
 class MessageParseError(Exception):
