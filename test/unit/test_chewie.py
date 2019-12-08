@@ -14,7 +14,6 @@ from chewie.state_machines.eap_state_machine import FullEAPStateMachine
 from chewie.state_machines.mab_state_machine import MacAuthenticationBypassStateMachine
 from eventlet.queue import Queue
 
-from chewie.managed_port import ManagedPort
 from helpers import FakeTimerScheduler
 
 FROM_SUPPLICANT = Queue()
@@ -31,7 +30,7 @@ SHORT_SLEEP = 0.2
 def patch_things(func):
     """decorator to mock patch socket operations and random number generators"""
 
-    @patch('chewie.managed_port.get_random_id', get_random_id_helper)
+    @patch('chewie.chewie.get_random_id', get_random_id_helper)
     @patch('chewie.chewie.EapSocket', FakeEapSocket)
     @patch('chewie.chewie.RadiusSocket', FakeRadiusSocket)
     @patch('chewie.chewie.MabSocket', FakeMabSocket)
@@ -297,6 +296,7 @@ class ChewieTestCase(unittest.TestCase):
         state_machine = self.chewie.get_state_machine('12:34:56:78:9a:bc',
                                                       # pylint: disable=invalid-name
                                                       '00:00:00:00:00:01')
+
         self.assertEqual(len(self.chewie.state_machines), 1)
 
         self.assertIs(state_machine, self.chewie.get_state_machine('12:34:56:78:9a:bc',
@@ -314,7 +314,6 @@ class ChewieTestCase(unittest.TestCase):
         # port 2 has 1 mac
         self.assertEqual(len(self.chewie.state_machines['00:00:00:00:00:02']), 1)
 
-    # TODO Stop Test from touching internal get_state_machine_from_radius_packet
     def test_get_state_machine_by_packet_id(self):
         """Tests Chewie.get_state_machine_by_packet_id()"""
         self.chewie.radius_lifecycle.packet_id_to_mac[56] = {'src_mac': '12:34:56:78:9a:bc',
@@ -323,10 +322,10 @@ class ChewieTestCase(unittest.TestCase):
                                                       # pylint: disable=invalid-name
                                                       '00:00:00:00:00:01')
 
-        self.assertIs(self.chewie._get_state_machine_from_radius_packet_id(56),
+        self.assertIs(self.chewie.get_state_machine_from_radius_packet_id(56),
                       state_machine)
         with self.assertRaises(KeyError):
-            self.chewie._get_state_machine_from_radius_packet_id(20)
+            self.chewie.get_state_machine_from_radius_packet_id(20)
 
     @patch_things
     @setup_generators(sup_replies_success, radius_replies_success)
@@ -343,6 +342,9 @@ class ChewieTestCase(unittest.TestCase):
             self.chewie.get_state_machine('02:42:ac:17:00:6f',
                                           '00:00:00:00:00:01').state,
             FullEAPStateMachine.SUCCESS2)
+
+
+
 
     @patch_things
     @setup_generators(sup_replies_success, radius_replies_success)
@@ -401,7 +403,7 @@ class ChewieTestCase(unittest.TestCase):
         # This will keep adding jobs forever.
         self.assertEqual(len(self.fake_scheduler.jobs), 1)
         self.assertEqual(self.fake_scheduler.jobs[0].function.__name__,
-                         ManagedPort.send_preemptive_identity_request.__name__)
+                         Chewie.send_preemptive_identity_request_if_no_active_on_port.__name__)
 
 
     @patch_things
@@ -543,16 +545,3 @@ class ChewieTestCase(unittest.TestCase):
             self.chewie.get_state_machine('02:42:ac:17:00:6f',
                                           '00:00:00:00:00:01').state,
             MacAuthenticationBypassStateMachine.AAA_FAILURE)
-
-    @patch_things
-    @setup_generators(sup_replies_success, radius_replies_success)
-    def test_smoke_test_clients(self):
-        """Test success api"""
-        FROM_SUPPLICANT.put_nowait(bytes.fromhex("0000000000010242ac17006f888e01010000"))
-
-        pool = eventlet.GreenPool()
-        pool.spawn(self.chewie.run)
-
-        eventlet.sleep(1)
-        self.assertIsNotNone(self.chewie.clients)
-        self.assertEqual(len(self.chewie.clients), 1)

@@ -1,9 +1,5 @@
 [MASTER]
 jobs=4
 
-[MESSAGES CONTROL]
-disable=no-absolute-import
-
-
 [TYPECHECK]
 generated-members=socket.*
