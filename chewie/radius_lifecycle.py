@@ -33,7 +33,7 @@ class RadiusLifecycle:
         self.packet_id_to_request_authenticator = {}
 
     def process_outbound(self, radius_output_bits):
-        """Placeholder method extracted from Chewie._send_radius_messages()"""
+        """Placeholder method extracted from Chewie.send_radius_messages()"""
         radius_payload = radius_output_bits.message
         src_mac = radius_output_bits.src_mac
         username = radius_output_bits.identity
@@ -71,7 +71,7 @@ class RadiusLifecycle:
         return EventRadiusMessageReceived(radius, state, radius.attributes.to_dict())
 
     def process_outbound_mab_request(self, radius_output_bits):
-        """Placeholder method extracted from Chewie._send_radius_messages()"""
+        """Placeholder method extracted from Chewie.send_radius_messages()"""
         src_mac = radius_output_bits.src_mac
         port_id = radius_output_bits.port_mac
         self.logger.info("Sending MAB to RADIUS: %s", src_mac)
