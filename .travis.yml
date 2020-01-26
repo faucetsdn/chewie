@@ -10,8 +10,6 @@ services:
   - docker
 script:
   - ./travis/runtests.sh
-matrix:
-  include:
 jobs:
   include:
     - stage: test
