@@ -1,11 +1,11 @@
 """Test Chewie's MAB Functionality"""
 
 import time
-from base_test import BaseTest
 import unittest
+from base_test import BaseTest
 
 CONFIG_FILENAME = "/tmp/wpasupplicant/wired-tmp.conf"
-supplicant_config_template = """
+supplicant_config_template = """   # pylint: disable=invalid-name
 ctrl_interface=/tmp/wpa_supplicant
 ctrl_interface_group=0
 ap_scan=0
@@ -25,13 +25,15 @@ class RadiusAttributeOnAuthentication(BaseTest):
     """Test Chewie's MAB Functionality"""
     test_name = "RadiusAttributeOnAuthentication"
 
-    def create_supplicant_config(self, identity, password):
+    @staticmethod
+    def create_supplicant_config(identity, password):
+        """Create config file with creds."""
         with open(CONFIG_FILENAME, "w+") as tmp_wpa_config:
             tmp_wpa_config.write(supplicant_config_template.format(identity, password))
 
     def setUp(self):
         """Start Radius and Chewie Servers"""
-        super(RadiusAttributeOnAuthentication, self).setUp()
+        super().setUp()
         self.start_radius()
         self.start_chewie()
 
