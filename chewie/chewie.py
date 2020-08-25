@@ -24,7 +24,9 @@ def unpack_byte_string(byte_string):
 
 
 def get_random_id():  # pylint: disable=missing-docstring
-    return random.randint(0, 200)
+    """pick a random 8 bit EAPOL ID."""
+    return random.randint(0, 2**8 - 1)
+
 
 # TODO set unneeded public methods to private
 # pylint: disable=too-many-instance-attributes
@@ -216,7 +218,7 @@ class Chewie:
             self.logger.debug("executing timer premptive on port %s", port_id)
             self.send_preemptive_identity_request(port_id)
 
-    def send_preemptive_identity_request(self, port_id):
+    def send_preemptive_identity_request(self, port_id, state_machine=None):
         """
         Message (EAP Identity Request) that notifies supplicant that port is using 802.1X
         Args:
@@ -224,11 +226,15 @@ class Chewie:
 
         """
         _id = get_random_id()
+        # ID of preemptive reauth attempt must be different to ID of initial authentication.
+        if state_machine is not None and hasattr(state_machine, 'current_id'):
+            while _id == state_machine.current_id:
+                _id = get_random_id()
         data = IdentityMessage(self.PAE_GROUP_ADDRESS, _id, Eap.REQUEST, "")
         self.port_to_eapol_id[port_id] = _id
         self.eap_output_messages.put_nowait(
             EapQueueMessage(data, self.PAE_GROUP_ADDRESS, MacAddress.from_string(port_id)))
-        self.logger.info("sending premptive on port %s", port_id)
+        self.logger.info("sending premptive on port %s with ID %s", port_id, _id)
 
     def reauth_port(self, src_mac, port_id):
         """
@@ -242,7 +248,7 @@ class Chewie:
 
         if state_machine and state_machine.is_success():
             self.logger.info('reauthenticating src_mac: %s on port: %s', src_mac, port_id)
-            self.send_preemptive_identity_request(port_id)
+            self.send_preemptive_identity_request(port_id, state_machine)
         elif state_machine is None:
             self.logger.debug('not reauthing. state machine on port: %s, mac: %s is none', port_id,
                               src_mac)
