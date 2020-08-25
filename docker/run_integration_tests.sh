@@ -2,6 +2,7 @@
 
 if [ "$PIP_INSTALL" == 1 ] ; then
     echo "=============== Installing Pypi Dependencies ================="
+    pip3 install -U setuptools
     pip3 install  --cache-dir --upgrade \
     -r ${CHEWIE_ROOT}/test-requirements.txt -r ${CHEWIE_ROOT}/requirements.txt
 fi
