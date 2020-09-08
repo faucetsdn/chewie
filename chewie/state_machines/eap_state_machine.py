@@ -11,7 +11,7 @@ from chewie.message_parser import SuccessMessage, FailureMessage, EapolStartMess
 
 # To create a difference between transitions.State and messageparser.EapMessage
 import chewie.radius_attributes as radius_attributes
-from chewie.utils import get_logger, log_method, RadiusQueueMessage, EapQueueMessage
+from chewie.utils import get_logger, log_method, RadiusQueueMessage, EapQueueMessage, get_random_id
 from chewie.radius import RadiusPacket
 from chewie.state_machines.abstract_state_machine import AbstractStateMachine
 
@@ -504,14 +504,8 @@ class FullEAPStateMachine(AbstractStateMachine):
         Returns:
             integer"""
         if self.current_id is None:
-            # I'm assuming we cant have ids wrap around in the same series.
-            #  so the 200 provides a large buffer.
-            return random.randint(0, 200)
-        _id = self.current_id + 1
-        # not tested
-        if _id > 255:
-            return random.randint(0, 200)
-        return _id
+            return get_random_id()
+        return max((self.current_id + 1) % 256, 1)
 
     @log_method
     def disabled_state(self):

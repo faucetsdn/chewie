@@ -1,5 +1,4 @@
 """ Entry point for 802.1X speaker. """
-import random
 from eventlet import sleep, GreenPool
 from eventlet.queue import Queue
 
@@ -16,16 +15,16 @@ from chewie.radius_socket import RadiusSocket
 from chewie.state_machines.eap_state_machine import FullEAPStateMachine
 from chewie.state_machines.mab_state_machine import MacAuthenticationBypassStateMachine
 from chewie.utils import get_logger, MessageParseError, EapQueueMessage
+from chewie.utils import get_random_id as utils_get_random_id
+
+
+def get_random_id():
+    return utils_get_random_id()
 
 
 def unpack_byte_string(byte_string):
     """unpacks a byte string"""
     return "".join("%02x" % x for x in byte_string)
-
-
-def get_random_id():  # pylint: disable=missing-docstring
-    """pick a random 8 bit EAPOL ID."""
-    return random.randint(0, 2**8 - 1)
 
 
 # TODO set unneeded public methods to private

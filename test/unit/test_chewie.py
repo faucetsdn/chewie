@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import eventlet
 import sys
-from chewie.chewie import Chewie
+from chewie.chewie import Chewie, get_random_id
 from chewie.mac_address import MacAddress
 from chewie.state_machines.eap_state_machine import FullEAPStateMachine
 from chewie.state_machines.mab_state_machine import MacAuthenticationBypassStateMachine
@@ -327,6 +327,9 @@ class ChewieTestCase(unittest.TestCase):
         with self.assertRaises(KeyError):
             self.chewie.get_state_machine_from_radius_packet_id(20)
 
+    def test_random_id(self):
+        self.assertTrue(isinstance(get_random_id(), int))
+
     @patch_things
     @setup_generators(sup_replies_success, radius_replies_success)
     def test_success_dot1x(self):
@@ -342,8 +345,6 @@ class ChewieTestCase(unittest.TestCase):
             self.chewie.get_state_machine('02:42:ac:17:00:6f',
                                           '00:00:00:00:00:01').state,
             FullEAPStateMachine.SUCCESS2)
-
-
 
 
     @patch_things
