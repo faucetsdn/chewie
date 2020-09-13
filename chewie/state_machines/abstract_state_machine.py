@@ -41,4 +41,6 @@ class AbstractStateMachine:
                      transitions=cls.CORE_TRANSITIONS,
                      queued=True,
                      initial=cls.INITIAL_STATE)
-        model.get_graph().draw(filename, prog='dot')  # pylint: disable=no-member
+        # pylint: disable=no-member
+        # pytype: disable=attribute-error
+        model.get_graph().draw(filename, prog='dot')
