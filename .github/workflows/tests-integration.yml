@@ -38,13 +38,12 @@ jobs:
           echo "Python code changed: ${PY_FILES_CHANGED}"
           echo "Requirement changes: ${RQ_FILES_CHANGED}"
           if [ ! -z "${CI_TEST_FILES_CHANGED}" ]; then \
-            echo ::set-env name=FILES_CHANGED::all; \
-            echo ::set-env name=PY_FILES_CHANGED::${ALL_PY_FILES}; \
+            FILES_CHANGED=all
+            PY_FILES_CHANGED=$ALL_PY_FILES
           else \
-            echo ::set-env name=FILES_CHANGED::${FILES_ADDED_MODIFIED}; \
-            echo ::set-env name=PY_FILES_CHANGED::${PY_FILES_CHANGED}; \
+            FILES_CHANGED=$FILES_ADDED_MODIFIED
+            PY_FILES_CHANGED=$PY_FILES_CHANGED
           fi
-          echo ::set-env name=RQ_FILES_CHANGED::${RQ_FILES_CHANGED}
       - name: Set up python-${{ env.CODECHECK_PY_VER }}
         uses: actions/setup-python@v2
         with:
