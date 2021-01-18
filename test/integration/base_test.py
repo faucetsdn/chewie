@@ -70,7 +70,7 @@ def auth_handler(address, group_address, *args, **kwargs):  # pylint: disable=mi
         for key, value in kwargs.items():
             logger.info("kwargs : " + str(key) + " : " + str(value))
 
-    HANDLER_COUNTS['auth_handler'] += 1
+    HANDLER_COUNTS['auth_handler'] += 1  # pytype: disable=key-error
 
 
 def failure_handler(address, group_address):  # pylint: disable=missing-docstring
@@ -78,7 +78,7 @@ def failure_handler(address, group_address):  # pylint: disable=missing-docstrin
     logger.info("Authentication failed for address {} on port {}".format(
         str(address), str(group_address)))
 
-    HANDLER_COUNTS['failure_handler'] += 1
+    HANDLER_COUNTS['failure_handler'] += 1  # pytype: disable=key-error
 
 
 def logoff_handler(address, group_address):  # pylint: disable=missing-docstring
@@ -86,7 +86,7 @@ def logoff_handler(address, group_address):  # pylint: disable=missing-docstring
     logger.info("Logoff Successful for address {} on port {}".format(
         str(address), str(group_address)))
 
-    HANDLER_COUNTS['logoff_handler'] += 1
+    HANDLER_COUNTS['logoff_handler'] += 1  # pytype: disable=key-error
 
 
 class BaseTest(unittest.TestCase):
@@ -221,8 +221,12 @@ class BaseTest(unittest.TestCase):
                 assert requirement in chewie_log, "Unable to find {} in chewie logs".format(
                     requirement, )
 
-        assert "Authentication successful" in chewie_log, \
-            "Authentication failed for {}".format(inspect.currentframe().f_back.f_code.co_name)
+        currentframe = inspect.currentframe()
+        assert currentframe
+
+        if currentframe:
+            assert "Authentication successful" in chewie_log, "Authentication failed for {}".format(
+                currentframe.f_back.f_code.co_name)
 
 
     @staticmethod
