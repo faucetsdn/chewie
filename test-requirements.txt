@@ -2,4 +2,4 @@ codecov
 pylint
 pytest
 pytest-cov
-pytype==2021.2.19
+pytype==2021.2.23
