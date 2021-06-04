@@ -1,23 +1,27 @@
 #!/bin/bash
 
-CHEWIEHOME=`dirname $0`"/../.."
-PYTHONPATH=$CHEWIEHOME
-MINRATING=8.0
+set -euo pipefail
 
-lintfile=`mktemp`.lint
+MINRATING=9.44
 
-for f in $* ; do
-    f=$(realpath $f)
-    PYTHONPATH=$PYTHONPATH pylint --rcfile=$CHEWIEHOME/.pylintrc $f > $lintfile
-    rating=`cat $lintfile | grep -ohE "rated at [0-9\.]+" | sed "s/rated at //g"`
-    echo pylint $f: $rating
-    failing=$(bc <<< "$rating < $MINRATING")
+SCRIPTPATH=$(readlink -f "$0")
+TESTDIR=$(dirname "${SCRIPTPATH}")
+BASEDIR=$(readlink -f "${TESTDIR}/../..")
+PYTHONPATH=${BASEDIR}:${BASEDIR}/clib
+
+lintfile=$(mktemp /tmp/pylintXXXXXX)
+
+# TODO: --fail-under can't be used because it takes only integers.
+for file in "$@" ; do
+    PYTHONPATH=${PYTHONPATH} pylint --exit-zero --rcfile=/dev/null -d import-error ${file} > "${lintfile}"
+    rating=$(grep -ohE "rated at [0-9\.\-]+" "${lintfile}" | sed "s/rated at //g")
+    echo "pylint rating ${file}: ${rating}"
+    failing=$(bc <<< "${rating} < ${MINRATING}")
     if [ "$failing" -ne 0 ]; then
-        cat $lintfile
-        echo "$rating below min ($MINRATING), results in $lintfile"
+        cat "${lintfile}"
+        echo "pylint rating ${file}: ${rating} is below minimum ${MINRATING}"
         exit 1
     fi
-    rm $lintfile
 done
 
-exit 0
+rm "${lintfile}"
