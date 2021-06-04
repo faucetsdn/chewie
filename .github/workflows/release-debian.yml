@@ -1,0 +1,45 @@
+name: Build debian packages for release
+
+on:
+  release:
+    types:
+      - published
+
+env:
+  DEBIAN_FRONTEND: noninteractive
+
+jobs:
+  debian-package:
+    name: "Build debian packages"
+    runs-on: ubuntu-latest
+    environment:
+      name: "release"
+    container:
+      image: "ubuntu:bionic"
+    steps:
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get -y upgrade
+          apt-get -y install devscripts dpkg-dev debhelper equivs
+      - name: Checkout repo
+        uses: actions/checkout@v2
+      - name: Bump version
+        run: |
+          export DEBEMAIL='maintainers@faucet.nz'
+          export DEBFULLNAME='Faucet Maintainers'
+          debchange --newversion ${{ github.event.release.tag_name }} -b "New upstream release"
+      - name: Build package
+        run: |
+          mk-build-deps -i -r -t 'apt-get -f -y --force-yes'
+          dpkg-buildpackage -b -us -uc -rfakeroot
+      - name: Store package
+        run: |
+          mkdir -p packages/all
+          cp ../*.deb packages/all
+      - name: Publish package on packagecloud
+        uses: faucetsdn/action-packagecloud-upload-debian-packages@v1
+        with:
+          path: packages/
+          repo: faucetsdn/faucet
+          token: ${{ secrets.PACKAGECLOUD_TOKEN }}
