@@ -18,7 +18,10 @@ jobs:
           python-version: ${{ env.CODECHECK_PY_VER }}
       - name: Install dependencies
         run: |
-          ./docker/pip_deps.sh
+          ./docker/pip_deps.sh --extra-requirements="codecheck-requirements.txt"
       - name: Run pylint
         run: |
           ./test/codecheck/pylint.sh
+      - name: Run pytype
+        run: |
+          PYTHONPATH=. pytype --config setup.cfg chewie

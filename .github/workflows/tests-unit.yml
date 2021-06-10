@@ -28,7 +28,3 @@ jobs:
       - if: ${{ matrix.python-version == env.CODECOV_PY_VER }}
         name: Upload codecov
         uses: codecov/codecov-action@v1
-      - if: ${{ matrix.python-version != 3.5 }}
-        name: Run pytype
-        run: |
-          PYTHONPATH=. pytype --config setup.cfg
