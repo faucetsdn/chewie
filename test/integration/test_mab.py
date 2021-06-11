@@ -10,7 +10,7 @@ class MabTest(BaseTest):
 
     def setUp(self):
         """Start Radius and Chewie Servers"""
-        super(MabTest, self).setUp()
+        super().setUp()
         self.start_radius()
         self.start_chewie()
 

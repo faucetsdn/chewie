@@ -4,8 +4,8 @@
 
 from collections import namedtuple
 
-import afl  # pylint: disable=import-error
 import sys
+import afl  # pylint: disable=import-error
 from chewie.mac_address import MacAddress
 from chewie.message_parser import MessageParser
 from chewie.utils import MessageParseError

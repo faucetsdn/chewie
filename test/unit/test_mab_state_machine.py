@@ -31,8 +31,8 @@ def check_counters(_func=None, *,
 
     if _func is None:
         return decorator_check_counters
-    else:
-        return decorator_check_counters(_func)
+
+    return decorator_check_counters(_func)
 
 
 class MABStateMachineTest(unittest.TestCase):

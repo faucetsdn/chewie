@@ -16,11 +16,9 @@ class DataType():
     bytes_data = None  # bytes version of raw_data
 
     def parse(self, packed_value):
-        """"""
         return
 
     def pack(self, attribute_type):
-        """"""
         return
 
     def data(self):
@@ -68,7 +66,7 @@ class Integer(DataType):
         if raw_data:
             try:
                 bytes_data = raw_data.to_bytes(self.MAX_DATA_LENGTH, "big")
-            except OverflowError as exception:
+            except OverflowError:
                 raise ValueError("Integer must be >= 0  and <= 2^32-1, was %d" %
                                  raw_data)
         self.bytes_data = bytes_data

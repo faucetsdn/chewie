@@ -102,10 +102,10 @@ class UserPassword(Attribute):
         def string_pop(s, length):
             return s[:length], s[length:]
 
-        if type(secret) is str:
+        if isinstance(secret, str):
             secret = secret.encode()
 
-        if type(req_authenticator) is int:
+        if isinstance(req_authenticator, int):
             req_authenticator = req_authenticator.to_bytes(16, 'big')
 
         BASE = 16
@@ -130,10 +130,10 @@ class UserPassword(Attribute):
         def string_pop(s, length):
             return s[:length], s[length:]
 
-        if type(secret) is str:
+        if isinstance(secret, str):
             secret = secret.encode()
 
-        if type(req_authenticator) is int:
+        if isinstance(req_authenticator, int):
             req_authenticator = req_authenticator.to_bytes(16, 'big')
 
         BASE = 16
@@ -310,14 +310,14 @@ class EAPMessage(Attribute):
         Returns:
             Attribute subclass.
         """
-        from chewie.message_parser import MessagePacker, EapMessage
+        from chewie.message_parser import MessagePacker, EapMessage  # pylint: disable=import-outside-toplevel
         if isinstance(data, EapMessage):
             return cls(cls.DATA_TYPE(bytes_data=MessagePacker.eap_pack(data)[2]))  # pylint: disable=not-callable
-        else:
-            return super(EAPMessage, cls).create(data)
+
+        return super().create(data)
 
     def data(self):
-        from chewie.message_parser import MessageParser
+        from chewie.message_parser import MessageParser  # pylint: disable=import-outside-toplevel
         return MessageParser.eap_parse(self._data_type.data(), None)
 
 @register_attribute_type

@@ -1,3 +1,7 @@
+#!/usr/bin/env python3
+
+"""Chewie setup script"""
+
 import sys
 
 from setuptools import setup
