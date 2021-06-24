@@ -7,7 +7,7 @@ import sys
 from setuptools import setup
 
 if sys.version_info < (3,):
-    print("""You are trying to install beka on python {py}
+    print("""You are trying to install chewie on python {py}
 
 chewie is not compatible with python 2, please upgrade to python 3.5 or newer."""
           .format(py='.'.join([str(v) for v in sys.version_info[:3]])), file=sys.stderr)
