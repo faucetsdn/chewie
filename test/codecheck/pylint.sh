@@ -1,6 +1,9 @@
 #!/bin/bash
-CURR_DIR=`dirname $0`
-CHEWIEHOME=$CURR_DIR"/../.."
-SRCFILES="$CHEWIEHOME/test/codecheck/src_files.sh"
-$SRCFILES | xargs -n 1 -P 8 $CURR_DIR/min_pylint.sh || exit 1
-exit 0
+
+set -euo pipefail
+
+SCRIPTPATH=$(readlink -f "$0")
+TESTDIR=$(dirname "${SCRIPTPATH}")
+
+srcfiles="${TESTDIR}/src_files.sh $*"
+${srcfiles} | parallel --timeout 300 --delay 1 --halt now,fail=1 -j 4 "${TESTDIR}/min_pylint.sh"

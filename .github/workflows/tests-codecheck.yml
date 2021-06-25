@@ -21,4 +21,4 @@ jobs:
           ./docker/pip_deps.sh
       - name: Run pylint
         run: |
-          ./test/codecheck/min_pylint.sh
+          ./test/codecheck/pylint.sh

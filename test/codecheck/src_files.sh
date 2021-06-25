@@ -1,4 +1,22 @@
 #!/bin/bash
 
-CHEWIEHOME=`dirname $0`"/../.."
-for i in chewie test ; do find $CHEWIEHOME/$i/ -type f -name '[a-z]*.py' ; done
+set -euo pipefail
+
+SCRIPTPATH=$(readlink -f "$0")
+TESTDIR=$(dirname "${SCRIPTPATH}")
+BASEDIR=$(readlink -f "${TESTDIR}/../..")
+
+tmpfile=$(mktemp /tmp/srcfilesXXXXXX)
+
+if [[ "$*" == "" ]] ; then
+  for dir in chewie test ; do
+      find "${BASEDIR}/${dir}/" -type f -name '[a-z]*.py'
+  done | xargs realpath > "${tmpfile}"
+else
+  cd "${BASEDIR}"
+  readlink -f "$@" > "${tmpfile}"
+fi
+
+sort < "${tmpfile}"
+
+rm "${tmpfile}"
