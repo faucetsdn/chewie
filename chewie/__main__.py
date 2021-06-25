@@ -32,13 +32,17 @@ def auth_handler(address, group_address, *args, **kwargs):
 def failure_handler(address, group_address):
     """Handle client failures"""
 
-    print("failure of address %s on port %s" % (str(address), str(group_address)))
+    logger = get_logger("CHEWIE")
+    logger.info("Authentication failed for address %s on port %s",
+                str(address), str(group_address))
 
 
 def logoff_handler(address, group_address):
     """Handle client logoffs"""
 
-    print("logoff of address %s on port %s" % (str(address), str(group_address)))
+    logger = get_logger("CHEWIE")
+    logger.info("Logoff successful for address %s on port %s",
+                str(address), str(group_address))
 
 
 def main():
