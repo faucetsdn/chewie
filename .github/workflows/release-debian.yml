@@ -41,5 +41,5 @@ jobs:
         uses: faucetsdn/action-packagecloud-upload-debian-packages@v1
         with:
           path: packages/
-          repo: faucetsdn/faucet
+          repo: faucetsdn/faucet-test
           token: ${{ secrets.PACKAGECLOUD_TOKEN }}
