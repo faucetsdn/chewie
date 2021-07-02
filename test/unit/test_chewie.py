@@ -26,7 +26,7 @@ TO_RADIUS = Queue()
 
 # NOTE: Added due to tests failing because SM is not in the state
 # this appears to be because of checking too early.
-SHORT_SLEEP = 0.2
+SHORT_SLEEP = 0.4
 
 
 def patch_things(func):
