@@ -108,7 +108,7 @@ class EapIdentity(Eap):
 
     def pack(self):
         packed_identity = self.identity.encode()
-        return super(EapIdentity, self).pack(packed_identity)
+        return super().pack(packed_identity)
 
     def __repr__(self):
         return "%s(identity=%s)" % \
@@ -147,7 +147,7 @@ class EapMd5Challenge(Eap):
     def pack(self):
         value_length = struct.pack("!B", len(self.challenge))
         packed_md5_challenge = value_length + self.challenge + self.extra_data
-        return super(EapMd5Challenge, self).pack(packed_md5_challenge)
+        return super().pack(packed_md5_challenge)
 
     def __repr__(self):
         return "%s(challenge=%s, extra_data=%s)" % \
@@ -216,7 +216,7 @@ class EapLegacyNak(Eap):
     def pack(self):
         packed_legacy_nak = struct.pack("!%ds" % len(self.desired_auth_types),
                                         *self.desired_auth_types)  # pytype: disable=wrong-arg-types
-        return super(EapLegacyNak, self).pack(packed_legacy_nak)
+        return super().pack(packed_legacy_nak)
 
     def __repr__(self):
         return "%s(packet_id=%s, desired_auth_types=%s)" % \

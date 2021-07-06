@@ -2,7 +2,7 @@ FROM faucet/python3:5.0.1
 
 COPY ./ /chewie-src/
 
-RUN apk add -U git gcc python3-dev musl-dev && \
+RUN apk add -U git gcc g++ python3-dev musl-dev && \
     pip3 --no-cache-dir install --upgrade /chewie-src/
 
 CMD ["chewie"]

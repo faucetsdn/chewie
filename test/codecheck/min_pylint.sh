@@ -1,23 +1,13 @@
 #!/bin/bash
 
-CHEWIEHOME=`dirname $0`"/../.."
-PYTHONPATH=$CHEWIEHOME
-MINRATING=8.0
+set -euo pipefail
 
-lintfile=`mktemp`.lint
+MINRATING=8.42
 
-for f in $* ; do
-    f=$(realpath $f)
-    PYTHONPATH=$PYTHONPATH pylint --rcfile=$CHEWIEHOME/.pylintrc $f > $lintfile
-    rating=`cat $lintfile | grep -ohE "rated at [0-9\.]+" | sed "s/rated at //g"`
-    echo pylint $f: $rating
-    failing=$(bc <<< "$rating < $MINRATING")
-    if [ "$failing" -ne 0 ]; then
-        cat $lintfile
-        echo "$rating below min ($MINRATING), results in $lintfile"
-        exit 1
-    fi
-    rm $lintfile
+for file in "$@" ; do
+    echo ""
+    echo "------------------------------------------------------------------"
+    echo "pylint report for ${file}"
+    pylint --fail-under=${MINRATING} -d import-error ${file} || \
+        (echo "pylint rating for ${file} is below minimum of ${MINRATING}" && exit 1)
 done
-
-exit 0

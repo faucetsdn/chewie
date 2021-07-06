@@ -62,29 +62,29 @@ CHEWIE_CONF_DIR = CHEWIE_ROOT + '/etc/'
 
 def auth_handler(address, group_address, *args, **kwargs):  # pylint: disable=missing-docstring
     logger = logging.getLogger('CHEWIE')
-    logger.info("Authentication successful for address {} on port {}".format(
-        str(address), str(group_address)))
-    logger.info("Arguments passed from Chewie to Faucet: \n*args:{}".format(str(args)))
+    logger.info("Authentication successful for address %s on port %s",
+                str(address), str(group_address))
+    logger.info("Arguments passed from Chewie to Faucet: \n*args: %s", str(args))
 
     if kwargs:
         for key, value in kwargs.items():
-            logger.info("kwargs : " + str(key) + " : " + str(value))
+            logger.info("kwargs : %s : %s", str(key), str(value))
 
     HANDLER_COUNTS['auth_handler'] += 1  # pytype: disable=key-error
 
 
 def failure_handler(address, group_address):  # pylint: disable=missing-docstring
     logger = logging.getLogger('CHEWIE')
-    logger.info("Authentication failed for address {} on port {}".format(
-        str(address), str(group_address)))
+    logger.info("Authentication failed for address %s on port %s",
+                str(address), str(group_address))
 
     HANDLER_COUNTS['failure_handler'] += 1  # pytype: disable=key-error
 
 
 def logoff_handler(address, group_address):  # pylint: disable=missing-docstring
     logger = logging.getLogger('CHEWIE')
-    logger.info("Logoff Successful for address {} on port {}".format(
-        str(address), str(group_address)))
+    logger.info("Logoff successful for address %s on port %s",
+                str(address), str(group_address))
 
     HANDLER_COUNTS['logoff_handler'] += 1  # pytype: disable=key-error
 
@@ -95,6 +95,7 @@ class BaseTest(unittest.TestCase):
     Inherit from this class to have an environment set up for the tests to run in.
     """
     active_processes = []
+    chewie_pid = None
     freeradius_log = None
     wpa_supplicant_log = None
     current_log_dir = None
@@ -278,4 +279,3 @@ class BaseTest(unittest.TestCase):
             if os.path.exists(dst) and os.path.isdir(dst):
                 shutil.rmtree(dst)
             shutil.copytree(src, dst)
-

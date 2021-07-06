@@ -10,7 +10,7 @@ class EapTest(BaseTest):
 
     def setUp(self):
         """Start Radius and Chewie Servers"""
-        super(EapTest, self).setUp()
+        super().setUp()
         self.start_radius()
         self.start_chewie()
 

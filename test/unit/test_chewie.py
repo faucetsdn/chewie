@@ -2,19 +2,21 @@
 
 import logging
 import random
+import sys
 import tempfile
 import unittest
+
 from unittest.mock import patch
+from helpers import FakeTimerScheduler
 
 import eventlet
-import sys
+from eventlet.queue import Queue
+
 from chewie.chewie import Chewie, get_random_id
 from chewie.mac_address import MacAddress
 from chewie.state_machines.eap_state_machine import FullEAPStateMachine
 from chewie.state_machines.mab_state_machine import MacAuthenticationBypassStateMachine
-from eventlet.queue import Queue
 
-from helpers import FakeTimerScheduler
 
 FROM_SUPPLICANT = Queue()
 FROM_SUPPLICANT_ACTIVITY = Queue()
@@ -24,7 +26,7 @@ TO_RADIUS = Queue()
 
 # NOTE: Added due to tests failing because SM is not in the state
 # this appears to be because of checking too early.
-SHORT_SLEEP = 0.2
+SHORT_SLEEP = 0.4
 
 
 def patch_things(func):

@@ -1,0 +1,37 @@
+name: Build docker images for release
+
+on:
+  release:
+    types:
+      - published
+
+jobs:
+  chewie-docker-image:
+    name: "Build chewie docker image"
+    runs-on: ubuntu-latest
+    environment:
+      name: "release"
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+      - name: Set up qemu
+        uses: docker/setup-qemu-action@v1
+        with:
+          platforms: all
+      - name: Set up docker buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+        with:
+          version: latest
+      - name: Login to docker registry
+        run: |
+          docker login --username ${{ secrets.DOCKER_USERNAME }} --password ${{ secrets.DOCKER_TOKEN }}
+      - name: Run buildx
+        run: |
+          docker buildx build \
+            --tag faucet/chewie:${{ github.event.release.tag_name }} \
+            --tag faucet/chewie:latest \
+            --platform linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64/v8,linux/ppc64le,linux/s390x \
+            --output "type=registry" \
+            --file Dockerfile.chewie \
+            .

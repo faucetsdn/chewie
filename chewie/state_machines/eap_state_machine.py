@@ -1,5 +1,4 @@
 """Loosely based on RFC4137 'EAP State Machines' with some interpretation"""
-import random
 
 from transitions import State, Machine
 
@@ -492,7 +491,7 @@ class FullEAPStateMachine(AbstractStateMachine):
         return eap_code, _id, resp_method
 
     def build_success(self):
-        """Creates an EAP Sucecss Pakcet. Returns an EAP packet"""
+        """Creates an EAP Success Packet. Returns an EAP packet"""
         return SuccessMessage(self.src_mac, self.current_id)
 
     def build_failure(self):

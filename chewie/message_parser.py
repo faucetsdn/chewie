@@ -1,5 +1,3 @@
-""""""
-
 from chewie.auth_8021x import Auth8021x
 from chewie.eap import Eap, EapIdentity, EapMd5Challenge, EapSuccess, EapFailure, EapLegacyNak, \
     EapTTLS, EapTLS, EapPEAP, PARSERS_TYPES
@@ -10,7 +8,7 @@ from chewie.radius_attributes import CallingStationId, UserName, MessageAuthenti
 from chewie.utils import MessageParseError
 
 
-class EapMessage:
+class EapMessage:  # pylint: disable=too-few-public-methods
     src_mac = None
     message_id = None
 
@@ -25,15 +23,13 @@ class EapMessage:
         return "'%s': src_mac: '%s', id: '%d'" % (self.__class__.__name__, self.src_mac, _id)
 
 
-class SuccessMessage(EapMessage):
-
+class SuccessMessage(EapMessage):  # pylint: disable=too-few-public-methods
     @classmethod
     def build(cls, src_mac, eap):
         return cls(src_mac, eap.packet_id)
 
 
-class FailureMessage(EapMessage):
-
+class FailureMessage(EapMessage):  # pylint: disable=too-few-public-methods
     @classmethod
     def build(cls, src_mac, eap):
         return cls(src_mac, eap.packet_id)
@@ -69,7 +65,7 @@ class LegacyNakMessage(EapMessage):
 
 
 class Md5ChallengeMessage(EapMessage):
-    def __init__(self, src_mac, message_id, code, challenge, extra_data):
+    def __init__(self, src_mac, message_id, code, challenge, extra_data):  # pylint: disable=too-many-arguments
         super().__init__(src_mac, message_id)
         self.code = code
         self.challenge = challenge
@@ -87,7 +83,7 @@ class Md5ChallengeMessage(EapMessage):
 class TlsMessageBase(EapMessage):
     """TLS and TTLS will extend this class, but TTLS cannot be same type as TLS"""
 
-    def __init__(self, src_mac, message_id, code, flags, extra_data):
+    def __init__(self, src_mac, message_id, code, flags, extra_data):  # pylint: disable=too-many-arguments
         super().__init__(src_mac, message_id)
         self.code = code
         self.flags = flags
@@ -102,19 +98,19 @@ class TlsMessageBase(EapMessage):
         return cls(src_mac, eap.packet_id, eap.code, eap.flags, eap.extra_data)
 
 
-class TlsMessage(TlsMessageBase):
+class TlsMessage(TlsMessageBase):  # pylint: disable=too-few-public-methods
     pass
 
 
-class TtlsMessage(TlsMessageBase):
+class TtlsMessage(TlsMessageBase):  # pylint: disable=too-few-public-methods
     pass
 
 
-class PeapMessage(TlsMessageBase):
+class PeapMessage(TlsMessageBase):  # pylint: disable=too-few-public-methods
     pass
 
 
-class EapolStartMessage(EapMessage):
+class EapolStartMessage(EapMessage):  # pylint: disable=too-few-public-methods
     def __init__(self, src_mac):
         super().__init__(src_mac, None)
 
@@ -123,7 +119,7 @@ class EapolStartMessage(EapMessage):
         return cls(src_mac)
 
 
-class EapolLogoffMessage(EapMessage):
+class EapolLogoffMessage(EapMessage):  # pylint: disable=too-few-public-methods
     def __init__(self, src_mac):
         super().__init__(src_mac, None)
 
@@ -157,12 +153,16 @@ class MessageParser:
         Raises:
             MessageParseError: the data cannot be parsed."""
         auth_8021x = Auth8021x.parse(data)
+
         if auth_8021x.packet_type == 0:
             return MessageParser.eap_parse(auth_8021x.data, src_mac)
-        elif auth_8021x.packet_type == 1:
+
+        if auth_8021x.packet_type == 1:
             return EapolStartMessage.build(src_mac)
-        elif auth_8021x.packet_type == 2:
+
+        if auth_8021x.packet_type == 2:
             return EapolLogoffMessage.build(src_mac)
+
         raise MessageParseError("802.1x has bad type, expected 0: %s" % auth_8021x)
 
     @staticmethod
@@ -177,12 +177,14 @@ class MessageParser:
 
         if isinstance(eap, tuple(PARSERS_TYPES.values())):
             return EAP_MESSAGES[eap.PACKET_TYPE].build(src_mac, eap)
-        elif isinstance(eap, EapSuccess):
+
+        if isinstance(eap, EapSuccess):
             return SuccessMessage.build(src_mac, eap)
-        elif isinstance(eap, EapFailure):
+
+        if isinstance(eap, EapFailure):
             return FailureMessage.build(src_mac, eap)
-        else:
-            raise MessageParseError("Got bad Eap packet: %s" % eap)
+
+        raise MessageParseError("Got bad Eap packet: %s" % eap)
 
     @staticmethod
     def ethernet_parse(packed_message):
@@ -231,8 +233,6 @@ class MessagePacker:
 
     @staticmethod
     def radius_mab_pack(src_mac, radius_packet_id, request_authenticator, secret, nas_port):
-        """"""
-
         attr_list = []
         no_dots_mac = str(src_mac).replace(':', "")
         attr_list.append(UserName.create(no_dots_mac))

@@ -1,9 +1,7 @@
 # Chewie
 
-[![Build Status](https://travis-ci.com/faucetsdn/chewie.svg?branch=master)](https://travis-ci.com/faucetsdn/chewie)
-[![Codecov](https://codecov.io/gh/faucetsdn/chewie/branch/master/graph/badge.svg)](https://codecov.io/gh/faucetsdn/faucet)
-
-
+[![Build Status](https://github.com/faucetsdn/chewie/workflows/Unit%20tests/badge.svg?branch=master)](https://github.com/faucetsdn/chewie/actions?query=workflow%3A%22Unit+tests%22)
+[![Test Coverage](https://codecov.io/gh/faucetsdn/chewie/branch/master/graph/badge.svg)](https://codecov.io/gh/faucetsdn/chewie)
 
 ## Chewie - EAPOL / 802.1x
 Chewie is an EAPOL/802.1x implementation in Python.
