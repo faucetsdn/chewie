@@ -1,61 +1,64 @@
+---
 version: '2'
 
 services:
-    wpasupplicant:
-        build:
-            context: .
-            dockerfile: Dockerfile.wpasupplicant
-        image: 'chewie/wpasupplicant:latest'
-        depends_on: [chewie]
-        command: bash -c "wpa_supplicant -dd -c/tmp/wpasupplicant/wired-peap.conf -ieth0 -Dwired;"
-        networks:
-            00wpasupplicant-net:
-                ipv4_address: 172.23.0.111
-        cap_add:
-            - ALL
-        volumes:
-            - ./etc/wpasupplicant/:/tmp/wpasupplicant/
-            - ./etc/wpasupplicant/cert/:/tmp/cert/
+  wpasupplicant:
+    build:
+      context: .
+      dockerfile: Dockerfile.wpasupplicant
+    image: 'chewie/wpasupplicant:latest'
+    depends_on: [chewie]
+    command: >
+      bash -c
+      "wpa_supplicant -dd -c/tmp/wpasupplicant/wired-peap.conf -ieth0 -Dwired;"
+    networks:
+      00wpasupplicant-net:
+        ipv4_address: 172.23.0.111
+    cap_add:
+      - ALL
+    volumes:
+      - ./etc/wpasupplicant/:/tmp/wpasupplicant/
+      - ./etc/wpasupplicant/cert/:/tmp/cert/
 
-    chewie:
-        build:
-            context: .
-            dockerfile: Dockerfile.chewie
-        image: 'chewie/chewie:latest'
-        command: 'chewie --interface eth0 --radius_ip 172.24.0.113'
-        networks:
-            00wpasupplicant-net:
-                ipv4_address: 172.23.0.112
-                priority: 200
-            01radius-net:
-                ipv4_address: 172.24.0.112
-                priority: 100
-        cap_add:
-            - ALL
-        volumes:
-            - ./:/chewie-src/
+  chewie:
+    build:
+      context: .
+      dockerfile: Dockerfile.chewie
+    image: 'chewie/chewie:latest'
+    command: 'chewie --interface eth0 --radius_ip 172.24.0.113'
+    networks:
+      00wpasupplicant-net:
+        ipv4_address: 172.23.0.112
+        priority: 200
+      01radius-net:
+        ipv4_address: 172.24.0.112
+        priority: 100
+    cap_add:
+      - ALL
+    volumes:
+      - ./:/chewie-src/
 
-    freeradius:
-        build:
-            context: .
-            dockerfile: Dockerfile.freeradius
-        image: 'chewie/freeradius:latest'
-        networks:
-            01radius-net:
-                ipv4_address: 172.24.0.113
-        volumes:
-            - "./etc/freeradius/users:/etc/freeradius/3.0/users:ro"
-            - "./etc/freeradius/certs:/etc/freeradius/3.0/certs"
-            - "./etc/freeradius/default/eap:/etc/freeradius/3.0/mods-enabled/eap:ro"
-            - "./etc/freeradius/clients.conf:/etc/freeradius/3.0/clients.conf:ro"
+  freeradius:
+    build:
+      context: .
+      dockerfile: Dockerfile.freeradius
+    image: 'chewie/freeradius:latest'
+    networks:
+      01radius-net:
+        ipv4_address: 172.24.0.113
+    volumes:
+      - "./etc/freeradius/users:/etc/freeradius/3.0/users:ro"
+      - "./etc/freeradius/certs:/etc/freeradius/3.0/certs"
+      - "./etc/freeradius/default/eap:/etc/freeradius/3.0/mods-enabled/eap:ro"
+      - "./etc/freeradius/clients.conf:/etc/freeradius/3.0/clients.conf:ro"
 
 networks:
-    00wpasupplicant-net:
-        driver: macvlan
-        ipam:
-            config:
-                - subnet: 172.23.0.0/16
-    01radius-net:
-        ipam:
-            config:
-                - subnet: 172.24.0.0/16
+  00wpasupplicant-net:
+    driver: macvlan
+    ipam:
+      config:
+        - subnet: 172.23.0.0/16
+  01radius-net:
+    ipam:
+      config:
+        - subnet: 172.24.0.0/16
