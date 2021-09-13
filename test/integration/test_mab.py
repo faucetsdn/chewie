@@ -17,5 +17,13 @@ class MabTest(BaseTest):
     def test_smoke_mab(self):
         """Perform MAB using dhclient"""
         self.start_dhclient()
-        time.sleep(5)
-        self.check_output()
+        last_err = None
+        for _ in range(3):
+            time.sleep(5)
+            try:
+                self.check_output()
+                return
+            except AssertionError as err:
+                last_err = err
+                continue
+        self.fail(last_err)
