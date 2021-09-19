@@ -1,5 +1,8 @@
 [MASTER]
 jobs=4
+# TODO: remove consider-using-f-string when python3.5 is gone.
+disable=
+    consider-using-f-string
 
 [TYPECHECK]
 generated-members=socket.*
