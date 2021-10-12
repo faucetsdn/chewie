@@ -11,7 +11,7 @@ Build-Depends: debhelper (>=9),
                python3-pbr (>=1.9),
 Standards-Version: 3.9.6
 Homepage: https://pypi.org/project/chewie/
-X-Python3-Version: >= 3.2
+X-Python3-Version: >= 3.6
 #Vcs-Git: git://github.com/faucetsdn/chewie.git
 #Vcs-Browser: https://github.com/faucetsdn/chewie.git
 
