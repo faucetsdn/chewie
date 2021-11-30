@@ -1,4 +1,4 @@
-FROM faucet/python3:5.0.1
+FROM faucet/python3:6.0.0
 
 COPY ./ /chewie-src/
 
