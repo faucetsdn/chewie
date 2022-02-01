@@ -15,7 +15,7 @@ jobs:
     environment:
       name: "release"
     container:
-      image: "ubuntu:bionic"
+      image: "debian:latest"
     steps:
       - name: Install dependencies
         run: |
