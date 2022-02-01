@@ -1,7 +1,7 @@
 Source: chewie
 Section: python
 Priority: optional
-Maintainer: Brad Cowie <brad@faucet.nz>
+Maintainer: Faucet Maintainers <maintainers@faucet.nz>
 Build-Depends: debhelper (>= 11),
                dh-python,
                python3-all,
@@ -10,10 +10,10 @@ Build-Depends: debhelper (>= 11),
                python3-transitions,
                python3-pbr (>= 1.9),
 Standards-Version: 3.9.6
-Homepage: https://pypi.org/project/chewie/
+Homepage: https://github.com/faucetsdn/chewie
 X-Python3-Version: >= 3.7
-#Vcs-Git: git://github.com/faucetsdn/chewie.git
-#Vcs-Browser: https://github.com/faucetsdn/chewie.git
+Vcs-Git: https://github.com/faucetsdn/chewie.git
+Vcs-Browser: https://github.com/faucetsdn/chewie
 
 Package: python3-chewie
 Architecture: all
