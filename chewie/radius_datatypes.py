@@ -77,7 +77,7 @@ class Integer(DataType):
         try:
             cls.is_valid_length(packed_value)
             return cls(bytes_data=struct.unpack("!4s", packed_value)[0])
-        except (ValueError, struct.error)as exception:
+        except (ValueError, struct.error) as exception:
             raise MessageParseError("%s unable to unpack." % cls.__name__) from exception
 
     def pack(self, attribute_type):
@@ -108,7 +108,7 @@ class Enum(DataType):
         try:
             cls.is_valid_length(packed_value)
             return cls(bytes_data=struct.unpack("!4s", packed_value)[0])
-        except (ValueError, struct.error)as exception:
+        except (ValueError, struct.error) as exception:
             raise MessageParseError("%s unable to unpack." % cls.__name__) from exception
 
     def pack(self, attribute_type):
