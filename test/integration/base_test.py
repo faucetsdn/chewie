@@ -159,7 +159,7 @@ class BaseTest(unittest.TestCase):
         self.freeradius_log.close()
         self.wpa_supplicant_log.close()
 
-    def run_command_and_wait(self, command, output_file=None):  # pylint: disable=no-self-use
+    def run_command_and_wait(self, command, output_file=None):
         """Run a command and wait for the process to complete"""
         if output_file:
             child = subprocess.Popen(command.split(), stdout=output_file)
@@ -210,7 +210,7 @@ class BaseTest(unittest.TestCase):
         """Start dhclient on the MAB port"""
         return self.run_command_and_detach("dhclient -i {}".format(SUPPLICANT.name))
 
-    def check_output(self, **kwargs):  # pylint: disable=no-self-use
+    def check_output(self, **kwargs):
         """Check the output of the Log Files to verify state of system"""
 
         with open(os.path.join(self.current_log_dir + "chewie.log"), "r") as file:

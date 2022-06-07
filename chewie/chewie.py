@@ -97,7 +97,7 @@ class Chewie:
         self.setup_radius_socket()
         self.start_threads_and_wait()
 
-    def running(self):  # pylint: disable=no-self-use
+    def running(self):
         """Used to nicely exit the event loops"""
         return True
 
