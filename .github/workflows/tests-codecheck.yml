@@ -28,8 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # TODO: pytype does not yet support python 3.10: https://github.com/google/pytype/issues/1022
-        python-version: [3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8, 3.9, '3.10']
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
