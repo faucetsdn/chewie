@@ -11,14 +11,14 @@ Build-Depends: debhelper (>= 11),
                python3-pbr (>= 1.9),
 Standards-Version: 3.9.6
 Homepage: https://github.com/faucetsdn/chewie
-X-Python3-Version: >= 3.7
+X-Python3-Version: >= 3.8
 Vcs-Git: https://github.com/faucetsdn/chewie.git
 Vcs-Browser: https://github.com/faucetsdn/chewie
 
 Package: python3-chewie
 Architecture: all
 Depends: ${python3:Depends},
-         python3:any (>= 3.7~),
+         python3:any (>= 3.8~),
          ${misc:Depends}
 Description: Chewie is an EAPOL/802.1x implementation in Python.
  .
