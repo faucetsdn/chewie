@@ -1,6 +1,6 @@
 # dnspython 2.3.0 is not compatible with eventlet
 # https://github.com/eventlet/eventlet/issues/781
-dnspython<2.3.0
+dnspython<2.4.0
 eventlet>=0.26.1
 pbr>=1.9
 transitions
