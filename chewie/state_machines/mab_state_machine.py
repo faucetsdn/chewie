@@ -28,45 +28,73 @@ class MacAuthenticationBypassStateMachine(AbstractStateMachine):
 
     INITIAL_STATE = DISABLED
     PROGRESS_STATES = [
-        State(DISABLED, 'mab_disabled_state'),
-        State(ETH_RECEIVED, 'eth_received_state'),
-        State(AAA_REQUEST, 'aaa_request_state'),
-        State(AAA_IDLE, 'aaa_idle_state'),
-        State(AAA_RECEIVED, 'aaa_received_state'),
+        State(DISABLED, "mab_disabled_state"),
+        State(ETH_RECEIVED, "eth_received_state"),
+        State(AAA_REQUEST, "aaa_request_state"),
+        State(AAA_IDLE, "aaa_idle_state"),
+        State(AAA_RECEIVED, "aaa_received_state"),
     ]
 
-    SUCCESS_STATES = [State(AAA_SUCCESS, 'aaa_success_state'), ]
-    FAILURE_STATES = [State(AAA_FAILURE, 'aaa_failure_state'), ]
+    SUCCESS_STATES = [
+        State(AAA_SUCCESS, "aaa_success_state"),
+    ]
+    FAILURE_STATES = [
+        State(AAA_FAILURE, "aaa_failure_state"),
+    ]
     COMPLETION_STATES = FAILURE_STATES + SUCCESS_STATES
 
     STATES = COMPLETION_STATES + PROGRESS_STATES
 
     ERROR_TRANSTIONS = [
-        {'trigger': 'process', 'source': '*', 'dest': DISABLED,
-         'unless': ['_is_port_enabled']},
-        {'trigger': 'process', 'source': '*', 'dest': DISABLED,
-         'conditions': ['_is_mab_restart']},
+        {
+            "trigger": "process",
+            "source": "*",
+            "dest": DISABLED,
+            "unless": ["_is_port_enabled"],
+        },
+        {
+            "trigger": "process",
+            "source": "*",
+            "dest": DISABLED,
+            "conditions": ["_is_mab_restart"],
+        },
     ]
 
     CORE_TRANSITIONS = [
-        {'trigger': 'process', 'source': DISABLED, 'dest': ETH_RECEIVED,
-         'conditions': ['_is_eth_received']},
-
-        {'trigger': 'process', 'source': ETH_RECEIVED, 'dest': AAA_REQUEST},
-        {'trigger': 'process', 'source': AAA_REQUEST, 'dest': AAA_IDLE},
-
-        {'trigger': 'process', 'source': AAA_IDLE, 'dest': AAA_RECEIVED,
-         'conditions': ['_is_aaa_received']},
-
+        {
+            "trigger": "process",
+            "source": DISABLED,
+            "dest": ETH_RECEIVED,
+            "conditions": ["_is_eth_received"],
+        },
+        {"trigger": "process", "source": ETH_RECEIVED, "dest": AAA_REQUEST},
+        {"trigger": "process", "source": AAA_REQUEST, "dest": AAA_IDLE},
+        {
+            "trigger": "process",
+            "source": AAA_IDLE,
+            "dest": AAA_RECEIVED,
+            "conditions": ["_is_aaa_received"],
+        },
         # Completion States
-        {'trigger': 'process', 'source': AAA_RECEIVED, 'dest': AAA_FAILURE,
-         'conditions': ['_is_aaa_fail']},
-        {'trigger': 'process', 'source': AAA_RECEIVED, 'dest': AAA_SUCCESS,
-         'conditions': ['_is_aaa_success']},
-
+        {
+            "trigger": "process",
+            "source": AAA_RECEIVED,
+            "dest": AAA_FAILURE,
+            "conditions": ["_is_aaa_fail"],
+        },
+        {
+            "trigger": "process",
+            "source": AAA_RECEIVED,
+            "dest": AAA_SUCCESS,
+            "conditions": ["_is_aaa_success"],
+        },
         # On Failure - Restart Authentication
-        {'trigger': 'process', 'source': AAA_FAILURE, 'dest': ETH_RECEIVED,
-         'conditions': ['_is_eth_received']},
+        {
+            "trigger": "process",
+            "source": AAA_FAILURE,
+            "dest": ETH_RECEIVED,
+            "conditions": ["_is_eth_received"],
+        },
     ]
     TRANSITIONS = CORE_TRANSITIONS + ERROR_TRANSTIONS
 
@@ -138,19 +166,28 @@ class MacAuthenticationBypassStateMachine(AbstractStateMachine):
     @log_method
     def aaa_success_state(self):  # pylint: disable=missing-docstring
         self.logger.info(
-            'Authentication Passed: MAC is approved for MAB %s', self.src_mac)
+            "Authentication Passed: MAC is approved for MAB %s", self.src_mac
+        )
         self.handle_success()
 
     @log_method
     def aaa_failure_state(self):  # pylint: disable=missing-docstring
         self.logger.info(
-            'Authentication Failed: MAC is not approved for MAB %s', self.src_mac)
+            "Authentication Failed: MAC is not approved for MAB %s", self.src_mac
+        )
         self.handle_failure()
 
     # pylint: disable=too-many-arguments
 
-    def __init__(self, radius_output_queue, src_mac, timer_scheduler,
-                 auth_handler, failure_handler, log_prefix):
+    def __init__(
+        self,
+        radius_output_queue,
+        src_mac,
+        timer_scheduler,
+        auth_handler,
+        failure_handler,
+        log_prefix,
+    ):
         """
 
         Args:
@@ -168,10 +205,13 @@ class MacAuthenticationBypassStateMachine(AbstractStateMachine):
         self.failure_handler = failure_handler
         self.aaa_sent_count = 0
         self.set_timer = None
-        self.machine = Machine(model=self, states=MacAuthenticationBypassStateMachine.STATES,
-                               transitions=MacAuthenticationBypassStateMachine.TRANSITIONS,
-                               queued=True,
-                               initial=MacAuthenticationBypassStateMachine.DISABLED)
+        self.machine = Machine(
+            model=self,
+            states=MacAuthenticationBypassStateMachine.STATES,
+            transitions=MacAuthenticationBypassStateMachine.TRANSITIONS,
+            queued=True,
+            initial=MacAuthenticationBypassStateMachine.DISABLED,
+        )
 
         self.logger = get_logger(log_prefix)
 
@@ -197,7 +237,8 @@ class MacAuthenticationBypassStateMachine(AbstractStateMachine):
     def event(self, event):
         """Processes an event for the state machine"""
         self.logger.info(
-            "Received event: %s with starting state: %s", event.__class__, self.state)
+            "Received event: %s with starting state: %s", event.__class__, self.state
+        )
 
         self.reset_variables()
 
@@ -205,17 +246,22 @@ class MacAuthenticationBypassStateMachine(AbstractStateMachine):
         if isinstance(event, EventMessageReceived):
             self.event_message_received(event)
         else:
-            self.logger.error('MAB State Machine error. Incorrect event received. %s',
-                              event.__dict__)
+            self.logger.error(
+                "MAB State Machine error. Incorrect event received. %s", event.__dict__
+            )
 
         self.handle_event_received()
-        self.logger.info('end state: %s', self.state)
+        self.logger.info("end state: %s", self.state)
 
     def handle_success(self):
         """Handle a AAA_Success event"""
         self.logger.info("Successful MAB Authentication. Running Auth Handler")
-        self.auth_handler(self.src_mac, str(self.port_id_mac), self.session_timeout,
-                          self.aaa_response_attributes)
+        self.auth_handler(
+            self.src_mac,
+            str(self.port_id_mac),
+            self.session_timeout,
+            self.aaa_response_attributes,
+        )
 
     def handle_failure(self):
         """Handle a AAA_Failure event"""
@@ -253,10 +299,13 @@ class MacAuthenticationBypassStateMachine(AbstractStateMachine):
 
     def process_radius_message(self):
         """Perform checks on Radius Packets before they're passed to the State Machine"""
-        if not isinstance(self.aaa_response_data, RadiusAccessAccept) \
-                and not isinstance(self.aaa_response_data, RadiusAccessReject):
-            raise Exception("Unexpected Packet Type in MAB state Machine: %s" %
-                            self.aaa_response_data.__dict__)
+        if not isinstance(
+            self.aaa_response_data, RadiusAccessAccept
+        ) and not isinstance(self.aaa_response_data, RadiusAccessReject):
+            raise Exception(
+                "Unexpected Packet Type in MAB state Machine: %s"
+                % self.aaa_response_data.__dict__
+            )
 
     def send_aaa_request(self):
         """Perform sending a AAA Request"""
@@ -266,7 +315,9 @@ class MacAuthenticationBypassStateMachine(AbstractStateMachine):
 
         # Build the RADIUS Packet and send
         self.radius_output_messages.put_nowait(
-            RadiusQueueMessage(src_mac, src_mac, src_mac,
-                               self.radius_state_attribute, port_id))
+            RadiusQueueMessage(
+                src_mac, src_mac, src_mac, self.radius_state_attribute, port_id
+            )
+        )
 
         self.aaa_sent_count += 1

@@ -35,12 +35,15 @@ class AbstractStateMachine:
     @classmethod
     def build_state_graph(cls, filename):
         "Build a graphc representation of the state machine and store in 'filename'.png"
-        model = type('model', (object,), {})()
-        GraphMachine(model=model, states=cls.STATES,
-                     title=cls.__name__,
-                     transitions=cls.CORE_TRANSITIONS,
-                     queued=True,
-                     initial=cls.INITIAL_STATE)
+        model = type("model", (object,), {})()
+        GraphMachine(
+            model=model,
+            states=cls.STATES,
+            title=cls.__name__,
+            transitions=cls.CORE_TRANSITIONS,
+            queued=True,
+            initial=cls.INITIAL_STATE,
+        )
         # pylint: disable=no-member
         # pytype: disable=attribute-error
-        model.get_graph().draw(filename, prog='dot')
+        model.get_graph().draw(filename, prog="dot")

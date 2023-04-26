@@ -42,3 +42,6 @@ jobs:
       - name: Run pytype
         run: |
           PYTHONPATH=. pytype --config setup.cfg chewie
+      - name: Run black formatter
+        run: |
+          black . --check

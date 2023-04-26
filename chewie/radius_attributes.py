@@ -7,11 +7,13 @@ from hashlib import md5
 
 import math
 from chewie.radius_datatypes import Concat, Enum, Integer, String, Text, Vsa
+
 ATTRIBUTE_TYPES = {}
 
 # TODO Fix Class Docstrings
 
-class Attribute():
+
+class Attribute:
     """Parent class for the Attributes."""
 
     TYPE = None  # e.g. 1
@@ -82,6 +84,7 @@ def register_attribute_type(cls):
 @register_attribute_type
 class UserName(Attribute):
     """User-Name https://tools.ietf.org/html/rfc2865#section-5.1"""
+
     TYPE = 1
     DATA_TYPE = Text
     DESCRIPTION = "User-Name"
@@ -91,6 +94,7 @@ class UserName(Attribute):
 @register_attribute_type
 class UserPassword(Attribute):
     """User-Password https://tools.ietf.org/html/rfc2865#section-5.2"""
+
     TYPE = 2
     DATA_TYPE = String
     DESCRIPTION = "User-Password"
@@ -106,7 +110,7 @@ class UserPassword(Attribute):
             secret = secret.encode()
 
         if isinstance(req_authenticator, int):
-            req_authenticator = req_authenticator.to_bytes(16, 'big')
+            req_authenticator = req_authenticator.to_bytes(16, "big")
 
         BASE = 16
         ciphertext = bytes()
@@ -134,7 +138,7 @@ class UserPassword(Attribute):
             secret = secret.encode()
 
         if isinstance(req_authenticator, int):
-            req_authenticator = req_authenticator.to_bytes(16, 'big')
+            req_authenticator = req_authenticator.to_bytes(16, "big")
 
         BASE = 16
         cleartext = ""
@@ -144,15 +148,16 @@ class UserPassword(Attribute):
             c_sec, ciphertext = string_pop(ciphertext, BASE)
             pass_array = [x ^ y for x, y in zip(b_sec, c_sec)]
             p_sec = bytes(pass_array)
-            cleartext += p_sec.decode('ascii')
+            cleartext += p_sec.decode("ascii")
 
             b_sec = md5(secret + c_sec).digest()
-        return cleartext.strip('\0')
+        return cleartext.strip("\0")
 
 
 @register_attribute_type
 class NASIPAddress(Attribute):
     """Service-Type https://tools.ietf.org/html/rfc2865#section-5.4"""
+
     TYPE = 4
     DATA_TYPE = String
     DESCRIPTION = "NAS-IP-Address"
@@ -161,6 +166,7 @@ class NASIPAddress(Attribute):
 @register_attribute_type
 class NASPort(Attribute):
     """Service-Type https://tools.ietf.org/html/rfc2865#section-5.5"""
+
     TYPE = 5
     DATA_TYPE = Integer
     DESCRIPTION = "NAS-Port"
@@ -169,6 +175,7 @@ class NASPort(Attribute):
 @register_attribute_type
 class ServiceType(Attribute):
     """Service-Type https://tools.ietf.org/html/rfc2865#section-5.6"""
+
     TYPE = 6
     DATA_TYPE = Enum
     DESCRIPTION = "Service-Type"
@@ -177,6 +184,7 @@ class ServiceType(Attribute):
 @register_attribute_type
 class FilterId(Attribute):
     """Framed-MTU https://tools.ietf.org/html/rfc2865#section-5.11"""
+
     TYPE = 11
     DATA_TYPE = Text
     DESCRIPTION = "Filter-Id"
@@ -185,6 +193,7 @@ class FilterId(Attribute):
 @register_attribute_type
 class FramedMTU(Attribute):
     """Framed-MTU https://tools.ietf.org/html/rfc2865#section-5.12"""
+
     TYPE = 12
     DATA_TYPE = Integer
     DESCRIPTION = "Framed-MTU"
@@ -193,6 +202,7 @@ class FramedMTU(Attribute):
 @register_attribute_type
 class ReplyMessage(Attribute):
     """Reply-Message https://tools.ietf.org/html/rfc2865#section-5.18"""
+
     TYPE = 18
     DATA_TYPE = Text
     DESCRIPTION = "Reply-Message"
@@ -201,6 +211,7 @@ class ReplyMessage(Attribute):
 @register_attribute_type
 class State(Attribute):
     """State https://tools.ietf.org/html/rfc2865#section-5.24"""
+
     TYPE = 24
     DATA_TYPE = String
     DESCRIPTION = "State"
@@ -211,6 +222,7 @@ class State(Attribute):
 @register_attribute_type
 class VendorSpecific(Attribute):
     """Vendor-Specific https://tools.ietf.org/html/rfc2865#section-5.26"""
+
     TYPE = 26
     DATA_TYPE = Vsa
     DESCRIPTION = "Vendor-Specific"
@@ -219,6 +231,7 @@ class VendorSpecific(Attribute):
 @register_attribute_type
 class SessionTimeout(Attribute):
     """Vendor-Specific https://tools.ietf.org/html/rfc2865#section-5.27"""
+
     TYPE = 27
     DATA_TYPE = Integer
     DESCRIPTION = "Session-Timeout"
@@ -227,6 +240,7 @@ class SessionTimeout(Attribute):
 @register_attribute_type
 class CalledStationId(Attribute):
     """Called-Station-Id https://tools.ietf.org/html/rfc2865#section-5.30"""
+
     TYPE = 30
     DATA_TYPE = Text
     DESCRIPTION = "Called-Station-Id"
@@ -235,6 +249,7 @@ class CalledStationId(Attribute):
 @register_attribute_type
 class CallingStationId(Attribute):
     """Calling-Station-Id https://tools.ietf.org/html/rfc2865#section-5.31"""
+
     TYPE = 31
     DATA_TYPE = Text
     DESCRIPTION = "Calling-Station-Id"
@@ -243,6 +258,7 @@ class CallingStationId(Attribute):
 @register_attribute_type
 class NASIdentifier(Attribute):
     """Calling-Station-Id https://tools.ietf.org/html/rfc2865#section-5.32"""
+
     TYPE = 32
     DATA_TYPE = Text
     DESCRIPTION = "NAS-Identifier"
@@ -251,6 +267,7 @@ class NASIdentifier(Attribute):
 @register_attribute_type
 class AcctSessionId(Attribute):
     """Acct-Session-id (RADIUS Accounting) https://tools.ietf.org/html/rfc2866#section-5.5"""
+
     TYPE = 44
     DATA_TYPE = Text
     DESCRIPTION = "Acct-Session-Id"
@@ -259,6 +276,7 @@ class AcctSessionId(Attribute):
 @register_attribute_type
 class NASPortType(Attribute):
     """NAS-Port-Type https://tools.ietf.org/html/rfc2865#section-5.41"""
+
     TYPE = 61
     DATA_TYPE = Enum
     DESCRIPTION = "NAS-Port-Type"
@@ -267,6 +285,7 @@ class NASPortType(Attribute):
 @register_attribute_type
 class TunnelType(Attribute):
     """NAS-Port-Type https://tools.ietf.org/html/rfc2868#section-3.1"""
+
     TYPE = 64
     DATA_TYPE = Enum
     DESCRIPTION = "Tunnel-Type"
@@ -275,6 +294,7 @@ class TunnelType(Attribute):
 @register_attribute_type
 class TunnelMediumType(Attribute):
     """NAS-Port-Type https://tools.ietf.org/html/rfc2868#section-3.2"""
+
     TYPE = 65
     DATA_TYPE = Enum
     DESCRIPTION = "Tunnel-Medium-Type"
@@ -283,6 +303,7 @@ class TunnelMediumType(Attribute):
 @register_attribute_type
 class ConnectInfo(Attribute):
     """ConnectInfo (RADIUS Extensions) https://tools.ietf.org/html/rfc2869#section-5.11"""
+
     TYPE = 77
     DATA_TYPE = Text
     DESCRIPTION = "Connect-Info"
@@ -291,6 +312,7 @@ class ConnectInfo(Attribute):
 @register_attribute_type
 class EAPMessage(Attribute):
     """EAP-Message (RADIUS Extensions) https://tools.ietf.org/html/rfc2869#section-5.13"""
+
     TYPE = 79
     DATA_TYPE = Concat
     DESCRIPTION = "EAP-Message"
@@ -310,19 +332,30 @@ class EAPMessage(Attribute):
         Returns:
             Attribute subclass.
         """
-        from chewie.message_parser import MessagePacker, EapMessage  # pylint: disable=import-outside-toplevel
+        from chewie.message_parser import (
+            MessagePacker,
+            EapMessage,
+        )  # pylint: disable=import-outside-toplevel
+
         if isinstance(data, EapMessage):
-            return cls(cls.DATA_TYPE(bytes_data=MessagePacker.eap_pack(data)[2]))  # pylint: disable=not-callable
+            return cls(
+                cls.DATA_TYPE(bytes_data=MessagePacker.eap_pack(data)[2])
+            )  # pylint: disable=not-callable
 
         return super().create(data)
 
     def data(self):
-        from chewie.message_parser import MessageParser  # pylint: disable=import-outside-toplevel
+        from chewie.message_parser import (
+            MessageParser,
+        )  # pylint: disable=import-outside-toplevel
+
         return MessageParser.eap_parse(self._data_type.data(), None)
+
 
 @register_attribute_type
 class MessageAuthenticator(Attribute):
     """Message-Authenticator (RADIUS Extensions) https://tools.ietf.org/html/rfc2869#section-5.14"""
+
     TYPE = 80
     DATA_TYPE = String
     DESCRIPTION = "Message-Authenticator"
@@ -331,6 +364,7 @@ class MessageAuthenticator(Attribute):
 @register_attribute_type
 class TunnelPrivateGroupID(Attribute):
     """NAS-Port-Type https://tools.ietf.org/html/rfc2868#section-3.6"""
+
     TYPE = 81
     DATA_TYPE = String
     DESCRIPTION = "Tunnel-Private-Group-ID"
@@ -340,6 +374,7 @@ class TunnelPrivateGroupID(Attribute):
 @register_attribute_type
 class NASFilterRule(Attribute):
     """NAS-Fitler-Rule https://freeradius.org/rfc/rfc4849.html"""
+
     TYPE = 92
     DATA_TYPE = String
     DESCRIPTION = "NAS-Filter-Rule"

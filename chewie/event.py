@@ -4,6 +4,7 @@
 # pylint: disable=too-few-public-methods
 class Event:
     """Base event class"""
+
     TIMER_EXPIRED = 1
     MESSAGE_RECEIVED = 2
     SHUTDOWN = 3
@@ -53,12 +54,14 @@ class EventMessageReceived(Event):
         self.port_id = port_id
 
     def __eq__(self, other):
-        return self.type == other.type and \
-               self.message == other.message and \
-               self.port_id == other.port_id
+        return (
+            self.type == other.type
+            and self.message == other.message
+            and self.port_id == other.port_id
+        )
 
     def __repr__(self):
-        return "%s(\"%s\", \"%s\")" % (self.__class__.__name__, self.message, self.port_id)
+        return '%s("%s", "%s")' % (self.__class__.__name__, self.message, self.port_id)
 
 
 class EventPreemptiveEAPResponseMessageReceived(EventMessageReceived):

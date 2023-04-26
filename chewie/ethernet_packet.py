@@ -27,10 +27,13 @@ class EthernetPacket:
             MessageParseError: if packed_message cannot be successfully parsed.
         """
         try:
-            dst_mac, src_mac, ethertype = struct.unpack("!6s6sH",
-                                                        packed_message[:ETHERNET_HEADER_LENGTH])
+            dst_mac, src_mac, ethertype = struct.unpack(
+                "!6s6sH", packed_message[:ETHERNET_HEADER_LENGTH]
+            )
         except struct.error as exception:
-            raise MessageParseError("Unable to parse Ethernet header (14bytes)") from exception
+            raise MessageParseError(
+                "Unable to parse Ethernet header (14bytes)"
+            ) from exception
         data = packed_message[ETHERNET_HEADER_LENGTH:]
         return cls(MacAddress(dst_mac), MacAddress(src_mac), ethertype, data)
 
@@ -39,9 +42,15 @@ class EthernetPacket:
         Returns:
             bytes
         """
-        header = struct.pack("!6s6sH", self.dst_mac.address, self.src_mac.address, self.ethertype)
+        header = struct.pack(
+            "!6s6sH", self.dst_mac.address, self.src_mac.address, self.ethertype
+        )
         return header + self.data
 
     def __repr__(self):
-        return "%s(dst_mac=%s, src_mac=%s, ethertype=0x%04X)" % \
-               (self.__class__.__name__, self.dst_mac, self.src_mac, self.ethertype)
+        return "%s(dst_mac=%s, src_mac=%s, ethertype=0x%04X)" % (
+            self.__class__.__name__,
+            self.dst_mac,
+            self.src_mac,
+            self.ethertype,
+        )
