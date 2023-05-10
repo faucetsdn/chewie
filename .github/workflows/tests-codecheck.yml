@@ -3,7 +3,7 @@ name: Code health checks
 on: [push, pull_request]
 
 env:
-  CODECHECK_PY_VER: 3.8
+  CODECHECK_PY_VER: '3.10'
 
 jobs:
   pylint:
