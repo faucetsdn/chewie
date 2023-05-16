@@ -15,7 +15,7 @@ def log_method(method):
 
     def wrapped(self, *args, **kwargs):
         """Method that gets called for logging"""
-        self.logger.info('Entering %s' % method.__name__)
+        self.logger.info("Entering %s" % method.__name__)
         return method(self, *args, **kwargs)
 
     return wrapped
@@ -28,14 +28,15 @@ def get_random_id():  # pylint: disable=missing-docstring
 
 class MessageParseError(Exception):
     """Error for when parsing cannot be successfully completed."""
+
     pass
 
 
-class EapQueueMessage(namedtuple('EapQueueMessage',
-                                 'message src_mac port_mac')):
+class EapQueueMessage(namedtuple("EapQueueMessage", "message src_mac port_mac")):
     pass
 
 
-class RadiusQueueMessage(namedtuple('RadiusQueueMessage',
-                                    'message src_mac identity state port_mac')):
+class RadiusQueueMessage(
+    namedtuple("RadiusQueueMessage", "message src_mac identity state port_mac")
+):
     pass

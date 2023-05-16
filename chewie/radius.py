@@ -16,19 +16,23 @@ PACKET_TYPE_PARSERS = {}
 
 class InvalidResponseAuthenticatorError(Exception):
     """To be used when the ResponseAuthenticator hashes
-     (received in packet, and calculated) do not match."""
+    (received in packet, and calculated) do not match."""
+
     pass
 
 
 class InvalidMessageAuthenticatorError(Exception):
     """To be used when the Message-Authenticator hashes
      (received in packet, and calculated) do not match.
-    Received packets that throw this error should be 'silently dropped' (logging is fine)."""
+    Received packets that throw this error should be 'silently dropped' (logging is fine).
+    """
+
     pass
 
 
 class Radius:
     """Radius packet interface which will determin the correct RadiusPacket child class to use"""
+
     ACCESS_REQUEST = 1
     ACCESS_ACCEPT = 2
     ACCESS_REJECT = 3
@@ -52,34 +56,42 @@ class Radius:
             MessageParseError: if packed_message cannot be parsed
         """
         try:
-            code, packet_id, length, authenticator = struct.unpack("!BBH16s",
-                                                                   packed_message[
-                                                                   :RADIUS_HEADER_LENGTH])
+            code, packet_id, length, authenticator = struct.unpack(
+                "!BBH16s", packed_message[:RADIUS_HEADER_LENGTH]
+            )
         except struct.error as exception:
-            raise MessageParseError('Unable to unpack first 20 bytes of RADIUS header') \
-                from exception
+            raise MessageParseError(
+                "Unable to unpack first 20 bytes of RADIUS header"
+            ) from exception
 
         if code in PACKET_TYPE_PARSERS.keys():
-            radius_packet = PACKET_TYPE_PARSERS[code](packet_id, authenticator,
-                                                      RadiusAttributesList.parse(
-                                                          packed_message[RADIUS_HEADER_LENGTH:]))
+            radius_packet = PACKET_TYPE_PARSERS[code](
+                packet_id,
+                authenticator,
+                RadiusAttributesList.parse(packed_message[RADIUS_HEADER_LENGTH:]),
+            )
             if code == Radius.ACCESS_REQUEST:
                 request_authenticator = authenticator
             else:
                 try:
-                    request_authenticator = radius_lifecycle.packet_id_to_request_authenticator[
-                        packet_id]
+                    request_authenticator = (
+                        radius_lifecycle.packet_id_to_request_authenticator[packet_id]
+                    )
                 except KeyError as exception:
-                    raise MessageParseError('Unknown RAIDUS packet_id: %s' % packet_id, ) \
-                        from exception
+                    raise MessageParseError(
+                        "Unknown RAIDUS packet_id: %s" % packet_id,
+                    ) from exception
             try:
-                return radius_packet.validate_packet(secret,
-                                                     request_authenticator=request_authenticator,
-                                                     code=code)
-            except (InvalidMessageAuthenticatorError,
-                    InvalidResponseAuthenticatorError) as exception:
-                raise MessageParseError("Unable to validate Radius packet") \
-                    from exception
+                return radius_packet.validate_packet(
+                    secret, request_authenticator=request_authenticator, code=code
+                )
+            except (
+                InvalidMessageAuthenticatorError,
+                InvalidResponseAuthenticatorError,
+            ) as exception:
+                raise MessageParseError(
+                    "Unable to validate Radius packet"
+                ) from exception
         raise MessageParseError("Unable to parse radius code: %d" % code)
 
     def pack(self):
@@ -93,6 +105,7 @@ def register_packet_type_parser(cls):
 
 class RadiusPacket(Radius):
     """super class for different radius packets"""
+
     CODE = None
     packed = None
 
@@ -106,9 +119,13 @@ class RadiusPacket(Radius):
         return cls(packet_id, request_authenticator, attributes)
 
     def pack(self):
-        header = struct.pack("!BBH16s", self.CODE, self.packet_id,
-                             RADIUS_HEADER_LENGTH + self.attributes.__len__(),
-                             self.authenticator)
+        header = struct.pack(
+            "!BBH16s",
+            self.CODE,
+            self.packet_id,
+            RADIUS_HEADER_LENGTH + self.attributes.__len__(),
+            self.authenticator,
+        )
         packed_attributes = self.attributes.pack()
         self.packed = bytearray(header + packed_attributes)
         return self.packed
@@ -123,15 +140,19 @@ class RadiusPacket(Radius):
         if not self.packed:
             self.pack()
         try:
-            position = self.attributes.indexof(MessageAuthenticator.DESCRIPTION) + \
-                       RADIUS_HEADER_LENGTH + Attribute.HEADER_SIZE
+            position = (
+                self.attributes.indexof(MessageAuthenticator.DESCRIPTION)
+                + RADIUS_HEADER_LENGTH
+                + Attribute.HEADER_SIZE
+            )
         except ValueError as err:
             print(err)
             return self.packed
 
         if secret:
-            message_authenticator = bytearray(hmac.new(secret.encode(), self.packed, 'md5')
-                                              .digest())
+            message_authenticator = bytearray(
+                hmac.new(secret.encode(), self.packed, "md5").digest()
+            )
 
             for i in range(16):
                 self.packed[i + position] = message_authenticator[i]
@@ -156,50 +177,65 @@ class RadiusPacket(Radius):
         if not secret:
             raise ValueError("secret cannot be None for hashing")
 
-        self.validate_response_authenticator(radius_packet, request_authenticator, secret, code)
+        self.validate_response_authenticator(
+            radius_packet, request_authenticator, secret, code
+        )
 
-        self.validate_message_authenticator(radius_packet, secret, request_authenticator)
+        self.validate_message_authenticator(
+            radius_packet, secret, request_authenticator
+        )
         return self
 
     @staticmethod
-    def validate_response_authenticator(radius_packet, request_authenticator, secret, code):
-        if request_authenticator and code in [Radius.ACCESS_REJECT,
-                                              Radius.ACCESS_ACCEPT,
-                                              Radius.ACCESS_CHALLENGE]:
+    def validate_response_authenticator(
+        radius_packet, request_authenticator, secret, code
+    ):
+        if request_authenticator and code in [
+            Radius.ACCESS_REJECT,
+            Radius.ACCESS_ACCEPT,
+            Radius.ACCESS_CHALLENGE,
+        ]:
             response_authenticator = radius_packet.authenticator
             radius_packet.authenticator = request_authenticator
             radius_packet.pack()
-            calculated_response_authenticator = hashlib.md5(radius_packet.packed +
-                                                            bytearray(secret, 'utf-8')).digest()
+            calculated_response_authenticator = hashlib.md5(
+                radius_packet.packed + bytearray(secret, "utf-8")
+            ).digest()
             if calculated_response_authenticator != response_authenticator:
                 raise InvalidResponseAuthenticatorError(
-                    "Original ResponseAuthenticator: '%s', does not match calculated: '%s' %s" % (
+                    "Original ResponseAuthenticator: '%s', does not match calculated: '%s' %s"
+                    % (
                         response_authenticator,
                         calculated_response_authenticator,
-                        binascii.hexlify(radius_packet.packed)))
+                        binascii.hexlify(radius_packet.packed),
+                    )
+                )
 
     @staticmethod
     def validate_message_authenticator(radius_packet, secret, request_authenticator):
-        message_authenticator = radius_packet.attributes.find(MessageAuthenticator.DESCRIPTION)
+        message_authenticator = radius_packet.attributes.find(
+            MessageAuthenticator.DESCRIPTION
+        )
         if message_authenticator:
-
             radius_packet.authenticator = request_authenticator
 
             original_ma = message_authenticator.bytes_data
             # Replace the Original Message Authenticator
             message_authenticator.bytes_data = bytes.fromhex(
-                "00000000000000000000000000000000")
+                "00000000000000000000000000000000"
+            )
 
             radius_packet.pack()
 
             # calculate new hash message authenticator
-            new_ma = hmac.new(secret.encode(), radius_packet.packed, 'md5').digest()
+            new_ma = hmac.new(secret.encode(), radius_packet.packed, "md5").digest()
 
             # compare old and new message authenticator
             if original_ma != new_ma:
                 raise InvalidMessageAuthenticatorError(
-                    "Original Message-Authenticator: '%s', does not match calculated: '%s'" %
-                    (binascii.hexlify(original_ma), binascii.hexlify(new_ma)))
+                    "Original Message-Authenticator: '%s', does not match calculated: '%s'"
+                    % (binascii.hexlify(original_ma), binascii.hexlify(new_ma))
+                )
 
 
 @register_packet_type_parser
@@ -268,8 +304,9 @@ class RadiusAttributesList:
             concatenated_data = b""
             for d, i in list_:
                 concatenated_data += d.bytes_data
-            concatenated_attributes.append(tuple((ATTRIBUTE_TYPES[value].parse(concatenated_data),
-                                                  i)))
+            concatenated_attributes.append(
+                tuple((ATTRIBUTE_TYPES[value].parse(concatenated_data), i))
+            )
         # Remove old Attributes that were concatenated.
         for ca, _ in concatenated_attributes:
             attributes = [x for x in attributes if x.TYPE != ca.TYPE]
@@ -299,20 +336,23 @@ class RadiusAttributesList:
         last_attribute = -1
         while pos < total_length:
             try:
-                type_, attr_length = struct.unpack("!BB",
-                                                   attributes_data[pos:pos + Attribute.HEADER_SIZE])
+                type_, attr_length = struct.unpack(
+                    "!BB", attributes_data[pos : pos + Attribute.HEADER_SIZE]
+                )
             except struct.error as exception:
-                raise MessageParseError('Unable to unpack first 2 bytes of attribute header') \
-                    from exception
-            data = attributes_data[pos + Attribute.HEADER_SIZE: pos + attr_length]
+                raise MessageParseError(
+                    "Unable to unpack first 2 bytes of attribute header"
+                ) from exception
+            data = attributes_data[pos + Attribute.HEADER_SIZE : pos + attr_length]
             pos += attr_length
 
-            packed_value = data[:attr_length - Attribute.HEADER_SIZE]
+            packed_value = data[: attr_length - Attribute.HEADER_SIZE]
             try:
                 attribute = ATTRIBUTE_TYPES[type_].parse(packed_value)
             except KeyError as exception:
-                raise MessageParseError('Cannot find parser for RADIUS attribute %s' %
-                                        type_) from exception
+                raise MessageParseError(
+                    "Cannot find parser for RADIUS attribute %s" % type_
+                ) from exception
             # keep track of where the concated AVP should be in the attributes list.
             # required so the hashing gives correct hash.
             if attribute.DATA_TYPE != Concat or last_attribute != attribute.TYPE:

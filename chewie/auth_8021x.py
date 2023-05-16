@@ -30,11 +30,16 @@ class Auth8021x:
             MessageParseException: if packed_message cannot be parsed successfully.
         """
         try:
-            version, packet_type, length = struct.unpack("!BBH",
-                                                         packed_message[:AUTH_8021X_HEADER_LENGTH])
+            version, packet_type, length = struct.unpack(
+                "!BBH", packed_message[:AUTH_8021X_HEADER_LENGTH]
+            )
         except struct.error as exception:
-            raise MessageParseError("Auth8021x unable to parse first 4 bytes") from exception
-        data = packed_message[AUTH_8021X_HEADER_LENGTH:AUTH_8021X_HEADER_LENGTH + length]
+            raise MessageParseError(
+                "Auth8021x unable to parse first 4 bytes"
+            ) from exception
+        data = packed_message[
+            AUTH_8021X_HEADER_LENGTH : AUTH_8021X_HEADER_LENGTH + length
+        ]
         return cls(version, packet_type, data)
 
     def pack(self):
@@ -46,9 +51,16 @@ class Auth8021x:
         return header + self.data
 
     def __repr__(self):
-        return "%s(version=%s, packet_type=%s, data=%s)" % \
-               (self.__class__.__name__, self.version, self.packet_type, self.data)
+        return "%s(version=%s, packet_type=%s, data=%s)" % (
+            self.__class__.__name__,
+            self.version,
+            self.packet_type,
+            self.data,
+        )
 
     def __str__(self):
-        return "%s<packet_type=%d, data=%s>" % \
-               (self.__class__.__name__, self.packet_type, self.data)
+        return "%s<packet_type=%d, data=%s>" % (
+            self.__class__.__name__,
+            self.packet_type,
+            self.data,
+        )

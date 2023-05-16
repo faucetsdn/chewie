@@ -11,20 +11,21 @@ from chewie.state_machines.mab_state_machine import MacAuthenticationBypassState
 
 
 # TODO Remove and create a 'test state machine' class
-def check_counters(_func=None, *,
-                   expected_auth_counter=0, expected_failure_counter=0):
+def check_counters(_func=None, *, expected_auth_counter=0, expected_failure_counter=0):
     """Decorator to check the handlers have been called the
-     correct number of times at the end of each test"""
+    correct number of times at the end of each test"""
 
     def decorator_check_counters(func):
         def wrapper(self):
             start_auth_counter = self.auth_counter
             start_failure_counter = self.failure_counter
             ret = func(self)
-            self.assertEqual(self.auth_counter,
-                             start_auth_counter + expected_auth_counter)
-            self.assertEqual(self.failure_counter,
-                             start_failure_counter + expected_failure_counter)
+            self.assertEqual(
+                self.auth_counter, start_auth_counter + expected_auth_counter
+            )
+            self.assertEqual(
+                self.failure_counter, start_failure_counter + expected_failure_counter
+            )
             return ret
 
         return wrapper
@@ -48,12 +49,19 @@ class MABStateMachineTest(unittest.TestCase):
         self.radius_output_queue = Queue()
         self.timer_scheduler = None
         self.src_mac = MacAddress.from_string("00:12:34:56:78:90")
-        log_prefix = "chewie.SM - port: %s, client: %s" % (self.src_mac, self.PORT_ID_MAC)
+        log_prefix = "chewie.SM - port: %s, client: %s" % (
+            self.src_mac,
+            self.PORT_ID_MAC,
+        )
 
-        self.sm = MacAuthenticationBypassStateMachine(self.radius_output_queue,
-                                                      self.src_mac, self.timer_scheduler,
-                                                      self.auth_handler, self.failure_handler,
-                                                      log_prefix)
+        self.sm = MacAuthenticationBypassStateMachine(
+            self.radius_output_queue,
+            self.src_mac,
+            self.timer_scheduler,
+            self.auth_handler,
+            self.failure_handler,
+            log_prefix,
+        )
 
         self.auth_counter = 0
         self.failure_counter = 0
@@ -61,16 +69,18 @@ class MABStateMachineTest(unittest.TestCase):
     # pylint: disable=unused-argument
     def auth_handler(self, client_mac, port_id_mac, timer, *arg, **kwargs):
         self.auth_counter += 1
-        print('Successful auth from MAC %s' % str(client_mac))
+        print("Successful auth from MAC %s" % str(client_mac))
 
-    def failure_handler(self, client_mac, port_id_mac):  # pylint: disable=unused-argument
+    def failure_handler(
+        self, client_mac, port_id_mac
+    ):  # pylint: disable=unused-argument
         self.failure_counter += 1
-        print('failure from MAC %s' % str(client_mac))
+        print("failure from MAC %s" % str(client_mac))
 
     def receive_eth_packet(self):
         """Receive Ethernet Frame and send to State Machine"""
         rad_queue_size = self.radius_output_queue.qsize()
-        message = EthernetPacket(self.PORT_ID_MAC, str(self.src_mac), 0x888e, "")
+        message = EthernetPacket(self.PORT_ID_MAC, str(self.src_mac), 0x888E, "")
         self.sm.event(EventMessageReceived(message, self.PORT_ID_MAC))
         self.assertEqual(self.radius_output_queue.qsize(), rad_queue_size + 1)
 

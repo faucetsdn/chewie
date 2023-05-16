@@ -56,10 +56,13 @@ def test_radius_parse(data):
     try:
         # The dict sets the packet ID for the known packet_id (test/fuzzer/radius_packet*.ex)
         #  to none. so no validation is done.
-        MessageParser.radius_parse(data, "SECRET",
-                                   radius_lifecycle=namedtuple('RadiusLifecycle',
-                                                               'packet_id_to_request_authenticator')
-                                   (NoneDict()))
+        MessageParser.radius_parse(
+            data,
+            "SECRET",
+            radius_lifecycle=namedtuple(
+                "RadiusLifecycle", "packet_id_to_request_authenticator"
+            )(NoneDict()),
+        )
     except MessageParseError:
         # Ignore exceptions the parser intentionally throws, and are caught by the caller.
         pass
@@ -68,6 +71,6 @@ def test_radius_parse(data):
 if __name__ == "__main__":
     PARSER = sys.argv[1]
     EAP = False
-    if PARSER == 'eap':
+    if PARSER == "eap":
         EAP = True
     main(EAP)

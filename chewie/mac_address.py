@@ -4,7 +4,7 @@ import re
 
 # pylint: disable=too-few-public-methods
 
-_MAC_REGEX = re.compile(r'(?:[0-9a-f]{1,2}:){5}[0-9a-f]{1,2}\Z', re.IGNORECASE)
+_MAC_REGEX = re.compile(r"(?:[0-9a-f]{1,2}:){5}[0-9a-f]{1,2}\Z", re.IGNORECASE)
 
 
 class MacAddress:
@@ -27,8 +27,10 @@ class MacAddress:
             ValueError: If address_string is invalid.
         """
         if not _MAC_REGEX.match(address_string):
-            raise ValueError("'%s' does not appear to be a MAC address" % address_string)
-        address = bytes(int(x, 16) for x in address_string.split(':'))
+            raise ValueError(
+                "'%s' does not appear to be a MAC address" % address_string
+            )
+        address = bytes(int(x, 16) for x in address_string.split(":"))
         return cls(address)
 
     def __str__(self):
@@ -42,4 +44,4 @@ class MacAddress:
         return hash(self.address)
 
     def __repr__(self):
-        return "%s.from_string(\"%s\")" % (self.__class__.__name__, self.__str__())
+        return '%s.from_string("%s")' % (self.__class__.__name__, self.__str__())
