@@ -5,9 +5,10 @@ import math
 from chewie.utils import MessageParseError
 
 
-class DataType():
+class DataType:
     """Parent datatype class, subclass should provide implementation for abstractmethods.
-    May """
+    May"""
+
     DATA_TYPE_VALUE = None
     AVP_HEADER_LEN = 1 + 1
     MAX_DATA_LENGTH = 253
@@ -48,13 +49,16 @@ class DataType():
     @classmethod
     def is_valid_length(cls, packed_value):
         length = len(packed_value)
-        if length < cls.MIN_DATA_LENGTH \
-                or length > cls.MAX_DATA_LENGTH \
-                or len(packed_value) > cls.MAX_DATA_LENGTH \
-                or length != len(packed_value):
-            raise ValueError("RADIUS data type '%s' length must be: %d <= actual_length(%d) <= %d"
-                             ""
-                             % (cls.__name__, cls.MIN_DATA_LENGTH, length, cls.MAX_DATA_LENGTH))
+        if (
+            length < cls.MIN_DATA_LENGTH
+            or length > cls.MAX_DATA_LENGTH
+            or len(packed_value) > cls.MAX_DATA_LENGTH
+            or length != len(packed_value)
+        ):
+            raise ValueError(
+                "RADIUS data type '%s' length must be: %d <= actual_length(%d) <= %d"
+                "" % (cls.__name__, cls.MIN_DATA_LENGTH, length, cls.MAX_DATA_LENGTH)
+            )
 
 
 class Integer(DataType):
@@ -67,24 +71,26 @@ class Integer(DataType):
             try:
                 bytes_data = raw_data.to_bytes(self.MAX_DATA_LENGTH, "big")
             except OverflowError:
-                raise ValueError("Integer must be >= 0  and <= 2^32-1, was %d" %
-                                 raw_data)
+                raise ValueError(
+                    "Integer must be >= 0  and <= 2^32-1, was %d" % raw_data
+                )
         self.bytes_data = bytes_data
 
     @classmethod
     def parse(cls, packed_value):
-
         try:
             cls.is_valid_length(packed_value)
             return cls(bytes_data=struct.unpack("!4s", packed_value)[0])
         except (ValueError, struct.error) as exception:
-            raise MessageParseError("%s unable to unpack." % cls.__name__) from exception
+            raise MessageParseError(
+                "%s unable to unpack." % cls.__name__
+            ) from exception
 
     def pack(self, attribute_type):
         return struct.pack("!4s", self.bytes_data)
 
     def data(self):
-        return int.from_bytes(self.bytes_data, 'big')  # pytype: disable=attribute-error
+        return int.from_bytes(self.bytes_data, "big")  # pytype: disable=attribute-error
 
     def data_length(self):
         return 4
@@ -100,7 +106,9 @@ class Enum(DataType):
             try:
                 bytes_data = raw_data.to_bytes(self.MAX_DATA_LENGTH, "big")
             except OverflowError:
-                raise ValueError("Integer must be >= 0  and <= 2^32-1, was %d" % raw_data)
+                raise ValueError(
+                    "Integer must be >= 0  and <= 2^32-1, was %d" % raw_data
+                )
         self.bytes_data = bytes_data
 
     @classmethod
@@ -109,13 +117,15 @@ class Enum(DataType):
             cls.is_valid_length(packed_value)
             return cls(bytes_data=struct.unpack("!4s", packed_value)[0])
         except (ValueError, struct.error) as exception:
-            raise MessageParseError("%s unable to unpack." % cls.__name__) from exception
+            raise MessageParseError(
+                "%s unable to unpack." % cls.__name__
+            ) from exception
 
     def pack(self, attribute_type):
         return struct.pack("!4s", self.bytes_data)
 
     def data(self):
-        return int.from_bytes(self.bytes_data, 'big')  # pytype: disable=attribute-error
+        return int.from_bytes(self.bytes_data, "big")  # pytype: disable=attribute-error
 
     def data_length(self):
         return 4
@@ -136,7 +146,9 @@ class Text(DataType):
             cls.is_valid_length(packed_value)
             return cls(struct.unpack("!%ds" % len(packed_value), packed_value)[0])
         except (ValueError, struct.error) as exception:
-            raise MessageParseError("%s unable to unpack." % cls.__name__) from exception
+            raise MessageParseError(
+                "%s unable to unpack." % cls.__name__
+            ) from exception
 
     def pack(self, attribute_type):
         return struct.pack("!%ds" % len(self.bytes_data), self.bytes_data)
@@ -167,7 +179,9 @@ class String(DataType):
             cls.is_valid_length(packed_value)
             return cls(struct.unpack("!%ds" % len(packed_value), packed_value)[0])
         except (ValueError, struct.error) as exception:
-            raise MessageParseError("%s unable to unpack." % cls.__name__) from exception
+            raise MessageParseError(
+                "%s unable to unpack." % cls.__name__
+            ) from exception
 
     def pack(self, attribute_type):
         return struct.pack("!%ds" % len(self.bytes_data), self.bytes_data)
@@ -198,10 +212,11 @@ class Concat(DataType):
         try:
             return cls(struct.unpack("!%ds" % len(packed_value), packed_value)[0])
         except struct.error as exception:
-            raise MessageParseError("%s unable to unpack." % cls.__name__) from exception
+            raise MessageParseError(
+                "%s unable to unpack." % cls.__name__
+            ) from exception
 
     def pack(self, attribute_type):
-
         def chunks(data):
             length = self.MAX_DATA_LENGTH
             list_length = len(data)
@@ -210,11 +225,14 @@ class Concat(DataType):
                 if i + self.MAX_DATA_LENGTH > list_length:
                     length = list_length % self.MAX_DATA_LENGTH
 
-                chunk = data[i:i + length]
+                chunk = data[i : i + length]
                 chunk_length = len(chunk)
-                packed = struct.pack("!BB%ds" % chunk_length, attribute_type,
-                                     chunk_length + self.AVP_HEADER_LEN,
-                                     chunk)
+                packed = struct.pack(
+                    "!BB%ds" % chunk_length,
+                    attribute_type,
+                    chunk_length + self.AVP_HEADER_LEN,
+                    chunk,
+                )
                 return_chunks.append(packed)
             return return_chunks
 
@@ -225,9 +243,12 @@ class Concat(DataType):
         return self.bytes_data
 
     def full_length(self):
-        return self.AVP_HEADER_LEN * \
-               (math.ceil(len(self.bytes_data) / self.MAX_DATA_LENGTH + 1)) \
-               + len(self.bytes_data) - self.AVP_HEADER_LEN
+        return (
+            self.AVP_HEADER_LEN
+            * (math.ceil(len(self.bytes_data) / self.MAX_DATA_LENGTH + 1))
+            + len(self.bytes_data)
+            - self.AVP_HEADER_LEN
+        )
 
     def data_length(self):
         return len(self.bytes_data)
@@ -252,7 +273,9 @@ class Vsa(DataType):
             cls.is_valid_length(packed_value)
             return cls(struct.unpack("!%ds" % len(packed_value), packed_value)[0])
         except (ValueError, struct.error) as exception:
-            raise MessageParseError("%s unable to unpack." % cls.__name__) from exception
+            raise MessageParseError(
+                "%s unable to unpack." % cls.__name__
+            ) from exception
 
     def pack(self, attribute_type):
         return struct.pack("!%ds" % (self.data_length()), self.bytes_data)

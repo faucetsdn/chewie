@@ -23,6 +23,7 @@ network={{
 # TODO : should also test for mab
 class RadiusAttributeOnAuthentication(BaseTest):
     """Test Chewie's MAB Functionality"""
+
     test_name = "RadiusAttributeOnAuthentication"
 
     @staticmethod
@@ -40,25 +41,25 @@ class RadiusAttributeOnAuthentication(BaseTest):
     def test_smoke_vlan_id(self):
         """Perform MAB using dhclient"""
         self.create_supplicant_config("vlan_id", "microphone")
-        self.start_wpa_supplicant('tmp')
+        self.start_wpa_supplicant("tmp")
         time.sleep(5)
-        requirements = ['kwargs : vlan_name : VLAN_100']
+        requirements = ["kwargs : vlan_name : VLAN_100"]
 
         self.check_output(chewie_requirements=requirements)
 
     def test_smoke_filter_id(self):
         """Perform MAB using dhclient"""
         self.create_supplicant_config("filter_id", "microphone")
-        self.start_wpa_supplicant('tmp')
+        self.start_wpa_supplicant("tmp")
         time.sleep(5)
-        requirements = ['kwargs : filter_id : ACL_1']
+        requirements = ["kwargs : filter_id : ACL_1"]
         self.check_output(chewie_requirements=requirements)
 
     @unittest.skip("Skipping as not implemented yet.")
     def test_smoke_nas_filter_rule(self):
         """Perform MAB using dhclient"""
         self.create_supplicant_config("filter_rule", "microphone")
-        self.start_wpa_supplicant('tmp')
+        self.start_wpa_supplicant("tmp")
         time.sleep(5)
-        requirements = ['kwargs : NAS-Filter-Rule : deny in tcp from any to any']
+        requirements = ["kwargs : NAS-Filter-Rule : deny in tcp from any to any"]
         self.check_output(chewie_requirements=requirements)

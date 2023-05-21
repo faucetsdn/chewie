@@ -6,6 +6,7 @@ from base_test import BaseTest
 
 class MabTest(BaseTest):
     """Test Chewie's MAB Functionality"""
+
     test_name = "MabTest"
 
     def setUp(self):
