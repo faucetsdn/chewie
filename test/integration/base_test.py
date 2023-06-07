@@ -270,13 +270,7 @@ class BaseTest(unittest.TestCase):
             radius_config_base = "/etc/freeradius/"
         else:
             # Assume we are dealing with freeradius >=3 configuration
-            freerad_version = (
-                os.popen(r'freeradius -v | egrep -o -m 1 "Version ([0-9]\.[0.9])"')
-                .read()
-                .rstrip()
-            )
-            freerad_major_version = freerad_version.split(" ")[1]
-            radius_config_base = "/etc/freeradius/%s/" % freerad_major_version
+            radius_config_base = "/etc/freeradius/3.0/"
 
         try:
             # Copy files
