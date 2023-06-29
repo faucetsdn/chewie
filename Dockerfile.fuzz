@@ -1,6 +1,6 @@
 ## Image name: chewie/packet-fuzzer
 
-FROM faucet/test-base:21.0.0
+FROM faucet/test-base:22.0.0
 
 ENV PIP3="pip3 -q --no-cache-dir install --upgrade"
 
