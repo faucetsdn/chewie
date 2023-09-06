@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Integration tests
         run: |
           time docker run -t --rm --privileged --cap-add NET_ADMIN -e CHEWIE_ROOT="/chewie-src/" \
