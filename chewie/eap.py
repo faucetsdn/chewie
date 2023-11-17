@@ -123,9 +123,9 @@ class EapIdentity(Eap):
             ) from exception
         return cls(code, packet_id, identity)
 
-    def pack(self):
+    def pack(self, packed_body=b''):
         packed_identity = self.identity.encode()
-        return super().pack(packed_identity)
+        return super().pack(packed_identity) + packed_body
 
     def __repr__(self):
         return "%s(identity=%s)" % (self.__class__.__name__, self.identity)
@@ -161,10 +161,10 @@ class EapMd5Challenge(Eap):
         extra_data = packed_message[1 + value_length :]
         return cls(code, packet_id, challenge, extra_data)
 
-    def pack(self):
+    def pack(self, packed_body=b''):
         value_length = struct.pack("!B", len(self.challenge))
         packed_md5_challenge = value_length + self.challenge + self.extra_data
-        return super().pack(packed_md5_challenge)
+        return super().pack(packed_md5_challenge) + packed_body
 
     def __repr__(self):
         return "%s(challenge=%s, extra_data=%s)" % (
@@ -184,8 +184,8 @@ class EapSuccess(Eap):
     def parse(cls, packet_id):
         return cls(packet_id)
 
-    def pack(self):
-        return struct.pack("!BBH", Eap.SUCCESS, self.packet_id, EAP_HEADER_LENGTH)
+    def pack(self, packed_body=b''):
+        return struct.pack("!BBH", Eap.SUCCESS, self.packet_id, EAP_HEADER_LENGTH) + packed_body
 
     def __repr__(self):
         return "%s(packet_id=%s)" % (self.__class__.__name__, self.packet_id)
@@ -201,8 +201,8 @@ class EapFailure(Eap):
     def parse(cls, packet_id):
         return cls(packet_id)
 
-    def pack(self):
-        return struct.pack("!BBH", Eap.FAILURE, self.packet_id, EAP_HEADER_LENGTH)
+    def pack(self, packed_body=b''):
+        return struct.pack("!BBH", Eap.FAILURE, self.packet_id, EAP_HEADER_LENGTH) + packed_body
 
     def __repr__(self):
         return "%s(packet_id=%s)" % (self.__class__.__name__, self.packet_id)
@@ -236,11 +236,11 @@ class EapLegacyNak(Eap):
             ) from exception
         return cls(code, packet_id, desired_auth_types)
 
-    def pack(self):
+    def pack(self, packed_body=b''):
         packed_legacy_nak = struct.pack(
             "!%ds" % len(self.desired_auth_types), *self.desired_auth_types
         )  # pytype: disable=wrong-arg-types
-        return super().pack(packed_legacy_nak)
+        return super().pack(packed_legacy_nak) + packed_body
 
     def __repr__(self):
         return "%s(packet_id=%s, desired_auth_types=%s)" % (
@@ -283,14 +283,14 @@ class EapTLSBase(Eap):
 
         return cls(code, packet_id, flags, extra_data)
 
-    def pack(self):
+    def pack(self, packed_body=b''):
         if self.extra_data:
             packed = struct.pack(
                 "!B%ds" % len(self.extra_data), self.flags, self.extra_data
             )
         else:
             packed = struct.pack("!B", self.flags)
-        return super().pack(packed)
+        return super().pack(packed) + packed_body
 
     def __repr__(self):
         return "%s(packet_id=%s, flags=%s, extra_data=%s)" % (
