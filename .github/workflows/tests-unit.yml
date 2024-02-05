@@ -27,4 +27,4 @@ jobs:
           time env PYTHONPATH=. pytest -v --cov=chewie test/unit/test_*.py
       - if: ${{ matrix.python-version == env.CODECOV_PY_VER }}
         name: Upload codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
