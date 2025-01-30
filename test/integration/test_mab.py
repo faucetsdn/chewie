@@ -19,7 +19,7 @@ class MabTest(BaseTest):
         """Perform MAB using dhclient"""
         self.start_dhclient()
         last_err = None
-        for _ in range(3):
+        for _ in range(5):
             time.sleep(5)
             try:
                 self.check_output()
