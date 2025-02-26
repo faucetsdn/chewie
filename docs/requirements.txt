@@ -1,4 +1,4 @@
 -r ../requirements.txt
-sphinx==8.2.0
+sphinx==8.2.1
 sphinx_rtd_theme==3.0.2
 pygraphviz
