@@ -1,2 +1,2 @@
-pylint==3.3.7
+pylint==3.3.8
 pytype==2024.10.11
