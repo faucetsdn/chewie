@@ -23,7 +23,7 @@ jobs:
           apt-get -y upgrade
           apt-get -y install devscripts dpkg-dev debhelper equivs
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Bump version
         run: |
           export DEBEMAIL='maintainers@faucet.nz'
