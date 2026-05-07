@@ -8,6 +8,7 @@ import os
 import shutil
 import signal
 import subprocess
+import time
 import unittest
 import tempfile
 from collections import namedtuple
@@ -208,11 +209,18 @@ class BaseTest(unittest.TestCase):
         )
 
     def start_chewie(self):
-        """Start Chewie Server"""
+        """Start Chewie Server and wait until its recv loops are ready.
 
+        Returning before chewie has bound its EAP/MAB/RADIUS sockets and
+        started the matching ``waiting for ...`` recv loops races with the
+        next setup step (dhclient / wpa_supplicant), which can drop the
+        first DISCOVER/EAP frame and leave the test waiting for a
+        retransmit.
+        """
+        chewie_log_path = os.path.join(self.current_log_dir + "chewie.log")
         self.chewie_pid = os.fork()
         if self.chewie_pid == 0:
-            file = open(os.path.join(self.current_log_dir + "chewie.log"), "w+")
+            file = open(chewie_log_path, "w+")
             logger = get_logger("CHEWIE", file)
             logger.info("Starting chewie.")
             chewie = Chewie(
@@ -225,6 +233,32 @@ class BaseTest(unittest.TestCase):
                 radius_server_secret=RADIUS_SECRET,
             )
             chewie.run()
+            return
+
+        # Parent: poll the chewie log for the three ``waiting for ...``
+        # markers, which only fire once each receive loop has bound its
+        # socket and entered its blocking recv. ``waiting for eap`` /
+        # ``waiting for MAB activity`` / ``waiting for radius`` all need
+        # to land before any test traffic is generated.
+        deadline = time.time() + 30
+        markers = (
+            "waiting for eap.",
+            "waiting for MAB activity.",
+            "waiting for radius.",
+        )
+        while time.time() < deadline:
+            try:
+                with open(chewie_log_path, "r", encoding="utf-8") as log_file:
+                    log_contents = log_file.read()
+            except FileNotFoundError:
+                log_contents = ""
+            if all(marker in log_contents for marker in markers):
+                return
+            time.sleep(0.1)
+        raise RuntimeError(
+            "chewie did not finish setting up sockets within 30s; "
+            "log so far:\n%s" % log_contents
+        )
 
     def start_wpa_supplicant(self, eap_method):
         """Start WPA_Supplicant / EAP Client"""
