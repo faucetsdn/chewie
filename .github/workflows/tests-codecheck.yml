@@ -3,7 +3,7 @@ name: Code health checks
 on: [push, pull_request]
 
 env:
-  CODECHECK_PY_VER: '3.10'
+  CODECHECK_PY_VER: "3.12"
 
 jobs:
   pylint:
@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8, 3.9, '3.10']
+        python-version: [3.11, 3.12]
     steps:
       - name: Checkout repo
         uses: actions/checkout@v7
