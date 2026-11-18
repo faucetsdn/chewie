@@ -309,6 +309,8 @@ class RadiusAttributesList:
             )
         # Remove old Attributes that were concatenated.
         for ca, _ in concatenated_attributes:
+            if isinstance(ca, int):
+                continue
             attributes = [x for x in attributes if x.TYPE != ca.TYPE]
 
         # need to put them back in the same position.
